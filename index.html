@@ -21,7 +21,7 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
 button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 #app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
-#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+12px) 12px calc(120px + var(--safe-b));}
+#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+12px) 12px calc(140px + var(--safe-b));}
 #tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:0.5px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:50;}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 0;color:var(--t3);transition:color 0.15s;}
 .tab.active{color:var(--text);}
@@ -261,7 +261,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="tab" data-tab="health"><span class="tab-ic">🏃</span><span class="tab-lbl">Health</span></button>
     <button class="tab" data-tab="social"><span class="tab-ic">👥</span><span class="tab-lbl">Friends</span></button>
     <button class="tab" data-tab="work"><span class="tab-ic">💼</span><span class="tab-lbl">Work</span></button>
-    <button class="tab" data-tab="chores"><span class="tab-ic">🏠</span><span class="tab-lbl">Home</span></button>
+    <button class="tab" data-tab="chores"><span class="tab-ic">🧹</span><span class="tab-lbl">Chores</span></button>
     <button class="tab" data-tab="fin"><span class="tab-ic">💰</span><span class="tab-lbl">Money</span></button>
     <button class="tab" data-tab="journal"><span class="tab-ic">📓</span><span class="tab-lbl">Journal</span></button>
   </nav>
@@ -703,7 +703,7 @@ function rPaige(){
   // Question card
   if(q){html+=`<div class="qcard">
     <div class="qlbl">💬 ask paige</div>
-    <div class="qtxt">${escH(q.question||q)}</div>
+    <div class="qtxt">${escH(typeof q === 'object' ? q.question : q)}</div>
     <button class="qbtn" id="nxtq-paige">Next question ↻</button>
     <div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div>
   </div>`;}
