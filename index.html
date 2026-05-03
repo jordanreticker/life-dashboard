@@ -22,7 +22,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 #app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
 #main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+12px) 12px calc(140px + var(--safe-b));}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:0.5px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:50;}
+#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:0.5px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:50;transition:transform 0.3s ease;}
+#tabbar.hidden{transform:translateX(-50%) translateY(110%);}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 0;color:var(--t3);transition:color 0.15s;}
 .tab.active{color:var(--text);}
 .tab-ic{font-size:19px;line-height:1;}
@@ -429,7 +430,7 @@ async function loadData(){
     if(data.chores&&data.chores.length) D.chores=data.chores; else D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
     if(data.people) D.people={social:data.people.social||[],work:data.people.work||[]};
     if(data.activities) D.activities=data.activities;
-    if(data.questions&&data.questions.length) D.questions=data.questions;
+    if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
     if(data.gamification){
       const g=data.gamification;
       D.gamification={...D.gamification,...g,
@@ -651,6 +652,23 @@ function switchTab(tab){
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   D.currentTab=tab;document.getElementById('main').scrollTo(0,0);
 }
+// ── Auto-hide tab bar on scroll ───────────────────────────────────────────────
+(()=>{
+  let lastY=0,ticking=false;
+  const main=document.getElementById('main');
+  const bar=document.getElementById('tabbar');
+  main.addEventListener('scroll',()=>{
+    if(ticking)return;
+    ticking=true;
+    requestAnimationFrame(()=>{
+      const y=main.scrollTop;
+      if(y>lastY+8) bar.classList.add('hidden');      // scrolling down → hide
+      else if(y<lastY-8) bar.classList.remove('hidden'); // scrolling up → show
+      lastY=y;ticking=false;
+    });
+  },{passive:true});
+})();
+
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 ['chore-modal','act-modal','edit-modal','fin-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});
@@ -703,7 +721,7 @@ function rPaige(){
   // Question card
   if(q){html+=`<div class="qcard">
     <div class="qlbl">💬 ask paige</div>
-    <div class="qtxt">${escH(typeof q === 'object' ? q.question : q)}</div>
+    <div class="qtxt">${escH(q)}</div>
     <button class="qbtn" id="nxtq-paige">Next question ↻</button>
     <div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div>
   </div>`;}
