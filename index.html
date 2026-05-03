@@ -1,574 +1,924 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Dashboard" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Dashboard"/>
 <title>Life Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 :root {
-  --bg: #F5F3EE;
-  --surface: #FFFFFF;
-  --border: rgba(0,0,0,0.08);
-  --border-strong: rgba(0,0,0,0.16);
-  --text: #1A1A18;
-  --text-2: #6B6B66;
-  --text-3: #A8A8A3;
-  --radius: 14px;
-  --radius-sm: 8px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --c-home: #2B6CB0;
-  --c-health: #276749;
-  --c-social: #97266D;
-  --c-work: #5B3FA8;
-  --fresh-great: #276749;
-  --fresh-ok: #D97706;
-  --fresh-stale: #C05621;
-  --fresh-old: #9B1C1C;
+  --bg:#F4F2ED; --surface:#fff; --surface2:#F9F8F5;
+  --border:rgba(0,0,0,0.07); --border2:rgba(0,0,0,0.14);
+  --text:#18180F; --t2:#6A6A62; --t3:#AEADA6;
+  --r:13px; --r2:8px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  --chome:#2563EB; --chealth:#16A34A; --csocial:#9333EA; --cwork:#D97706; --cchores:#0891B2;
+  --xp:#F59E0B;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { min-height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
-#app { max-width: 480px; margin: 0 auto; padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 40px); }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);overscroll-behavior:none;}
+button,input,select{font-family:'DM Sans',sans-serif;}
 
-.top-bar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
-.top-bar h1 { font-size: 28px; font-weight: 300; letter-spacing: -0.5px; line-height: 1.1; }
-.top-bar h1 span { font-weight: 500; }
-.top-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-3); text-align: right; line-height: 1.6; margin-top: 4px; }
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;min-height:100vh;max-width:480px;margin:0 auto;}
+#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t) + 16px) 16px 80px;}
+#tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:0.5px solid var(--border);display:flex;padding:8px 0 calc(8px + var(--safe-b));z-index:50;}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:4px 0;color:var(--t3);transition:color 0.15s;}
+.tab-btn.active{color:var(--text);}
+.tab-icon{font-size:20px;line-height:1;}
+.tab-label{font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;}
+.tab-pane{display:none;animation:fadeIn 0.15s ease;}
+.tab-pane.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-.sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); padding: 4px 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 20px; margin-bottom: 20px; }
-.sync-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; transition: background 0.3s; }
-.sync-pip.synced { background: #276749; }
-.sync-pip.syncing { background: #D97706; animation: blink 0.8s infinite; }
-.sync-pip.error { background: #C05621; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* ── Top bar ── */
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.topbar-left h1{font-size:24px;font-weight:300;letter-spacing:-0.4px;line-height:1.15;}
+.topbar-left h1 b{font-weight:500;}
+.topbar-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--t3);line-height:1.7;text-align:right;margin-top:2px;}
+.sync-row{display:flex;align-items:center;gap:5px;margin-bottom:18px;}
+.sync-pip{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:background 0.3s;}
+.sync-pip.synced{background:#16A34A;} .sync-pip.syncing{background:#D97706;animation:blink 0.8s infinite;} .sync-pip.error{background:#DC2626;}
+.sync-txt{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
 
-.summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 24px; }
-.stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 10px; text-align: center; }
-.stat-n { font-size: 26px; font-weight: 300; letter-spacing: -1px; line-height: 1; }
-.stat-l { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+/* ── XP bar ── */
+.xp-bar-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:16px;}
+.xp-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.xp-level{font-size:13px;font-weight:500;} .xp-pts{font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);}
+.xp-track{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.xp-fill{height:100%;border-radius:3px;background:var(--xp);transition:width 0.6s ease;}
+.xp-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.badge-pill{font-size:10px;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:20px;background:#FEF3C7;color:#92400E;border:0.5px solid #FCD34D;}
 
-.section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
-.sec-header { display: flex; align-items: center; padding: 16px 16px 14px; cursor: pointer; user-select: none; gap: 10px; }
-.sec-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.sec-name { flex: 1; font-size: 15px; font-weight: 500; letter-spacing: -0.2px; }
-.sec-badge { font-size: 11px; font-family: 'DM Mono', monospace; padding: 3px 9px; border-radius: 20px; }
-.badge-pending { background: #FFF5EE; color: #C05621; }
-.badge-done { background: #E6F4EE; color: #276749; }
-.sec-chevron { font-size: 10px; color: var(--text-3); transition: transform 0.2s; margin-left: 4px; }
-.sec-chevron.open { transform: rotate(180deg); }
-.prog-wrap { height: 2px; background: var(--bg); margin: 0 16px; }
-.prog-fill { height: 100%; border-radius: 1px; transition: width 0.4s ease; }
+/* ── Summary cards ── */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.summary-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s;}
+.summary-card:active{box-shadow:0 0 0 2px rgba(0,0,0,0.1);}
+.sc-accent{position:absolute;top:0;left:0;width:4px;height:100%;border-radius:var(--r) 0 0 var(--r);}
+.sc-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.sc-big{font-size:28px;font-weight:300;letter-spacing:-1px;line-height:1;}
+.sc-sub{font-size:11px;color:var(--t2);margin-top:4px;}
+.sc-bar{height:3px;background:var(--bg);border-radius:2px;margin-top:10px;overflow:hidden;}
+.sc-bar-fill{height:100%;border-radius:2px;transition:width 0.5s ease;}
+.sc-overdue{font-size:10px;font-family:'DM Mono',monospace;color:#DC2626;margin-top:4px;}
+.streak-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.streak-flame{font-size:32px;line-height:1;}
+.streak-info h3{font-size:20px;font-weight:500;letter-spacing:-0.5px;}
+.streak-info p{font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;margin-top:2px;}
+.overdue-banner{background:#FEF2F2;border:0.5px solid #FECACA;border-radius:var(--r2);padding:10px 14px;margin-bottom:10px;font-size:13px;color:#DC2626;}
+.overdue-banner b{font-weight:500;}
 
-.task-list { padding: 10px 12px 4px; }
-.person-group { margin-bottom: 10px; }
-.person-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 2px 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 6px; }
+/* ── Section header ── */
+.sec{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;}
+.sec-hd{display:flex;align-items:center;gap:10px;padding:14px 14px 12px;cursor:pointer;user-select:none;}
+.sec-pip{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sec-name{flex:1;font-size:15px;font-weight:500;}
+.sec-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px;}
+.badge-warn{background:#FFF7ED;color:#C2410C;} .badge-ok{background:#F0FDF4;color:#15803D;} .badge-neutral{background:var(--bg);color:var(--t2);}
+.sec-chev{font-size:10px;color:var(--t3);transition:transform 0.2s;margin-left:2px;}
+.sec-chev.open{transform:rotate(180deg);}
+.prog{height:2px;background:var(--bg);margin:0 14px;}
+.prog-fill{height:100%;border-radius:1px;transition:width 0.4s;}
 
-.task-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border-radius: var(--radius-sm); margin-bottom: 3px; }
-.task-item:active { background: var(--bg); }
-.check-ring { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; margin-top: 1px; }
-.check-ring.checked { background: #276749; border-color: #276749; }
-.check-ring.checked::after { content: ''; width: 5px; height: 9px; border: 1.5px solid white; border-top: none; border-left: none; transform: rotate(42deg) translateY(-1px); display: block; }
-.task-body { flex: 1; min-width: 0; }
-.task-text { font-size: 14px; color: var(--text); line-height: 1.4; }
-.task-item.done .task-text { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-3); }
-.task-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
-.task-due { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); }
-.task-due.urgent { color: #C05621; }
-.task-due.soon { color: #D97706; }
-.task-tag { font-size: 10px; font-family: 'DM Mono', monospace; padding: 1px 6px; border-radius: 4px; background: #EDE9F8; color: #5B3FA8; }
-.task-scheduled { font-size: 10px; font-family: 'DM Mono', monospace; color: #5B3FA8; }
+/* ── Task rows ── */
+.task-list{padding:8px 10px 4px;}
+.person-group{margin-bottom:10px;}
+.person-lbl{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.07em;padding:4px 2px 5px;border-bottom:0.5px solid var(--border);margin-bottom:5px;}
+.task-row{display:flex;align-items:flex-start;gap:9px;padding:8px 6px;border-radius:var(--r2);margin-bottom:2px;}
+.task-row:active{background:var(--bg);}
+.task-row.overdue{background:#FEF2F2;}
+.chk{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;margin-top:1px;}
+.chk.done{background:#16A34A;border-color:#16A34A;}
+.chk.done::after{content:'';width:5px;height:9px;border:1.5px solid #fff;border-top:none;border-left:none;transform:rotate(42deg) translateY(-1px);display:block;}
+.task-body{flex:1;min-width:0;}
+.task-txt{font-size:14px;line-height:1.4;}
+.task-row.done-row .task-txt{color:var(--t3);text-decoration:line-through;}
+.task-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap;}
+.t-pri{font-size:10px;font-family:'DM Mono',monospace;padding:1px 6px;border-radius:4px;}
+.pri-urgent{background:#FEF2F2;color:#DC2626;} .pri-high{background:#FFF7ED;color:#C2410C;} .pri-medium{background:#FEFCE8;color:#A16207;} .pri-low{background:#F0FDF4;color:#15803D;}
+.t-date{font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);}
+.t-date.overdue{color:#DC2626;font-weight:500;}
+.t-tag{font-size:10px;font-family:'DM Mono',monospace;padding:1px 6px;border-radius:4px;background:#EDE9F8;color:#7C3AED;}
+.t-sched{font-size:10px;font-family:'DM Mono',monospace;color:#7C3AED;}
+.task-acts{display:flex;gap:1px;flex-shrink:0;margin-top:1px;}
+.act-btn{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);cursor:pointer;padding:3px 5px;border-radius:5px;opacity:0;transition:opacity 0.15s,background 0.15s;border:none;background:none;}
+.task-row:hover .act-btn{opacity:1;}
+.act-btn:hover{background:var(--bg);color:var(--text);}
+.act-btn.del:hover{background:#FEE2E2;color:#DC2626;}
+.empty-msg{font-size:12px;color:var(--t3);font-family:'DM Mono',monospace;padding:4px 2px 8px;}
 
-.task-actions { display: flex; align-items: center; gap: 1px; flex-shrink: 0; margin-top: 1px; }
-.action-btn { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); cursor: pointer; padding: 3px 6px; border-radius: 5px; opacity: 0; transition: opacity 0.15s, background 0.15s; border: none; background: none; }
-.task-item:hover .action-btn { opacity: 1; }
-.action-btn:hover { background: var(--bg); color: var(--text); }
-.action-btn.del:hover { background: #FEE2E2; color: #C05621; }
+/* ── Add task row ── */
+.add-wrap{padding:8px 10px 10px;border-top:0.5px solid var(--border);}
+.add-main{display:flex;gap:5px;margin-bottom:6px;}
+.add-extras{display:flex;gap:5px;flex-wrap:wrap;}
+.inp{font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 11px;border-radius:var(--r2);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;}
+.inp:focus{border-color:rgba(0,0,0,0.3);background:#fff;}
+.inp::placeholder{color:var(--t3);}
+.inp.flex1{flex:1;min-width:0;}
+.sel{font-family:'DM Mono',monospace;font-size:11px;padding:9px 6px;border-radius:var(--r2);border:0.5px solid var(--border2);background:var(--bg);color:var(--t2);outline:none;cursor:pointer;}
+.inp-date{font-family:'DM Mono',monospace;font-size:11px;padding:9px 8px;border-radius:var(--r2);border:0.5px solid var(--border2);background:var(--bg);color:var(--t2);outline:none;}
+.btn-add{font-size:13px;font-weight:500;padding:9px 14px;border-radius:var(--r2);border:none;background:var(--text);color:#fff;cursor:pointer;white-space:nowrap;}
+.btn-add:active{opacity:0.7;}
+.btn-sm{font-size:12px;padding:7px 11px;border-radius:var(--r2);border:0.5px solid var(--border2);background:transparent;color:var(--t2);cursor:pointer;white-space:nowrap;}
+.btn-sm:hover{background:var(--bg);}
 
-.add-row { display: flex; gap: 5px; padding: 8px 12px 12px; border-top: 0.5px solid var(--border); flex-wrap: wrap; }
-.add-input { flex: 1; min-width: 100px; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text); outline: none; }
-.add-input:focus { border-color: rgba(0,0,0,0.3); background: white; }
-.add-input::placeholder { color: var(--text-3); }
-.add-select { font-family: 'DM Mono', monospace; font-size: 11px; padding: 9px 6px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text-2); outline: none; cursor: pointer; }
-.add-submit { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 9px 14px; border-radius: var(--radius-sm); border: none; background: var(--text); color: white; cursor: pointer; white-space: nowrap; }
-.add-submit:active { opacity: 0.7; }
+/* ── People ── */
+.people-bar{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px;}
+.person-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-family:'DM Mono',monospace;padding:4px 10px;border-radius:20px;background:#F5F3FF;border:0.5px solid rgba(147,51,234,0.2);color:#7C3AED;}
+.chip-del{cursor:pointer;color:rgba(124,58,237,0.5);font-size:11px;}
+.chip-del:hover{color:#DC2626;}
+.add-person-row{display:flex;gap:5px;padding:0 10px 10px;}
+.divider{height:0.5px;background:var(--border);margin:0 10px 8px;}
 
-.people-bar { display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; flex-wrap: wrap; }
-.person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-family: 'DM Mono', monospace; padding: 4px 10px; border-radius: 20px; background: #FFF0F7; border: 0.5px solid rgba(151,38,109,0.2); color: #97266D; }
-.chip-del { cursor: pointer; color: rgba(151,38,109,0.5); font-size: 11px; }
-.chip-del:hover { color: #C05621; }
-.add-person-row { display: flex; gap: 6px; padding: 0 12px 12px; }
-.add-person-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 10px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text); outline: none; }
-.add-person-input::placeholder { color: var(--text-3); }
-.add-person-btn { font-size: 12px; font-family: 'DM Sans', monospace; padding: 7px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; white-space: nowrap; }
-.add-person-btn:hover { background: var(--bg); }
-.people-divider { height: 0.5px; background: var(--border); margin: 0 12px 8px; }
+/* ── Chores ── */
+.chore-list{padding:8px 10px 4px;}
+.chore-row{display:flex;align-items:center;gap:10px;padding:10px 6px;border-radius:var(--r2);margin-bottom:3px;cursor:pointer;transition:background 0.15s;}
+.chore-row:hover{background:var(--bg);}
+.chore-info{flex:1;min-width:0;}
+.chore-name{font-size:14px;line-height:1.3;}
+.chore-last{font-size:11px;font-family:'DM Mono',monospace;margin-top:1px;}
+.fresh-wrap{width:54px;flex-shrink:0;}
+.fresh-track{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;border:0.5px solid var(--border);margin-bottom:2px;}
+.fresh-fill{height:100%;border-radius:3px;transition:width 0.5s ease;}
+.fresh-lbl{font-size:9px;font-family:'DM Mono',monospace;text-align:right;}
+.chore-del{font-size:12px;color:var(--t3);cursor:pointer;padding:4px 5px;border-radius:5px;opacity:0;border:none;background:none;}
+.chore-row:hover .chore-del{opacity:1;}
+.chore-del:hover{background:#FEE2E2;color:#DC2626;}
+.tap-hint{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 10px 8px;}
 
-.chore-list { padding: 10px 12px 4px; }
-.chore-item { display: flex; align-items: center; gap: 12px; padding: 11px 8px; border-radius: var(--radius-sm); margin-bottom: 4px; cursor: pointer; transition: background 0.15s; }
-.chore-item:hover { background: var(--bg); }
-.chore-info { flex: 1; min-width: 0; }
-.chore-name { font-size: 14px; color: var(--text); line-height: 1.3; }
-.chore-last { font-size: 11px; font-family: 'DM Mono', monospace; margin-top: 2px; }
-.freshness-bar-wrap { width: 52px; flex-shrink: 0; }
-.freshness-bar-track { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-bottom: 3px; border: 0.5px solid var(--border); }
-.freshness-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-.freshness-label { font-size: 9px; font-family: 'DM Mono', monospace; text-align: right; }
-.chore-del { font-size: 12px; color: var(--text-3); cursor: pointer; padding: 4px 6px; border-radius: 5px; opacity: 0; border: none; background: none; flex-shrink: 0; }
-.chore-item:hover .chore-del { opacity: 1; }
-.chore-del:hover { background: #FEE2E2; color: #C05621; }
-.tap-hint { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); padding: 2px 12px 8px; }
-.add-chore-row { display: flex; gap: 6px; padding: 8px 12px 12px; border-top: 0.5px solid var(--border); }
+/* ── Activities ── */
+.activity-types{display:flex;flex-wrap:wrap;gap:6px;padding:10px;}
+.act-type-btn{font-size:12px;font-family:'DM Mono',monospace;padding:6px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg);color:var(--t2);cursor:pointer;transition:all 0.15s;}
+.act-type-btn:hover,.act-type-btn.sel{background:var(--text);color:#fff;border-color:var(--text);}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 10px 10px;}
+.week-day{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.wd-label{font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);}
+.wd-dot{width:28px;height:28px;border-radius:50%;background:var(--bg);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);}
+.wd-dot.has-act{background:var(--text);color:#fff;border-color:var(--text);}
+.wd-dot.today{border:2px solid var(--chealth);}
+.act-log{padding:0 10px 10px;}
+.act-log-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);}
+.act-log-item:last-child{border-bottom:none;}
+.act-type-badge{font-size:10px;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--t2);flex-shrink:0;}
+.act-log-date{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);}
+.act-log-notes{font-size:13px;flex:1;}
+.log-form{padding:0 10px 12px;display:flex;flex-direction:column;gap:6px;}
 
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
-.modal-backdrop.hidden { display: none; }
-.modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px calc(24px + var(--safe-bottom)); width: 100%; max-width: 480px; }
-.modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
-.modal-sub { font-size: 13px; color: var(--text-3); font-family: 'DM Mono', monospace; margin-bottom: 20px; }
-.modal-btn { display: block; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 14px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; margin-bottom: 8px; }
-.modal-btn:active { opacity: 0.7; }
-.modal-cancel { background: transparent; border-color: transparent; color: var(--text-3); }
+/* ── Questions ── */
+.q-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:12px;text-align:center;}
+.q-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px;}
+.q-text{font-size:17px;font-weight:300;line-height:1.5;letter-spacing:-0.2px;min-height:80px;display:flex;align-items:center;justify-content:center;}
+.q-btn{font-size:13px;font-weight:500;padding:11px 20px;border-radius:var(--r2);border:none;background:var(--csocial);color:#fff;cursor:pointer;margin-top:16px;width:100%;}
+.q-btn:active{opacity:0.8;}
+.q-count{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:8px;}
 
-.loading { text-align: center; padding: 48px 0; color: var(--text-3); font-size: 13px; font-family: 'DM Mono', monospace; }
-.loading-dots::after { content: '...'; animation: dots 1.2s infinite; }
-@keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
-.empty-msg { font-size: 12px; color: var(--text-3); padding: 4px 2px 8px; font-family: 'DM Mono', monospace; }
+/* ── Modal ── */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:200;}
+.modal-back.hide{display:none;}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + var(--safe-b));width:100%;max-width:480px;}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--t3);font-family:'DM Mono',monospace;margin-bottom:18px;}
+.modal-btn{display:block;width:100%;text-align:left;font-family:'DM Sans',sans-serif;font-size:15px;padding:14px 16px;border-radius:var(--r2);border:0.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;margin-bottom:8px;}
+.modal-btn:active{opacity:0.7;}
+.modal-cancel{background:transparent;border-color:transparent;color:var(--t3);}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:calc(90px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);color:#fff;font-size:13px;font-family:'DM Mono',monospace;padding:10px 18px;border-radius:20px;opacity:0;transition:all 0.3s;z-index:300;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.loading{text-align:center;padding:48px 0;color:var(--t3);font-size:13px;font-family:'DM Mono',monospace;}
+.loading::after{content:'...';animation:dots 1.2s infinite;}
+@keyframes dots{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="top-bar">
-    <h1>my<br/><span>dashboard</span></h1>
-    <div><div class="top-date" id="top-date"></div></div>
+  <div id="main">
+    <!-- HOME / SUMMARY -->
+    <div class="tab-pane active" id="pane-home">
+      <div class="topbar">
+        <div class="topbar-left"><h1>my<br/><b>dashboard</b></h1></div>
+        <div class="topbar-date" id="top-date"></div>
+      </div>
+      <div class="sync-row"><div class="sync-pip" id="sync-pip"></div><span class="sync-txt" id="sync-txt">connecting</span></div>
+      <div id="home-content"><div class="loading">loading</div></div>
+    </div>
+    <!-- HEALTH -->
+    <div class="tab-pane" id="pane-health">
+      <div class="topbar"><div class="topbar-left"><h1><b>Health</b></h1></div></div>
+      <div id="health-content"><div class="loading">loading</div></div>
+    </div>
+    <!-- SOCIAL -->
+    <div class="tab-pane" id="pane-social">
+      <div class="topbar"><div class="topbar-left"><h1><b>Social</b></h1></div></div>
+      <div id="social-content"><div class="loading">loading</div></div>
+    </div>
+    <!-- WORK -->
+    <div class="tab-pane" id="pane-work">
+      <div class="topbar"><div class="topbar-left"><h1><b>Work</b></h1></div></div>
+      <div id="work-content"><div class="loading">loading</div></div>
+    </div>
+    <!-- CHORES -->
+    <div class="tab-pane" id="pane-chores">
+      <div class="topbar"><div class="topbar-left"><h1><b>Home</b></h1></div></div>
+      <div id="chores-content"><div class="loading">loading</div></div>
+    </div>
   </div>
-  <div class="sync-pill"><div class="sync-pip" id="sync-pip"></div><span id="sync-label">connecting</span></div>
-  <div id="root"><div class="loading"><span class="loading-dots">loading</span></div></div>
+
+  <!-- Tab bar -->
+  <nav id="tabs">
+    <button class="tab-btn active" data-tab="home">
+      <span class="tab-icon">◎</span><span class="tab-label">Summary</span>
+    </button>
+    <button class="tab-btn" data-tab="health">
+      <span class="tab-icon">◈</span><span class="tab-label">Health</span>
+    </button>
+    <button class="tab-btn" data-tab="social">
+      <span class="tab-icon">◇</span><span class="tab-label">Social</span>
+    </button>
+    <button class="tab-btn" data-tab="work">
+      <span class="tab-icon">◆</span><span class="tab-label">Work</span>
+    </button>
+    <button class="tab-btn" data-tab="chores">
+      <span class="tab-icon">◉</span><span class="tab-label">Home</span>
+    </button>
+  </nav>
 </div>
 
-<div class="modal-backdrop hidden" id="chore-modal">
+<!-- Chore modal -->
+<div class="modal-back hide" id="chore-modal">
   <div class="modal">
-    <h3 id="chore-modal-title">Mark as done?</h3>
-    <div class="modal-sub" id="chore-modal-sub"></div>
-    <button class="modal-btn" id="chore-modal-confirm">Yes — I just did this</button>
-    <button class="modal-btn modal-cancel" onclick="closeChoreModal()">Cancel</button>
+    <h3 id="cm-title"></h3>
+    <div class="modal-sub" id="cm-sub"></div>
+    <button class="modal-btn" id="cm-confirm">Yes — just did this</button>
+    <button class="modal-btn modal-cancel" onclick="closeModal('chore-modal')">Cancel</button>
   </div>
 </div>
+<!-- Activity log modal -->
+<div class="modal-back hide" id="act-modal">
+  <div class="modal">
+    <h3>Log activity</h3>
+    <div class="modal-sub" id="act-modal-type"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <input class="inp" id="act-notes" placeholder="Notes (optional)" />
+      <input class="inp" id="act-duration" placeholder="Duration (e.g. 45 min)" />
+    </div>
+    <button class="modal-btn" id="act-confirm">Log it</button>
+    <button class="modal-btn modal-cancel" onclick="closeModal('act-modal')">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERXN5__wVsbaA_MEY_dm8Fqw-r_lc3ihIHa3EDmDr9w/exec';
 
+// ── State ─────────────────────────────────────────────────────────────────────
+let S = {
+  tasks:[], chores:[], people:{social:[],work:[]},
+  activities:[], questions:[], gamification:{xp:0,level:1,streakDays:0,lastActiveDate:'',badges:[]},
+  nextId: Date.now(), saveTimer:null, currentTab:'home',
+  pendingChoreId:null, pendingActType:null, questionIdx:0,
+};
+
 const DEFAULT_CHORES = [
-  { id:'c1',  name:'Order paper towels',           intervalDays:14, lastDone:null },
-  { id:'c2',  name:'Order toilet paper',           intervalDays:14, lastDone:null },
-  { id:'c3',  name:'Order mouthwash & toothpaste', intervalDays:21, lastDone:null },
-  { id:'c4',  name:'Vacuum apartment',             intervalDays:7,  lastDone:null },
-  { id:'c5',  name:'Mop apartment',               intervalDays:14, lastDone:null },
-  { id:'c6',  name:'Clean bathroom',              intervalDays:7,  lastDone:null },
-  { id:'c7',  name:'Clean tub',                   intervalDays:14, lastDone:null },
-  { id:'c8',  name:'Make grocery list',            intervalDays:7,  lastDone:null },
-  { id:'c9',  name:'Do laundry',                  intervalDays:7,  lastDone:null },
-  { id:'c10', name:'Change bed sheets',           intervalDays:14, lastDone:null },
-  { id:'c11', name:'Take out trash',              intervalDays:4,  lastDone:null },
-  { id:'c12', name:'Wipe down kitchen surfaces',  intervalDays:5,  lastDone:null },
-  { id:'c13', name:'Clean out fridge',            intervalDays:14, lastDone:null },
+  {id:'c1',name:'Order paper towels',intervalDays:14,lastDone:null},
+  {id:'c2',name:'Order toilet paper',intervalDays:14,lastDone:null},
+  {id:'c3',name:'Order mouthwash & toothpaste',intervalDays:21,lastDone:null},
+  {id:'c4',name:'Vacuum apartment',intervalDays:7,lastDone:null},
+  {id:'c5',name:'Mop apartment',intervalDays:14,lastDone:null},
+  {id:'c6',name:'Clean bathroom',intervalDays:7,lastDone:null},
+  {id:'c7',name:'Clean tub',intervalDays:14,lastDone:null},
+  {id:'c8',name:'Make grocery list',intervalDays:7,lastDone:null},
+  {id:'c9',name:'Do laundry',intervalDays:7,lastDone:null},
+  {id:'c10',name:'Change bed sheets',intervalDays:14,lastDone:null},
+  {id:'c11',name:'Take out trash',intervalDays:4,lastDone:null},
+  {id:'c12',name:'Wipe down kitchen surfaces',intervalDays:5,lastDone:null},
+  {id:'c13',name:'Clean out fridge',intervalDays:14,lastDone:null},
 ];
 
-let tasks  = [];
-let chores = JSON.parse(JSON.stringify(DEFAULT_CHORES));
-let people = { social: [], work: [] };
-let openSections = { home:true, health:true, social:true, work:true };
-let nextId = Date.now();
-let saveTimer = null;
-
-const SECTIONS = [
-  { id:'home',   label:'Home & apartment',        color:'var(--c-home)',   mode:'chores'  },
-  { id:'health', label:'Health',                  color:'var(--c-health)', mode:'tasks'   },
-  { id:'social', label:'Relationships & friends', color:'var(--c-social)', mode:'people'  },
-  { id:'work',   label:'Work',                    color:'var(--c-work)',   mode:'tags'    },
+const ACTIVITY_TYPES = ['bowling','volleyball','workout','yoga','run','walk','other'];
+const LEVEL_THRESHOLDS = [0,100,250,500,900,1500,2500,4000,6000,9000,13000];
+const BADGES = [
+  {id:'first_task',    label:'First step',   desc:'Complete your first task',        check:g=>g.xp>=10},
+  {id:'streak3',       label:'On a roll',    desc:'3-day streak',                    check:g=>g.streakDays>=3},
+  {id:'streak7',       label:'Week warrior', desc:'7-day streak',                    check:g=>g.streakDays>=7},
+  {id:'streak30',      label:'Habit locked', desc:'30-day streak',                   check:g=>g.streakDays>=30},
+  {id:'level5',        label:'Level 5',      desc:'Reached level 5',                 check:g=>g.level>=5},
+  {id:'social_star',   label:'Social star',  desc:'100 XP from social tasks',        check:(g,t)=>t.filter(x=>x.section==='social'&&x.done).length>=10},
+  {id:'health_hero',   label:'Health hero',  desc:'Log 10 activities',               check:(g,t,a)=>a.length>=10},
+  {id:'chore_champ',   label:'Chore champ',  desc:'Mark 20 chores done',             check:g=>g.xp>=200},
+  {id:'workhorse',     label:'Workhorse',    desc:'Complete 25 work tasks',          check:(g,t)=>t.filter(x=>x.section==='work'&&x.done).length>=25},
 ];
 
-// Date header
-const now = new Date();
+// ── Date helpers ──────────────────────────────────────────────────────────────
+const today = new Date();
+const todayStr = today.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const todayIso = today.toISOString().split('T')[0];
 document.getElementById('top-date').innerHTML =
-  now.toLocaleDateString('en-US',{weekday:'long'}) + '<br>' +
-  now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  today.toLocaleDateString('en-US',{weekday:'long'})+'<br>'+
+  today.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
-function setSync(state, label) {
-  document.getElementById('sync-pip').className = 'sync-pip ' + state;
-  document.getElementById('sync-label').textContent = label;
+function isOverdue(dueDate) {
+  if (!dueDate) return false;
+  return new Date(dueDate) < new Date(todayIso);
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function isScheduledToday(t) {
+  if (!t.scheduledFor) return true;
+  return t.scheduledFor === todayStr;
 }
 
+// ── Sync UI ───────────────────────────────────────────────────────────────────
+function setSync(state, txt) {
+  document.getElementById('sync-pip').className = 'sync-pip ' + state;
+  document.getElementById('sync-txt').textContent = txt;
+}
+function toast(msg, dur=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), dur);
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
 async function loadData() {
   setSync('syncing','loading');
   try {
-    const res  = await fetch(API + '?action=getData');
+    const res = await fetch(API + '?action=getData');
     const data = await res.json();
-    if (data.tasks)  tasks  = data.tasks.map(t => ({...t, done: t.done===true||t.done==='TRUE', tags: Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[])}));
-    if (data.chores) chores = data.chores.length ? data.chores : chores;
-    if (data.people) people = { social: data.people.social||[], work: data.people.work||[] };
-    if (tasks.length) nextId = Math.max(...tasks.map(t=>Number(t.id)||0)) + 1;
+    if (data.tasks) S.tasks = data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:t.dueDate||'',priority:t.priority||''}));
+    if (data.chores && data.chores.length) S.chores = data.chores;
+    else S.chores = JSON.parse(JSON.stringify(DEFAULT_CHORES));
+    if (data.people) S.people = {social:data.people.social||[],work:data.people.work||[]};
+    if (data.activities) S.activities = data.activities;
+    if (data.questions && data.questions.length) S.questions = data.questions;
+    if (data.gamification) S.gamification = {...S.gamification,...data.gamification,badges:Array.isArray(data.gamification.badges)?data.gamification.badges:(data.gamification.badges?String(data.gamification.badges).split(',').filter(Boolean):[])};
+    if (S.tasks.length) S.nextId = Math.max(...S.tasks.map(t=>Number(t.id)||0), S.nextId) + 1;
+    updateStreak();
     setSync('synced','synced');
   } catch(e) { setSync('error','offline'); }
-  render();
+  renderAll();
 }
 
 async function saveAll() {
   setSync('syncing','saving');
   try {
-    await fetch(API, { method:'POST', body: JSON.stringify({action:'saveData', tasks, chores, people}) });
+    await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',tasks:S.tasks,chores:S.chores,people:S.people,gamification:S.gamification})});
     setSync('synced','saved');
   } catch(e) { setSync('error','save failed'); }
 }
+function scheduleSave() { clearTimeout(S.saveTimer); S.saveTimer = setTimeout(saveAll, 1200); }
 
-function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveAll, 1200); }
-
-// Task actions
-function toggleDone(id) {
-  const t = tasks.find(t=>t.id==id);
-  if (t) { t.done = !t.done; render(); scheduleSave(); }
+// ── Gamification ──────────────────────────────────────────────────────────────
+function addXP(amount, reason) {
+  S.gamification.xp += amount;
+  const newLevel = LEVEL_THRESHOLDS.findIndex((t,i)=> S.gamification.xp < (LEVEL_THRESHOLDS[i+1]||Infinity));
+  if (newLevel > S.gamification.level) { S.gamification.level = newLevel; toast('Level up! You\'re now level '+newLevel+' ✦'); }
+  checkBadges();
 }
-function deleteTask(id) { tasks = tasks.filter(t=>t.id!=id); render(); scheduleSave(); }
-function dupeNextWeek(id) {
-  const t = tasks.find(t=>t.id==id);
+function checkBadges() {
+  BADGES.forEach(b => {
+    if (!S.gamification.badges.includes(b.id) && b.check(S.gamification, S.tasks, S.activities)) {
+      S.gamification.badges.push(b.id);
+      toast('Badge unlocked: '+b.label+' ✦', 3500);
+    }
+  });
+}
+function updateStreak() {
+  const last = S.gamification.lastActiveDate;
+  if (!last) return;
+  const lastDt = new Date(last);
+  const diffDays = Math.floor((today - lastDt) / 86400000);
+  if (diffDays > 1) S.gamification.streakDays = 0;
+}
+function markActiveToday() {
+  const last = S.gamification.lastActiveDate;
+  if (last === todayIso) return;
+  const lastDt = last ? new Date(last) : null;
+  const diffDays = lastDt ? Math.floor((today - lastDt) / 86400000) : 999;
+  if (diffDays === 1) S.gamification.streakDays++;
+  else if (diffDays > 1) S.gamification.streakDays = 1;
+  else S.gamification.streakDays = Math.max(1, S.gamification.streakDays);
+  S.gamification.lastActiveDate = todayIso;
+}
+function levelLabel(lvl) {
+  const labels = ['Newcomer','Starter','Builder','Achiever','Consistent','Dedicated','Focused','Expert','Elite','Champion','Legend'];
+  return labels[Math.min(lvl,labels.length-1)] || 'Legend';
+}
+function xpForNext(lvl) { return LEVEL_THRESHOLDS[lvl+1] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length-1]; }
+function xpPct() {
+  const lvl = S.gamification.level;
+  const base = LEVEL_THRESHOLDS[lvl] || 0;
+  const next = LEVEL_THRESHOLDS[lvl+1] || base+1000;
+  return Math.min(100, Math.round((S.gamification.xp - base)/(next-base)*100));
+}
+
+// ── Freshness ─────────────────────────────────────────────────────────────────
+function freshness(c) {
+  if (!c.lastDone) return {pct:0,color:'#DC2626',label:'never'};
+  const days = (Date.now()-new Date(c.lastDone))/86400000;
+  const ratio = Math.max(0,1-days/c.intervalDays);
+  const pct = Math.round(ratio*100);
+  const color = ratio<0.25?'#DC2626':ratio<0.5?'#D97706':ratio<0.75?'#CA8A04':'#16A34A';
+  const d = Math.round(days);
+  return {pct,color,label:d===0?'today':d+'d ago'};
+}
+
+// ── Task actions ──────────────────────────────────────────────────────────────
+function toggleTask(id) {
+  const t = S.tasks.find(t=>t.id==id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) { addXP(t.priority==='urgent'?20:t.priority==='high'?15:t.priority==='medium'?10:5); markActiveToday(); }
+  renderAll(); scheduleSave();
+}
+function deleteTask(id) { S.tasks=S.tasks.filter(t=>t.id!=id); renderAll(); scheduleSave(); }
+function dupeTask(id) {
+  const t = S.tasks.find(t=>t.id==id);
   if (!t) return;
   const next = new Date(); next.setDate(next.getDate()+7);
   const label = next.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  tasks.push({...t, id:nextId++, done:false, scheduledFor:label, due:''});
-  render(); scheduleSave();
-  setSync('synced','duped → '+label);
-  setTimeout(()=>setSync('synced','saved'),2500);
+  S.tasks.push({...t,id:S.nextId++,done:false,scheduledFor:label,dueDate:''});
+  renderAll(); scheduleSave();
+  toast('Duped → '+label);
 }
-function addTask(section, text, due, personId, tags) {
+function addTask(section,text,priority,dueDate,personId,tags) {
   if (!text.trim()) return;
-  tasks.push({ id:nextId++, section, text:text.trim(), done:false, due:due||'', personId:personId||'', tags:tags||[], scheduledFor:'', createdAt:new Date().toISOString() });
-  render(); scheduleSave();
+  S.tasks.push({id:S.nextId++,section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:new Date().toISOString()});
+  markActiveToday(); renderAll(); scheduleSave();
 }
 
-// Chore actions
-let pendingChoreId = null;
+// ── Chore actions ─────────────────────────────────────────────────────────────
 function openChoreModal(id) {
-  const c = chores.find(c=>c.id==id);
+  const c = S.chores.find(c=>c.id==id);
   if (!c) return;
-  pendingChoreId = id;
-  document.getElementById('chore-modal-title').textContent = c.name;
+  S.pendingChoreId = id;
+  document.getElementById('cm-title').textContent = c.name;
   const f = freshness(c);
-  document.getElementById('chore-modal-sub').textContent = f.label === 'never' ? 'never done before' : 'last done '+f.label;
-  document.getElementById('chore-modal-confirm').onclick = confirmChoreDone;
-  document.getElementById('chore-modal').classList.remove('hidden');
+  document.getElementById('cm-sub').textContent = 'last done: '+f.label+' · every '+c.intervalDays+' days';
+  document.getElementById('cm-confirm').onclick = confirmChore;
+  document.getElementById('chore-modal').classList.remove('hide');
 }
-function confirmChoreDone() {
-  const c = chores.find(c=>c.id==pendingChoreId);
-  if (c) { c.lastDone = new Date().toISOString(); render(); scheduleSave(); }
-  closeChoreModal();
+function confirmChore() {
+  const c = S.chores.find(c=>c.id==S.pendingChoreId);
+  if (c) { c.lastDone = new Date().toISOString(); addXP(8); markActiveToday(); renderAll(); scheduleSave(); toast('Done! +8 XP'); }
+  closeModal('chore-modal');
 }
-function closeChoreModal() { document.getElementById('chore-modal').classList.add('hidden'); pendingChoreId = null; }
-function deleteChore(id) { chores = chores.filter(c=>c.id!=id); render(); scheduleSave(); }
+function deleteChore(id) { S.chores=S.chores.filter(c=>c.id!=id); renderAll(); scheduleSave(); }
 function addChore(name) {
   if (!name.trim()) return;
-  chores.push({ id:'c'+nextId++, name:name.trim(), intervalDays:7, lastDone:null });
-  render(); scheduleSave();
+  S.chores.push({id:'c'+S.nextId++,name:name.trim(),intervalDays:7,lastDone:null});
+  renderAll(); scheduleSave();
 }
 
-// People actions
-function addPerson(section, name) {
+// ── People actions ────────────────────────────────────────────────────────────
+function addPerson(sec,name) {
   if (!name.trim()) return;
-  if (!people[section]) people[section] = [];
-  people[section].push({ id:'p'+nextId++, name:name.trim() });
-  render(); scheduleSave();
+  if (!S.people[sec]) S.people[sec]=[];
+  S.people[sec].push({id:'p'+S.nextId++,name:name.trim()});
+  renderAll(); scheduleSave();
 }
-function deletePerson(section, id) {
-  people[section] = (people[section]||[]).filter(p=>p.id!=id);
-  tasks = tasks.map(t=>t.personId==id?{...t,personId:''}:t);
-  render(); scheduleSave();
-}
-
-// Freshness
-function freshness(chore) {
-  if (!chore.lastDone) return { pct:0, color:'var(--fresh-old)', label:'never' };
-  const daysSince = (Date.now() - new Date(chore.lastDone)) / 86400000;
-  const ratio = Math.max(0, 1 - daysSince / chore.intervalDays);
-  const pct = Math.round(ratio * 100);
-  const dStr = Math.round(daysSince) + 'd ago';
-  let color = ratio < 0.25 ? 'var(--fresh-old)' : ratio < 0.5 ? 'var(--fresh-stale)' : ratio < 0.75 ? 'var(--fresh-ok)' : 'var(--fresh-great)';
-  return { pct, color, label: dStr };
+function deletePerson(sec,id) {
+  S.people[sec]=(S.people[sec]||[]).filter(p=>p.id!=id);
+  S.tasks=S.tasks.map(t=>t.personId==id?{...t,personId:''}:t);
+  renderAll(); scheduleSave();
 }
 
-function isScheduledToday(t) {
-  if (!t.scheduledFor) return true;
-  const today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  return t.scheduledFor === today;
+// ── Activity actions ──────────────────────────────────────────────────────────
+function openActModal(type) {
+  S.pendingActType = type;
+  document.getElementById('act-modal-type').textContent = type;
+  document.getElementById('act-notes').value='';
+  document.getElementById('act-duration').value='';
+  document.getElementById('act-confirm').onclick = confirmActivity;
+  document.getElementById('act-modal').classList.remove('hide');
+}
+async function confirmActivity() {
+  const notes = document.getElementById('act-notes').value;
+  const dur   = document.getElementById('act-duration').value;
+  const entry = {id:S.nextId++,type:S.pendingActType,date:todayIso,notes,duration:dur};
+  S.activities.push(entry);
+  addXP(15); markActiveToday();
+  try { await fetch(API,{method:'POST',body:JSON.stringify({action:'logActivity',...entry})}); } catch(e){}
+  closeModal('act-modal');
+  renderAll(); scheduleSave();
+  toast('Activity logged! +15 XP');
+}
+function closeModal(id) { document.getElementById(id).classList.add('hide'); }
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  S.currentTab = tab;
+  document.getElementById('main').scrollTo(0,0);
 }
 
-// Render
-function render() {
-  const root = document.getElementById('root');
-  const activeTasks   = tasks.filter(t => !t.scheduledFor || isScheduledToday(t));
-  const futureTasks   = tasks.filter(t => t.scheduledFor && !isScheduledToday(t));
-  const doneTasks     = activeTasks.filter(t => t.done);
+// ── Render all ────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderHome();
+  renderHealth();
+  renderSocial();
+  renderWork();
+  renderChores();
+}
+
+// ── HOME / SUMMARY ────────────────────────────────────────────────────────────
+function renderHome() {
+  const g = S.gamification;
+  const lvl = g.level; const pct = xpPct();
+  const activeTasks = S.tasks.filter(t=>!t.scheduledFor||isScheduledToday(t));
+  const overdue = activeTasks.filter(t=>!t.done&&isOverdue(t.dueDate));
+  const staleChores = S.chores.filter(c=>freshness(c).pct<50).length;
+
+  // Per-section stats
+  const secStats = {
+    health: sectionStat('health',activeTasks),
+    social: sectionStat('social',activeTasks),
+    work:   sectionStat('work',activeTasks),
+  };
+  const actThisWeek = S.activities.filter(a=>{ const d=new Date(a.date); const diff=(today-d)/86400000; return diff<=7; }).length;
+
+  const badges = BADGES.filter(b=>g.badges.includes(b.id));
 
   let html = `
-    <div class="summary">
-      <div class="stat"><div class="stat-n">${activeTasks.length}</div><div class="stat-l">active</div></div>
-      <div class="stat"><div class="stat-n">${doneTasks.length}</div><div class="stat-l">done</div></div>
-      <div class="stat"><div class="stat-n">${futureTasks.length}</div><div class="stat-l">upcoming</div></div>
-    </div>
-  `;
-
-  SECTIONS.forEach(sec => {
-    const isOpen = openSections[sec.id];
-    let badgeHtml = '', progPct = 0;
-
-    if (sec.mode === 'chores') {
-      const stale = chores.filter(c=>freshness(c).pct<50).length;
-      badgeHtml = stale > 0 ? `<span class="sec-badge badge-pending">${stale} stale</span>` : `<span class="sec-badge badge-done">all fresh</span>`;
-    } else {
-      const st = tasks.filter(t=>t.section===sec.id&&(!t.scheduledFor||isScheduledToday(t)));
-      const dn = st.filter(t=>t.done).length;
-      const pn = st.length - dn;
-      progPct = st.length ? Math.round(dn/st.length*100) : 0;
-      badgeHtml = pn > 0 ? `<span class="sec-badge badge-pending">${pn} left</span>` : `<span class="sec-badge badge-done">all done</span>`;
-    }
-
-    let bodyHtml = '';
-    if (isOpen) {
-      if (sec.mode==='chores')  bodyHtml = renderChores();
-      else if (sec.mode==='people') bodyHtml = renderPeopleSection('social');
-      else if (sec.mode==='tags')   bodyHtml = renderTagsSection();
-      else bodyHtml = renderTasksSection(sec.id);
-    }
-
-    html += `
-      <div class="section">
-        <div class="sec-header" data-sec="${sec.id}">
-          <div class="sec-pip" style="background:${sec.color}"></div>
-          <div class="sec-name">${sec.label}</div>
-          ${badgeHtml}
-          <span class="sec-chevron ${isOpen?'open':''}">▼</span>
-        </div>
-        ${sec.mode!=='chores'?`<div class="prog-wrap"><div class="prog-fill" style="width:${progPct}%;background:${sec.color}"></div></div>`:''}
-        ${bodyHtml}
+    <div class="xp-bar-wrap">
+      <div class="xp-top">
+        <span class="xp-level">Level ${lvl} — ${levelLabel(lvl)}</span>
+        <span class="xp-pts">${g.xp} XP</span>
       </div>
-    `;
-  });
+      <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+      ${badges.length?`<div class="xp-badges">${badges.map(b=>`<span class="badge-pill">✦ ${b.label}</span>`).join('')}</div>`:''}
+    </div>`;
 
-  root.innerHTML = html;
-  bindEvents();
-}
-
-function renderChores() {
-  const sorted = [...chores].sort((a,b)=>freshness(a).pct-freshness(b).pct);
-  let html = `<div class="chore-list">`;
-  if (!sorted.length) html += `<div class="empty-msg">no chores yet</div>`;
-  sorted.forEach(c => {
-    const f = freshness(c);
-    html += `
-      <div class="chore-item" data-chore="${c.id}">
-        <div class="chore-info">
-          <div class="chore-name">${escHtml(c.name)}</div>
-          <div class="chore-last" style="color:${f.color}">${f.label}</div>
-        </div>
-        <div class="freshness-bar-wrap">
-          <div class="freshness-bar-track"><div class="freshness-bar-fill" style="width:${f.pct}%;background:${f.color}"></div></div>
-          <div class="freshness-label" style="color:${f.color}">${f.pct}%</div>
-        </div>
-        <button class="chore-del" data-choredel="${c.id}">✕</button>
-      </div>`;
-  });
-  html += `</div>
-  <div class="tap-hint">tap any chore to mark it done</div>
-  <div class="add-chore-row">
-    <input class="add-input" id="chore-inp" placeholder="Add a chore..." />
-    <button class="add-submit" id="chore-add-btn">Add</button>
-  </div>`;
-  return html;
-}
-
-function renderPeopleSection(secId) {
-  const secPeople = people[secId] || [];
-  const secTasks  = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
-  const grouped   = {};
-  secPeople.forEach(p=>{ grouped[p.id]=[]; });
-  grouped['__none__'] = [];
-  secTasks.forEach(t => {
-    const key = t.personId && grouped[t.personId]!==undefined ? t.personId : '__none__';
-    grouped[key].push(t);
-  });
-
-  let html = `<div class="people-bar">`;
-  if (!secPeople.length) html += `<span class="empty-msg" style="padding:0">add people below to group tasks</span>`;
-  secPeople.forEach(p => {
-    html += `<div class="person-chip">${escHtml(p.name)}<span class="chip-del" data-delperson="${p.id}" data-sec="${secId}">✕</span></div>`;
-  });
-  html += `</div>
-  <div class="add-person-row">
-    <input class="add-person-input" id="person-inp-${secId}" placeholder="Add a person..." />
-    <button class="add-person-btn" data-addperson="${secId}">+ Add</button>
-  </div>
-  <div class="people-divider"></div>
-  <div class="task-list">`;
-
-  secPeople.forEach(p => {
-    html += `<div class="person-group"><div class="person-label">${escHtml(p.name)}</div>`;
-    const pt = grouped[p.id]||[];
-    if (!pt.length) html += `<div class="empty-msg">nothing yet</div>`;
-    pt.forEach(t=>{ html += renderTaskRow(t); });
-    html += `</div>`;
-  });
-  if (grouped['__none__'].length) {
-    html += `<div class="person-group">`;
-    if (secPeople.length) html += `<div class="person-label">general</div>`;
-    grouped['__none__'].forEach(t=>{ html += renderTaskRow(t); });
-    html += `</div>`;
+  if (g.streakDays >= 2) {
+    html += `<div class="streak-card">
+      <div class="streak-flame">${g.streakDays>=7?'🔥':'⚡'}</div>
+      <div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>keep it going — don't break the chain</p></div>
+    </div>`;
   }
-  if (!secTasks.length && !secPeople.length) html += `<div class="empty-msg">add people above, then add tasks</div>`;
-  html += `</div>
-  <div class="add-row">
-    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
-    <select class="add-select" id="person-sel-${secId}">
-      <option value="">anyone</option>
-      ${secPeople.map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join('')}
-    </select>
-    <select class="add-select" id="due-${secId}">
-      <option value="">—</option>
-      <option value="soon">soon</option>
-      <option value="urgent">urgent</option>
-    </select>
-    <button class="add-submit" data-addbtn="${secId}">Add</button>
+
+  if (overdue.length) {
+    html += `<div class="overdue-banner"><b>${overdue.length} overdue task${overdue.length>1?'s':''}</b> — check your sections</div>`;
+  }
+
+  html += `<div class="summary-grid">`;
+  // Health card
+  html += summaryCard('Health','◈','var(--chealth)',secStats.health,activeTasks,'health',`${actThisWeek} activities this week`);
+  // Social card
+  html += summaryCard('Social','◇','var(--csocial)',secStats.social,activeTasks,'social',`${(S.people.social||[]).length} people`);
+  // Work card
+  html += summaryCard('Work','◆','var(--cwork)',secStats.work,activeTasks,'work','');
+  // Home card (chores)
+  html += `<div class="summary-card" onclick="switchTab('chores')">
+    <div class="sc-accent" style="background:var(--cchores)"></div>
+    <div class="sc-label">Home</div>
+    <div class="sc-big">${staleChores}</div>
+    <div class="sc-sub">chores need attention</div>
+    <div class="sc-bar"><div class="sc-bar-fill" style="width:${Math.round((S.chores.length-staleChores)/Math.max(S.chores.length,1)*100)}%;background:var(--cchores)"></div></div>
   </div>`;
-  return html;
+  html += `</div>`;
+
+  document.getElementById('home-content').innerHTML = html;
 }
 
-function renderTagsSection() {
-  const secId = 'work';
-  const secTasks = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
-  let html = `<div class="task-list">`;
-  if (!secTasks.length) html += `<div class="empty-msg">no tasks yet</div>`;
-  secTasks.forEach(t=>{ html += renderTaskRow(t); });
-  html += `</div>
-  <div class="add-row">
-    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
-    <input class="add-input" id="tags-${secId}" placeholder="#tag" style="width:72px;flex:none" />
-    <select class="add-select" id="due-${secId}">
-      <option value="">—</option>
-      <option value="soon">soon</option>
-      <option value="urgent">urgent</option>
-    </select>
-    <button class="add-submit" data-addbtn="${secId}">Add</button>
-  </div>`;
-  return html;
+function sectionStat(sec, tasks) {
+  const all = tasks.filter(t=>t.section===sec);
+  const done = all.filter(t=>t.done).length;
+  const over = all.filter(t=>!t.done&&isOverdue(t.dueDate)).length;
+  return {all:all.length,done,pending:all.length-done,over};
 }
 
-function renderTasksSection(secId) {
-  const secTasks = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
-  let html = `<div class="task-list">`;
-  if (!secTasks.length) html += `<div class="empty-msg">no tasks yet</div>`;
-  secTasks.forEach(t=>{ html += renderTaskRow(t); });
-  html += `</div>
-  <div class="add-row">
-    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
-    <select class="add-select" id="due-${secId}">
-      <option value="">—</option>
-      <option value="soon">soon</option>
-      <option value="urgent">urgent</option>
-    </select>
-    <button class="add-submit" data-addbtn="${secId}">Add</button>
+function summaryCard(name,icon,color,stat,tasks,tab,extra) {
+  const pct = stat.all ? Math.round(stat.done/stat.all*100) : 0;
+  return `<div class="summary-card" onclick="switchTab('${tab}')">
+    <div class="sc-accent" style="background:${color}"></div>
+    <div class="sc-label">${name}</div>
+    <div class="sc-big">${stat.pending}</div>
+    <div class="sc-sub">${stat.done}/${stat.all} done${extra?' · '+extra:''}</div>
+    ${stat.over?`<div class="sc-overdue">${stat.over} overdue</div>`:''}
+    <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:${color}"></div></div>
   </div>`;
-  return html;
 }
 
-function renderTaskRow(t) {
-  const dueClass = t.due==='urgent'?'urgent':t.due==='soon'?'soon':'';
-  const tags = Array.isArray(t.tags)?t.tags:[];
-  const tagsHtml = tags.map(tag=>`<span class="task-tag">#${escHtml(tag)}</span>`).join('');
-  const schedHtml = t.scheduledFor?`<span class="task-scheduled">→ ${escHtml(t.scheduledFor)}</span>`:'';
-  const hasMeta = t.due||(tags.length>0)||t.scheduledFor;
-  return `
-    <div class="task-item ${t.done?'done':''}">
-      <div class="check-ring ${t.done?'checked':''}" data-check="${t.id}"></div>
-      <div class="task-body">
-        <div class="task-text">${escHtml(t.text)}</div>
-        ${hasMeta?`<div class="task-meta">
-          ${t.due?`<span class="task-due ${dueClass}">${t.due}</span>`:''}
-          ${tagsHtml}${schedHtml}
-        </div>`:''}
+// ── HEALTH ────────────────────────────────────────────────────────────────────
+function renderHealth() {
+  const tasks = S.tasks.filter(t=>t.section==='health'&&(!t.scheduledFor||isScheduledToday(t)));
+  // Week grid
+  const weekDays = [];
+  for (let i=6;i>=0;i--) { const d=new Date(); d.setDate(d.getDate()-i); weekDays.push(d); }
+  const actByDate = {};
+  S.activities.forEach(a=>{ if (!actByDate[a.date]) actByDate[a.date]=0; actByDate[a.date]++; });
+
+  let html = `
+    <div class="sec">
+      <div class="sec-hd" style="cursor:default">
+        <div class="sec-pip" style="background:var(--chealth)"></div>
+        <div class="sec-name">This week</div>
+        <span class="sec-badge badge-neutral">${S.activities.filter(a=>{const diff=(today-new Date(a.date))/86400000;return diff<=7;}).length} sessions</span>
       </div>
-      <div class="task-actions">
-        <button class="action-btn" data-dupe="${t.id}" title="Repeat next week">+7d</button>
-        <button class="action-btn del" data-del="${t.id}">✕</button>
+      <div class="week-grid">
+        ${weekDays.map(d=>{
+          const iso=d.toISOString().split('T')[0];
+          const isToday=iso===todayIso;
+          const ct=actByDate[iso]||0;
+          return `<div class="week-day">
+            <div class="wd-label">${d.toLocaleDateString('en-US',{weekday:'short'}).slice(0,1)}</div>
+            <div class="wd-dot ${ct?'has-act':''} ${isToday?'today':''}">${ct||''}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="activity-types">
+        ${ACTIVITY_TYPES.map(t=>`<button class="act-type-btn" data-acttype="${t}">${t}</button>`).join('')}
       </div>
     </div>`;
+
+  // Recent activity log
+  const recent = [...S.activities].reverse().slice(0,8);
+  if (recent.length) {
+    html += `<div class="sec">
+      <div class="sec-hd" style="cursor:default">
+        <div class="sec-pip" style="background:var(--chealth)"></div>
+        <div class="sec-name">Activity log</div>
+      </div>
+      <div class="act-log">
+        ${recent.map(a=>`<div class="act-log-item">
+          <span class="act-type-badge">${a.type}</span>
+          <span class="act-log-notes">${a.notes||'—'}</span>
+          <span class="act-log-date">${fmtDate(a.date)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Health tasks
+  html += renderTaskSection('health','Health tasks','var(--chealth)',tasks);
+  document.getElementById('health-content').innerHTML = html;
+  document.querySelectorAll('[data-acttype]').forEach(btn=>{
+    btn.addEventListener('click',()=>openActModal(btn.dataset.acttype));
+  });
+  bindTaskEvents('health');
 }
 
-function bindEvents() {
-  document.querySelectorAll('.sec-header').forEach(el => {
-    el.addEventListener('click', e => {
-      if (e.target.closest('[data-check],[data-del],[data-dupe],[data-addbtn],[data-addperson],[data-delperson],[data-chore],[data-choredel],.add-input,.add-select,.add-person-input,.add-person-btn')) return;
-      openSections[el.dataset.sec] = !openSections[el.dataset.sec];
-      render();
-    });
+// ── SOCIAL ────────────────────────────────────────────────────────────────────
+function renderSocial() {
+  const tasks = S.tasks.filter(t=>t.section==='social'&&(!t.scheduledFor||isScheduledToday(t)));
+  const ppl = S.people.social||[];
+  const grouped = {}; ppl.forEach(p=>{grouped[p.id]=[];}); grouped['__none__']=[];
+  tasks.forEach(t=>{ const k=t.personId&&grouped[t.personId]!==undefined?t.personId:'__none__'; grouped[k].push(t); });
+
+  // Question card
+  const qs = S.questions;
+  const q = qs.length ? qs[S.questionIdx % qs.length] : null;
+
+  let html = ``;
+  if (q) {
+    html += `<div class="q-card">
+      <div class="q-label">relationship question</div>
+      <div class="q-text">${escHtml(q.question||q)}</div>
+      <button class="q-btn" id="next-q-btn">Next question</button>
+      <div class="q-count">${S.questionIdx%qs.length+1} of ${qs.length}</div>
+    </div>`;
+  }
+
+  // People + tasks
+  html += `<div class="sec">
+    <div class="sec-hd" style="cursor:default">
+      <div class="sec-pip" style="background:var(--csocial)"></div>
+      <div class="sec-name">Relationships</div>
+      <span class="sec-badge ${tasks.filter(t=>!t.done).length?'badge-warn':'badge-ok'}">${tasks.filter(t=>!t.done).length} left</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:${tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0}%;background:var(--csocial)"></div></div>
+    <div class="people-bar">
+      ${!ppl.length?'<span class="empty-msg" style="padding:0">add people below</span>':''}
+      ${ppl.map(p=>`<div class="person-chip">${escHtml(p.name)}<span class="chip-del" data-delperson="${p.id}" data-sec="social">✕</span></div>`).join('')}
+    </div>
+    <div class="add-person-row">
+      <input class="inp flex1" id="person-inp-social" placeholder="Add a person..." />
+      <button class="btn-sm" data-addperson="social">+ Add</button>
+    </div>
+    <div class="divider"></div>
+    <div class="task-list">
+      ${ppl.map(p=>{
+        const pt=grouped[p.id]||[];
+        return `<div class="person-group">
+          <div class="person-lbl">${escHtml(p.name)}</div>
+          ${!pt.length?'<div class="empty-msg">nothing yet</div>':''}
+          ${pt.map(t=>taskRowHtml(t)).join('')}
+        </div>`;
+      }).join('')}
+      ${grouped['__none__'].length?`<div class="person-group">
+        ${ppl.length?'<div class="person-lbl">general</div>':''}
+        ${grouped['__none__'].map(t=>taskRowHtml(t)).join('')}
+      </div>`:''}
+      ${!tasks.length&&!ppl.length?'<div class="empty-msg">add people above, then tasks</div>':''}
+    </div>
+    <div class="add-wrap">
+      <div class="add-main">
+        <input class="inp flex1" id="inp-social" placeholder="Add a task..." />
+        <button class="btn-add" data-addbtn="social">Add</button>
+      </div>
+      <div class="add-extras">
+        <select class="sel" id="person-sel-social">
+          <option value="">anyone</option>
+          ${ppl.map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join('')}
+        </select>
+        <select class="sel" id="pri-social"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
+        <input class="inp-date" type="date" id="date-social" />
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('social-content').innerHTML = html;
+
+  document.getElementById('next-q-btn')?.addEventListener('click',()=>{ S.questionIdx++; renderSocial(); });
+  document.querySelectorAll('[data-addperson]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ const s=btn.dataset.addperson; const inp=document.getElementById('person-inp-'+s); if(inp?.value.trim()){addPerson(s,inp.value);inp.value='';} });
   });
-  document.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('click',()=>toggleDone(el.dataset.check)));
+  document.querySelectorAll('[data-delperson]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();deletePerson(el.dataset.sec,el.dataset.delperson);});
+  });
+  document.querySelectorAll('.add-person-input,.add-person-row .inp').forEach(inp=>{
+    inp.addEventListener('keydown',e=>{ if(e.key!=='Enter')return; document.querySelector(`[data-addperson="${inp.id.replace('person-inp-','')}"]`)?.click(); });
+  });
+  bindTaskEvents('social');
+}
+
+// ── WORK ──────────────────────────────────────────────────────────────────────
+function renderWork() {
+  const tasks = S.tasks.filter(t=>t.section==='work'&&(!t.scheduledFor||isScheduledToday(t)));
+  const allTags = [...new Set(tasks.flatMap(t=>t.tags||[]))].sort();
+  let html = `<div class="sec">
+    <div class="sec-hd" style="cursor:default">
+      <div class="sec-pip" style="background:var(--cwork)"></div>
+      <div class="sec-name">Work tasks</div>
+      <span class="sec-badge ${tasks.filter(t=>!t.done).length?'badge-warn':'badge-ok'}">${tasks.filter(t=>!t.done).length} left</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:${tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0}%;background:var(--cwork)"></div></div>
+    <div class="task-list">
+      ${!tasks.length?'<div class="empty-msg">no tasks yet</div>':''}
+      ${tasks.map(t=>taskRowHtml(t)).join('')}
+    </div>
+    ${allTags.length?`<div class="people-bar">${allTags.map(tag=>`<span class="t-tag" style="padding:4px 10px;font-size:11px">#${escHtml(tag)}</span>`).join('')}</div>`:''}
+    <div class="add-wrap">
+      <div class="add-main">
+        <input class="inp flex1" id="inp-work" placeholder="Add a task..." />
+        <button class="btn-add" data-addbtn="work">Add</button>
+      </div>
+      <div class="add-extras">
+        <input class="inp" id="tags-work" placeholder="#tag" style="width:80px;flex:none"/>
+        <select class="sel" id="pri-work"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
+        <input class="inp-date" type="date" id="date-work" />
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('work-content').innerHTML = html;
+  bindTaskEvents('work');
+}
+
+// ── CHORES ────────────────────────────────────────────────────────────────────
+function renderChores() {
+  const sorted = [...S.chores].sort((a,b)=>freshness(a).pct-freshness(b).pct);
+  const stale = sorted.filter(c=>freshness(c).pct<50).length;
+  let html = `<div class="sec">
+    <div class="sec-hd" style="cursor:default">
+      <div class="sec-pip" style="background:var(--cchores)"></div>
+      <div class="sec-name">Recurring chores</div>
+      <span class="sec-badge ${stale?'badge-warn':'badge-ok'}">${stale?stale+' stale':'all fresh'}</span>
+    </div>
+    <div class="chore-list">
+      ${!sorted.length?'<div class="empty-msg">no chores yet</div>':''}
+      ${sorted.map(c=>{
+        const f=freshness(c);
+        return `<div class="chore-row" data-chore="${c.id}">
+          <div class="chore-info">
+            <div class="chore-name">${escHtml(c.name)}</div>
+            <div class="chore-last" style="color:${f.color}">${f.label} · every ${c.intervalDays}d</div>
+          </div>
+          <div class="fresh-wrap">
+            <div class="fresh-track"><div class="fresh-fill" style="width:${f.pct}%;background:${f.color}"></div></div>
+            <div class="fresh-lbl" style="color:${f.color}">${f.pct}%</div>
+          </div>
+          <button class="chore-del" data-choredel="${c.id}">✕</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="tap-hint">tap a chore to mark it done</div>
+    <div class="add-wrap">
+      <div class="add-main">
+        <input class="inp flex1" id="chore-inp" placeholder="Add a chore..." />
+        <button class="btn-add" id="chore-add-btn">Add</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('chores-content').innerHTML = html;
+
+  document.querySelectorAll('.chore-row').forEach(el=>{
+    el.addEventListener('click',e=>{ if(!e.target.closest('[data-choredel]')) openChoreModal(el.dataset.chore); });
+  });
+  document.querySelectorAll('[data-choredel]').forEach(el=>{
+    el.addEventListener('click',e=>{ e.stopPropagation(); deleteChore(el.dataset.choredel); });
+  });
+  const addBtn=document.getElementById('chore-add-btn');
+  const addInp=document.getElementById('chore-inp');
+  if(addBtn) addBtn.addEventListener('click',()=>{ if(addInp?.value.trim()){addChore(addInp.value);addInp.value='';} });
+  if(addInp) { addInp.addEventListener('keydown',e=>{ if(e.key==='Enter')addBtn?.click(); }); addInp.addEventListener('click',e=>e.stopPropagation()); }
+}
+
+// ── Shared task section renderer ──────────────────────────────────────────────
+function renderTaskSection(secId, title, color, tasks) {
+  const pending = tasks.filter(t=>!t.done).length;
+  const pct = tasks.length ? Math.round(tasks.filter(t=>t.done).length/tasks.length*100) : 0;
+  return `<div class="sec">
+    <div class="sec-hd" style="cursor:default">
+      <div class="sec-pip" style="background:${color}"></div>
+      <div class="sec-name">${title}</div>
+      <span class="sec-badge ${pending?'badge-warn':'badge-ok'}">${pending} left</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div class="task-list">
+      ${!tasks.length?'<div class="empty-msg">no tasks yet</div>':''}
+      ${tasks.map(t=>taskRowHtml(t)).join('')}
+    </div>
+    <div class="add-wrap">
+      <div class="add-main">
+        <input class="inp flex1" id="inp-${secId}" placeholder="Add a task..." />
+        <button class="btn-add" data-addbtn="${secId}">Add</button>
+      </div>
+      <div class="add-extras">
+        <select class="sel" id="pri-${secId}"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
+        <input class="inp-date" type="date" id="date-${secId}" />
+      </div>
+    </div>
+  </div>`;
+}
+
+function taskRowHtml(t) {
+  const over = !t.done && isOverdue(t.dueDate);
+  const tags = Array.isArray(t.tags)?t.tags:[];
+  const hasMeta = t.priority||t.dueDate||(tags.length>0)||t.scheduledFor;
+  return `<div class="task-row ${t.done?'done-row':''} ${over?'overdue':''}">
+    <div class="chk ${t.done?'done':''}" data-check="${t.id}"></div>
+    <div class="task-body">
+      <div class="task-txt">${escHtml(t.text)}</div>
+      ${hasMeta?`<div class="task-meta">
+        ${t.priority?`<span class="t-pri pri-${t.priority}">${t.priority}</span>`:''}
+        ${t.dueDate?`<span class="t-date ${over?'overdue':''}">${over?'overdue · ':''} ${fmtDate(t.dueDate)}</span>`:''}
+        ${tags.map(tg=>`<span class="t-tag">#${escHtml(tg)}</span>`).join('')}
+        ${t.scheduledFor?`<span class="t-sched">→ ${escHtml(t.scheduledFor)}</span>`:''}
+      </div>`:''}
+    </div>
+    <div class="task-acts">
+      <button class="act-btn" data-dupe="${t.id}">+7d</button>
+      <button class="act-btn del" data-del="${t.id}">✕</button>
+    </div>
+  </div>`;
+}
+
+function bindTaskEvents(secId) {
+  document.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('click',()=>toggleTask(el.dataset.check)));
   document.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',()=>deleteTask(el.dataset.del)));
-  document.querySelectorAll('[data-dupe]').forEach(el=>el.addEventListener('click',()=>dupeNextWeek(el.dataset.dupe)));
+  document.querySelectorAll('[data-dupe]').forEach(el=>el.addEventListener('click',()=>dupeTask(el.dataset.dupe)));
 
-  document.querySelectorAll('[data-addbtn]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const s = btn.dataset.addbtn;
-      const inp = document.getElementById('inp-'+s);
-      if (!inp||!inp.value.trim()) return;
-      const due = document.getElementById('due-'+s)?.value;
-      const personId = document.getElementById('person-sel-'+s)?.value;
-      const tagInp = document.getElementById('tags-'+s);
-      const tags = tagInp ? tagInp.value.split(/[\s,]+/).map(t=>t.replace(/^#/,'')).filter(Boolean) : [];
-      addTask(s, inp.value, due, personId, tags);
-      inp.value = '';
-      if (tagInp) tagInp.value = '';
+  const addBtn = document.querySelector(`[data-addbtn="${secId}"]`);
+  if (addBtn) {
+    addBtn.addEventListener('click',()=>{
+      const inp = document.getElementById('inp-'+secId);
+      if (!inp?.value.trim()) return;
+      const pri  = document.getElementById('pri-'+secId)?.value;
+      const date = document.getElementById('date-'+secId)?.value;
+      const ps   = document.getElementById('person-sel-'+secId)?.value;
+      const ti   = document.getElementById('tags-'+secId);
+      const tags = ti ? ti.value.split(/[\s,]+/).map(t=>t.replace(/^#/,'')).filter(Boolean) : [];
+      addTask(secId,inp.value,pri,date,ps,tags);
+      inp.value=''; if(ti)ti.value='';
+      const ds=document.getElementById('date-'+secId); if(ds)ds.value='';
+      const ps2=document.getElementById('pri-'+secId); if(ps2)ps2.value='';
     });
-  });
-
-  document.querySelectorAll('.add-input').forEach(inp => {
-    inp.addEventListener('keydown', e => {
-      if (e.key!=='Enter') return;
-      const s = inp.id.replace('inp-','');
-      document.querySelector(`[data-addbtn="${s}"]`)?.click();
-    });
-    inp.addEventListener('click', e=>e.stopPropagation());
-  });
-
-  document.querySelectorAll('[data-addperson]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const s = btn.dataset.addperson;
-      const inp = document.getElementById('person-inp-'+s);
-      if (!inp||!inp.value.trim()) return;
-      addPerson(s, inp.value); inp.value='';
-    });
-  });
-  document.querySelectorAll('.add-person-input').forEach(inp => {
-    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') document.querySelector(`[data-addperson="${inp.id.replace('person-inp-','')}"]`)?.click(); });
-    inp.addEventListener('click', e=>e.stopPropagation());
-  });
-  document.querySelectorAll('[data-delperson]').forEach(el => {
-    el.addEventListener('click', e=>{ e.stopPropagation(); deletePerson(el.dataset.sec, el.dataset.delperson); });
-  });
-
-  document.querySelectorAll('.chore-item').forEach(el => {
-    el.addEventListener('click', e=>{ if(!e.target.closest('[data-choredel]')) openChoreModal(el.dataset.chore); });
-  });
-  document.querySelectorAll('[data-choredel]').forEach(el => {
-    el.addEventListener('click', e=>{ e.stopPropagation(); deleteChore(el.dataset.choredel); });
-  });
-
-  const choreAddBtn = document.getElementById('chore-add-btn');
-  const choreInp    = document.getElementById('chore-inp');
-  if (choreAddBtn) choreAddBtn.addEventListener('click',()=>{ if(choreInp?.value.trim()){addChore(choreInp.value);choreInp.value='';} });
-  if (choreInp)    choreInp.addEventListener('keydown',e=>{ if(e.key==='Enter')choreAddBtn?.click(); });
-  if (choreInp)    choreInp.addEventListener('click',e=>e.stopPropagation());
-
-  document.getElementById('chore-modal').addEventListener('click',e=>{ if(e.target===document.getElementById('chore-modal'))closeChoreModal(); });
+  }
+  const mainInp = document.getElementById('inp-'+secId);
+  if (mainInp) {
+    mainInp.addEventListener('keydown',e=>{ if(e.key==='Enter') addBtn?.click(); });
+    mainInp.addEventListener('click',e=>e.stopPropagation());
+  }
 }
+
+// ── Tab nav ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
+});
+document.getElementById('chore-modal').addEventListener('click',e=>{if(e.target===document.getElementById('chore-modal'))closeModal('chore-modal');});
+document.getElementById('act-modal').addEventListener('click',e=>{if(e.target===document.getElementById('act-modal'))closeModal('act-modal');});
 
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
