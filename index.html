@@ -257,8 +257,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   </div>
   <nav id="tabbar">
     <button class="tab active" data-tab="home"><span class="tab-ic">⊙</span><span class="tab-lbl">Home</span></button>
-    <button class="tab" data-tab="health"><span class="tab-ic">🏃</span><span class="tab-lbl">Health</span></button>
     <button class="tab" data-tab="paige"><span class="tab-ic">💕</span><span class="tab-lbl">Paige</span></button>
+    <button class="tab" data-tab="health"><span class="tab-ic">🏃</span><span class="tab-lbl">Health</span></button>
     <button class="tab" data-tab="social"><span class="tab-ic">👥</span><span class="tab-lbl">Friends</span></button>
     <button class="tab" data-tab="work"><span class="tab-ic">💼</span><span class="tab-lbl">Work</span></button>
     <button class="tab" data-tab="chores"><span class="tab-ic">🏠</span><span class="tab-lbl">Home</span></button>
@@ -327,6 +327,7 @@ let D={
   pendingChoreId:null,pendingActType:null,questionIdx:0,
   editingTaskId:null,editingFinId:null,selectedMood:'',
   weekXpStart:0,weekTasksStart:0,
+  relActs:[],encycNotes:[],encycOpen:false,paigeQIdx:0,
 };
 
 const DEFAULT_CHORES=[
@@ -441,6 +442,8 @@ async function loadData(){
     if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
     if(data.journal) D.journal=data.journal;
     if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
+    if(data.relActs&&data.relActs.length) D.relActs=data.relActs; else D.relActs=JSON.parse(JSON.stringify(RELATIONSHIP_ACTS));
+    if(data.encycNotes) D.encycNotes=data.encycNotes;
     if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
     updateStreak();
     setSync('synced','synced');
@@ -451,7 +454,7 @@ async function loadData(){
 async function saveAll(){
   setSync('syncing','saving');
   try{
-    await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats})});
+    await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes})});
     setSync('synced','saved');
   }catch(e){setSync('error','save failed');}
 }
@@ -666,24 +669,60 @@ const MOOD_PROMPTS={
 // ── Render all ────────────────────────────────────────────────────────────────
 function renderAll(){rHome();rHealth();rPaige();rSocial();rWork();rChores();rFinances();rJournal();}
 
+const RELATIONSHIP_ACTS=[
+  {id:'ra1',name:'Brought home a surprise treat',intervalDays:14,lastDone:null},
+  {id:'ra2',name:'Took care of a task without her asking',intervalDays:7,lastDone:null},
+  {id:'ra3',name:'Planned a date or outing',intervalDays:14,lastDone:null},
+  {id:'ra4',name:'Wrote her a note or message just to say something nice',intervalDays:10,lastDone:null},
+  {id:'ra5',name:'Asked about something she cares about and really listened',intervalDays:5,lastDone:null},
+  {id:'ra6',name:'Did something to help her decompress after a hard day',intervalDays:7,lastDone:null},
+  {id:'ra7',name:'Surprised her with her favorite food or snack',intervalDays:14,lastDone:null},
+  {id:'ra8',name:'Put the phone away and gave her full attention',intervalDays:5,lastDone:null},
+  {id:'ra9',name:'Remembered and followed up on something she mentioned',intervalDays:10,lastDone:null},
+  {id:'ra10',name:'Did something thoughtful without being asked',intervalDays:7,lastDone:null},
+  {id:'ra11',name:'Made her laugh',intervalDays:3,lastDone:null},
+  {id:'ra12',name:'Told her specifically what you appreciate about her',intervalDays:7,lastDone:null},
+];
+
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
 function rPaige(){
+  // seed relationship acts if not loaded
+  if(!D.relActs||!D.relActs.length) D.relActs=JSON.parse(JSON.stringify(RELATIONSHIP_ACTS));
+
   const tasks=D.tasks.filter(t=>t.section==='paige'&&isSchedToday(t));
   const qs=D.questions;
-  const q=qs.length?qs[D.questionIdx%qs.length]:null;
+  const q=qs.length?qs[D.paigeQIdx%qs.length]:null;
   const pend=tasks.filter(t=>!t.done).length;
   const pct=tasks.length?Math.round(tasks.filter(t=>t.done).length/tasks.length*100):0;
+  const sortedActs=[...D.relActs].sort((a,b)=>fresh(a).pct-fresh(b).pct);
+  const staleRel=sortedActs.filter(r=>fresh(r).pct<50).length;
+  const encycOpen=D.encycOpen||false;
 
   let html='';
+
+  // Question card
   if(q){html+=`<div class="qcard">
     <div class="qlbl">💬 ask paige</div>
     <div class="qtxt">${escH(q.question||q)}</div>
     <button class="qbtn" id="nxtq-paige">Next question ↻</button>
-    <div class="qcount">${D.questionIdx%qs.length+1} of ${qs.length}</div>
+    <div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div>
   </div>`;}
 
+  // Relationship freshness
   html+=`<div class="sec">
-    <div class="sec-hd"><span class="sec-ic">💕</span><div class="sec-name">Paige</div><span class="sbadge ${pend?'sw':'sok'}">${pend} left</span></div>
+    <div class="sec-hd"><span class="sec-ic">💝</span><div class="sec-name">Relationship acts</div><span class="sbadge ${staleRel?'sw':'sok'}">${staleRel?staleRel+' overdue':'all good'}</span></div>
+    <div class="tlist">
+      ${sortedActs.map(r=>{const f=fresh(r);return`<div class="crow" data-rel="${r.id}">
+        <div class="cinfo"><div class="cname">${escH(r.name)}</div><div class="clast" style="color:${f.color}">${f.label} · every ${r.intervalDays}d</div></div>
+        <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${f.pct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
+      </div>`;}).join('')}
+    </div>
+    <div class="hint">tap to mark done</div>
+  </div>`;
+
+  // Tasks
+  html+=`<div class="sec">
+    <div class="sec-hd"><span class="sec-ic">💕</span><div class="sec-name">Tasks</div><span class="sbadge ${pend?'sw':'sok'}">${pend} left</span></div>
     <div class="prog"><div class="prog-f" style="width:${pct}%;background:#DB2777"></div></div>
     <div class="tlist">${!tasks.length?'<div class="emsg">no tasks yet</div>':''}${tasks.map(t=>trow(t)).join('')}</div>
     <div class="add-wrap">
@@ -695,8 +734,71 @@ function rPaige(){
     </div>
   </div>`;
 
+  // Paigecyclopedia
+  const notes=D.encycNotes||[];
+  html+=`<div class="sec">
+    <div class="sec-hd" id="encyc-hd" style="cursor:pointer">
+      <span class="sec-ic">📖</span>
+      <div class="sec-name">Paigecyclopedia</div>
+      <span class="sbadge sn">${notes.length} notes</span>
+      <span class="sec-chev ${encycOpen?'open':''}">▼</span>
+    </div>
+    ${encycOpen?`
+    <div class="tlist">
+      ${!notes.length?'<div class="emsg">add gift ideas, things she loves, memories...</div>':''}
+      ${notes.map((n,i)=>`<div class="trow" style="align-items:center">
+        <div class="tbody"><div class="ttxt">${escH(n.text)}</div>${n.cat?`<div class="tmeta"><span class="ttag">${escH(n.cat)}</span></div>`:''}</div>
+        <div class="tacts"><button class="abtn del" data-delnote="${i}">✕</button></div>
+      </div>`).join('')}
+    </div>
+    <div class="add-wrap">
+      <div class="add-main"><input class="inp f1" id="encyc-inp" placeholder="Add a note (gift idea, thing she likes...)"/><button class="badd" id="encyc-add">Add</button></div>
+      <div class="add-extras">
+        <input class="inp" id="encyc-cat" placeholder="category" style="width:110px;flex:none"/>
+      </div>
+    </div>`:``}
+  </div>`;
+
   document.getElementById('paige-content').innerHTML=html;
-  document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.questionIdx++;rPaige();});
+
+  // question
+  document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx=(D.paigeQIdx||0)+1;rPaige();});
+
+  // relationship act tap
+  document.querySelectorAll('[data-rel]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const r=D.relActs.find(r=>r.id==el.dataset.rel);
+      if(!r)return;
+      if(confirm('Mark "'+r.name+'" as done today?')){
+        r.lastDone=new Date().toISOString();addXP(12);markActive();
+        toast('💕 Nice! +12 XP');fireConfetti();rPaige();sched();
+      }
+    });
+  });
+
+  // encyclopedia toggle
+  document.getElementById('encyc-hd')?.addEventListener('click',e=>{
+    if(e.target.closest('[data-delnote]')||e.target.closest('#encyc-add')||e.target.closest('#encyc-inp')||e.target.closest('#encyc-cat'))return;
+    D.encycOpen=!D.encycOpen;rPaige();
+  });
+
+  // add note
+  document.getElementById('encyc-add')?.addEventListener('click',()=>{
+    const inp=document.getElementById('encyc-inp');
+    const cat=document.getElementById('encyc-cat');
+    if(!inp?.value.trim())return;
+    if(!D.encycNotes)D.encycNotes=[];
+    D.encycNotes.push({text:inp.value.trim(),cat:cat?.value.trim()||''});
+    inp.value='';if(cat)cat.value='';
+    rPaige();sched();
+  });
+  document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
+
+  // delete note
+  document.querySelectorAll('[data-delnote]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();D.encycNotes.splice(parseInt(el.dataset.delnote),1);rPaige();sched();});
+  });
+
   bindTaskEv('paige');
 }
 
