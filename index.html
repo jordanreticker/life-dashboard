@@ -21,9 +21,9 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
 button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 #app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
-#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+12px) 12px calc(140px + var(--safe-b));}
-#tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:0.5px solid var(--border);display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:50;transition:transform 0.3s ease;}
-#tabbar.hidden{transform:translateX(-50%) translateY(110%);}
+#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t) + 72px) 12px 32px;}
+#tabbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,0.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:0.5px solid var(--border);display:flex;padding:calc(var(--safe-t) + 4px) 0 4px;z-index:50;}
+#tabbar.hidden{display:none;}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:4px 0;color:var(--t3);transition:color 0.15s;}
 .tab.active{color:var(--text);}
 .tab-ic{font-size:19px;line-height:1;}
@@ -652,23 +652,6 @@ function switchTab(tab){
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   D.currentTab=tab;document.getElementById('main').scrollTo(0,0);
 }
-// ── Auto-hide tab bar on scroll ───────────────────────────────────────────────
-(()=>{
-  let lastY=0,ticking=false;
-  const main=document.getElementById('main');
-  const bar=document.getElementById('tabbar');
-  main.addEventListener('scroll',()=>{
-    if(ticking)return;
-    ticking=true;
-    requestAnimationFrame(()=>{
-      const y=main.scrollTop;
-      if(y>lastY+8) bar.classList.add('hidden');      // scrolling down → hide
-      else if(y<lastY-8) bar.classList.remove('hidden'); // scrolling up → show
-      lastY=y;ticking=false;
-    });
-  },{passive:true});
-})();
-
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 ['chore-modal','act-modal','edit-modal','fin-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});
