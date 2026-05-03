@@ -657,9 +657,9 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>swit
 const MOOD_PROMPTS={
   '😊':['What made you smile today?','Who or what contributed most to your good mood?','How can you carry this energy into tomorrow?'],
   '😐':['What felt flat or neutral today? Why?','Is there something small you could do to shift your energy?','What would make tomorrow feel more alive?'],
-  '😔':['What's weighing on you right now?','Is there something you need that you're not getting?','What's one small thing that could help you feel a little better?'],
+  '😔':['What is weighing on you right now?','Is there something you need that you are not getting?','What is one small thing that could help you feel a little better?'],
   '😤':['What triggered the frustration today?','What would a fair resolution look like?','Is there something you need to say to someone?'],
-  '😴':['What's draining your energy lately?','Are you taking care of your basics — sleep, food, movement?','What would help you recharge?'],
+  '😴':['What is draining your energy lately?','Are you taking care of your basics — sleep, food, movement?','What would help you recharge?'],
   '🤩':['What got you fired up today?','How can you build on this momentum?','Who deserves credit for making today great?'],
 };
 
@@ -741,10 +741,7 @@ function rHome(){
   const ss={health:secStat('health'),social:secStat('social'),work:secStat('work'),paige:secStat('paige')};
 
   html+=`<div class="sum-grid">
-    ${sumCard('💕','Paige','#DB2777','paige',ss.paige,'')}
-    ${sumCard('🏃','Health','var(--chealth)','health',ss.health,actWeek+' sessions')}
-    ${sumCard('👥','Friends','var(--csocial)','social',ss.social,(D.people.social||[]).length+' people')}
-    ${sumCard('💼','Work','var(--cwork)','work',ss.work,'')}
+    `+sumCard('💕','Paige','#DB2777','paige',ss.paige,'')+sumCard('🏃','Health','var(--chealth)','health',ss.health,actWeek+' sessions')+sumCard('👥','Friends','var(--csocial)','social',ss.social,(D.people.social||[]).length+' people')+sumCard('💼','Work','var(--cwork)','work',ss.work,'')+`
     <div class="sc" onclick="switchTab('chores')">
       <div class="sc-accent" style="background:var(--cchores)"></div>
       <div class="sc-icon">🏠</div>
