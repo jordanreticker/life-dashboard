@@ -9,515 +9,570 @@
 <title>Life Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --bg: #F5F3EE;
-    --surface: #FFFFFF;
-    --border: rgba(0,0,0,0.08);
-    --border-strong: rgba(0,0,0,0.14);
-    --text: #1A1A18;
-    --text-2: #6B6B66;
-    --text-3: #A8A8A3;
-    --home: #2B6CB0;
-    --home-bg: #EBF4FF;
-    --health: #276749;
-    --health-bg: #E6F4EE;
-    --social: #97266D;
-    --social-bg: #FFF0F7;
-    --urgent: #C05621;
-    --urgent-bg: #FFF5EE;
-    --done-color: #276749;
-    --radius: 14px;
-    --radius-sm: 8px;
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+:root {
+  --bg: #F5F3EE;
+  --surface: #FFFFFF;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.16);
+  --text: #1A1A18;
+  --text-2: #6B6B66;
+  --text-3: #A8A8A3;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --c-home: #2B6CB0;
+  --c-health: #276749;
+  --c-social: #97266D;
+  --c-work: #5B3FA8;
+  --fresh-great: #276749;
+  --fresh-ok: #D97706;
+  --fresh-stale: #C05621;
+  --fresh-old: #9B1C1C;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+#app { max-width: 480px; margin: 0 auto; padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 40px); }
 
-  #app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100%;
-    padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 32px);
-  }
+.top-bar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.top-bar h1 { font-size: 28px; font-weight: 300; letter-spacing: -0.5px; line-height: 1.1; }
+.top-bar h1 span { font-weight: 500; }
+.top-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-3); text-align: right; line-height: 1.6; margin-top: 4px; }
 
-  /* Header */
-  .top-bar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 24px;
-  }
-  .top-bar h1 {
-    font-size: 28px;
-    font-weight: 300;
-    letter-spacing: -0.5px;
-    color: var(--text);
-    line-height: 1.1;
-  }
-  .top-bar h1 span { font-weight: 500; }
-  .top-date {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--text-3);
-    text-align: right;
-    margin-top: 4px;
-    line-height: 1.6;
-  }
+.sync-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); padding: 4px 10px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 20px; margin-bottom: 20px; }
+.sync-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; transition: background 0.3s; }
+.sync-pip.synced { background: #276749; }
+.sync-pip.syncing { background: #D97706; animation: blink 0.8s infinite; }
+.sync-pip.error { background: #C05621; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  /* Sync pill */
-  .sync-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    font-family: 'DM Mono', monospace;
-    color: var(--text-3);
-    padding: 4px 10px;
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: 20px;
-    margin-bottom: 20px;
-  }
-  .sync-pip {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--text-3);
-    flex-shrink: 0;
-    transition: background 0.3s;
-  }
-  .sync-pip.synced { background: #276749; }
-  .sync-pip.syncing { background: #D97706; animation: blink 0.8s infinite; }
-  .sync-pip.error { background: #C05621; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 24px; }
+.stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 10px; text-align: center; }
+.stat-n { font-size: 26px; font-weight: 300; letter-spacing: -1px; line-height: 1; }
+.stat-l { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
 
-  /* Summary row */
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 24px;
-  }
-  .stat {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 10px;
-    text-align: center;
-  }
-  .stat-n {
-    font-size: 26px;
-    font-weight: 300;
-    letter-spacing: -1px;
-    color: var(--text);
-    line-height: 1;
-  }
-  .stat-l {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    color: var(--text-3);
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
+.section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.sec-header { display: flex; align-items: center; padding: 16px 16px 14px; cursor: pointer; user-select: none; gap: 10px; }
+.sec-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sec-name { flex: 1; font-size: 15px; font-weight: 500; letter-spacing: -0.2px; }
+.sec-badge { font-size: 11px; font-family: 'DM Mono', monospace; padding: 3px 9px; border-radius: 20px; }
+.badge-pending { background: #FFF5EE; color: #C05621; }
+.badge-done { background: #E6F4EE; color: #276749; }
+.sec-chevron { font-size: 10px; color: var(--text-3); transition: transform 0.2s; margin-left: 4px; }
+.sec-chevron.open { transform: rotate(180deg); }
+.prog-wrap { height: 2px; background: var(--bg); margin: 0 16px; }
+.prog-fill { height: 100%; border-radius: 1px; transition: width 0.4s ease; }
 
-  /* Section cards */
-  .section {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.2s;
-  }
+.task-list { padding: 10px 12px 4px; }
+.person-group { margin-bottom: 10px; }
+.person-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 2px 6px; border-bottom: 0.5px solid var(--border); margin-bottom: 6px; }
 
-  .sec-header {
-    display: flex;
-    align-items: center;
-    padding: 16px 16px 14px;
-    cursor: pointer;
-    user-select: none;
-    gap: 10px;
-  }
-  .sec-pip {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .sec-name {
-    flex: 1;
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: -0.2px;
-  }
-  .sec-badge {
-    font-size: 11px;
-    font-family: 'DM Mono', monospace;
-    padding: 3px 9px;
-    border-radius: 20px;
-    font-weight: 400;
-  }
-  .badge-pending { background: #FFF5EE; color: #C05621; }
-  .badge-done { background: #E6F4EE; color: #276749; }
-  .sec-chevron {
-    font-size: 10px;
-    color: var(--text-3);
-    transition: transform 0.2s;
-    margin-left: 4px;
-  }
-  .sec-chevron.open { transform: rotate(180deg); }
+.task-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border-radius: var(--radius-sm); margin-bottom: 3px; }
+.task-item:active { background: var(--bg); }
+.check-ring { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; margin-top: 1px; }
+.check-ring.checked { background: #276749; border-color: #276749; }
+.check-ring.checked::after { content: ''; width: 5px; height: 9px; border: 1.5px solid white; border-top: none; border-left: none; transform: rotate(42deg) translateY(-1px); display: block; }
+.task-body { flex: 1; min-width: 0; }
+.task-text { font-size: 14px; color: var(--text); line-height: 1.4; }
+.task-item.done .task-text { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-3); }
+.task-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
+.task-due { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text-3); }
+.task-due.urgent { color: #C05621; }
+.task-due.soon { color: #D97706; }
+.task-tag { font-size: 10px; font-family: 'DM Mono', monospace; padding: 1px 6px; border-radius: 4px; background: #EDE9F8; color: #5B3FA8; }
+.task-scheduled { font-size: 10px; font-family: 'DM Mono', monospace; color: #5B3FA8; }
 
-  /* Progress bar */
-  .prog-wrap {
-    height: 2px;
-    background: var(--bg);
-    margin: 0 16px;
-  }
-  .prog-fill {
-    height: 100%;
-    border-radius: 1px;
-    transition: width 0.4s ease;
-  }
+.task-actions { display: flex; align-items: center; gap: 1px; flex-shrink: 0; margin-top: 1px; }
+.action-btn { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); cursor: pointer; padding: 3px 6px; border-radius: 5px; opacity: 0; transition: opacity 0.15s, background 0.15s; border: none; background: none; }
+.task-item:hover .action-btn { opacity: 1; }
+.action-btn:hover { background: var(--bg); color: var(--text); }
+.action-btn.del:hover { background: #FEE2E2; color: #C05621; }
 
-  /* Task list */
-  .task-list { padding: 10px 12px 12px; }
+.add-row { display: flex; gap: 5px; padding: 8px 12px 12px; border-top: 0.5px solid var(--border); flex-wrap: wrap; }
+.add-input { flex: 1; min-width: 100px; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text); outline: none; }
+.add-input:focus { border-color: rgba(0,0,0,0.3); background: white; }
+.add-input::placeholder { color: var(--text-3); }
+.add-select { font-family: 'DM Mono', monospace; font-size: 11px; padding: 9px 6px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text-2); outline: none; cursor: pointer; }
+.add-submit { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 9px 14px; border-radius: var(--radius-sm); border: none; background: var(--text); color: white; cursor: pointer; white-space: nowrap; }
+.add-submit:active { opacity: 0.7; }
 
-  .task-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 10px;
-    border-radius: var(--radius-sm);
-    margin-bottom: 4px;
-    transition: background 0.15s;
-    cursor: default;
-  }
-  .task-item:last-child { margin-bottom: 0; }
-  .task-item:active { background: var(--bg); }
+.people-bar { display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; flex-wrap: wrap; }
+.person-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-family: 'DM Mono', monospace; padding: 4px 10px; border-radius: 20px; background: #FFF0F7; border: 0.5px solid rgba(151,38,109,0.2); color: #97266D; }
+.chip-del { cursor: pointer; color: rgba(151,38,109,0.5); font-size: 11px; }
+.chip-del:hover { color: #C05621; }
+.add-person-row { display: flex; gap: 6px; padding: 0 12px 12px; }
+.add-person-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 10px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: var(--bg); color: var(--text); outline: none; }
+.add-person-input::placeholder { color: var(--text-3); }
+.add-person-btn { font-size: 12px; font-family: 'DM Sans', monospace; padding: 7px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.add-person-btn:hover { background: var(--bg); }
+.people-divider { height: 0.5px; background: var(--border); margin: 0 12px 8px; }
 
-  .check-ring {
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border-strong);
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    position: relative;
-  }
-  .check-ring.checked {
-    background: var(--done-color);
-    border-color: var(--done-color);
-  }
-  .check-ring.checked::after {
-    content: '';
-    width: 5px; height: 9px;
-    border: 1.5px solid white;
-    border-top: none; border-left: none;
-    transform: rotate(42deg) translateY(-1px);
-    display: block;
-  }
+.chore-list { padding: 10px 12px 4px; }
+.chore-item { display: flex; align-items: center; gap: 12px; padding: 11px 8px; border-radius: var(--radius-sm); margin-bottom: 4px; cursor: pointer; transition: background 0.15s; }
+.chore-item:hover { background: var(--bg); }
+.chore-info { flex: 1; min-width: 0; }
+.chore-name { font-size: 14px; color: var(--text); line-height: 1.3; }
+.chore-last { font-size: 11px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.freshness-bar-wrap { width: 52px; flex-shrink: 0; }
+.freshness-bar-track { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; margin-bottom: 3px; border: 0.5px solid var(--border); }
+.freshness-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.freshness-label { font-size: 9px; font-family: 'DM Mono', monospace; text-align: right; }
+.chore-del { font-size: 12px; color: var(--text-3); cursor: pointer; padding: 4px 6px; border-radius: 5px; opacity: 0; border: none; background: none; flex-shrink: 0; }
+.chore-item:hover .chore-del { opacity: 1; }
+.chore-del:hover { background: #FEE2E2; color: #C05621; }
+.tap-hint { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-3); padding: 2px 12px 8px; }
+.add-chore-row { display: flex; gap: 6px; padding: 8px 12px 12px; border-top: 0.5px solid var(--border); }
 
-  .task-text-wrap { flex: 1; min-width: 0; }
-  .task-text {
-    font-size: 14px;
-    color: var(--text);
-    line-height: 1.4;
-    transition: color 0.2s;
-  }
-  .task-item.done .task-text {
-    color: var(--text-3);
-    text-decoration: line-through;
-    text-decoration-color: var(--text-3);
-  }
-  .task-due {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    margin-top: 2px;
-    color: var(--text-3);
-  }
-  .task-due.urgent { color: var(--urgent); }
-  .task-due.soon { color: #D97706; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+.modal-backdrop.hidden { display: none; }
+.modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px calc(24px + var(--safe-bottom)); width: 100%; max-width: 480px; }
+.modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+.modal-sub { font-size: 13px; color: var(--text-3); font-family: 'DM Mono', monospace; margin-bottom: 20px; }
+.modal-btn { display: block; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 14px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; margin-bottom: 8px; }
+.modal-btn:active { opacity: 0.7; }
+.modal-cancel { background: transparent; border-color: transparent; color: var(--text-3); }
 
-  .del-btn {
-    font-size: 14px;
-    color: var(--text-3);
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 6px;
-    opacity: 0;
-    transition: opacity 0.15s, background 0.15s;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .task-item:hover .del-btn { opacity: 1; }
-  .del-btn:hover { background: #FEE2E2; color: #C05621; }
-
-  /* Add row */
-  .add-row {
-    display: flex;
-    gap: 6px;
-    padding: 8px 12px 12px;
-    border-top: 0.5px solid var(--border);
-    margin-top: 4px;
-  }
-  .add-input {
-    flex: 1;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    padding: 9px 12px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border-strong);
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .add-input::placeholder { color: var(--text-3); }
-  .add-input:focus { border-color: rgba(0,0,0,0.3); background: white; }
-  .add-submit {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 9px 16px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border-strong);
-    background: var(--text);
-    color: white;
-    cursor: pointer;
-    transition: opacity 0.15s;
-    white-space: nowrap;
-  }
-  .add-submit:active { opacity: 0.7; }
-
-  /* Due selector */
-  .due-sel {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    padding: 9px 8px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border-strong);
-    background: var(--bg);
-    color: var(--text-2);
-    outline: none;
-    cursor: pointer;
-  }
-
-  /* Loading */
-  .loading {
-    text-align: center;
-    padding: 48px 0;
-    color: var(--text-3);
-    font-size: 13px;
-    font-family: 'DM Mono', monospace;
-  }
-  .loading-dots::after {
-    content: '...';
-    animation: dots 1.2s infinite;
-  }
-  @keyframes dots {
-    0%{content:'.'} 33%{content:'..'} 66%{content:'...'} 100%{content:'.'}
-  }
-
-  /* Empty */
-  .empty-msg {
-    font-size: 13px;
-    color: var(--text-3);
-    padding: 6px 2px 8px;
-    font-family: 'DM Mono', monospace;
-  }
+.loading { text-align: center; padding: 48px 0; color: var(--text-3); font-size: 13px; font-family: 'DM Mono', monospace; }
+.loading-dots::after { content: '...'; animation: dots 1.2s infinite; }
+@keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+.empty-msg { font-size: 12px; color: var(--text-3); padding: 4px 2px 8px; font-family: 'DM Mono', monospace; }
 </style>
 </head>
 <body>
 <div id="app">
   <div class="top-bar">
     <h1>my<br/><span>dashboard</span></h1>
-    <div>
-      <div class="top-date" id="top-date"></div>
-    </div>
+    <div><div class="top-date" id="top-date"></div></div>
   </div>
-  <div class="sync-pill">
-    <div class="sync-pip" id="sync-pip"></div>
-    <span id="sync-label">connecting</span>
-  </div>
+  <div class="sync-pill"><div class="sync-pip" id="sync-pip"></div><span id="sync-label">connecting</span></div>
   <div id="root"><div class="loading"><span class="loading-dots">loading</span></div></div>
+</div>
+
+<div class="modal-backdrop hidden" id="chore-modal">
+  <div class="modal">
+    <h3 id="chore-modal-title">Mark as done?</h3>
+    <div class="modal-sub" id="chore-modal-sub"></div>
+    <button class="modal-btn" id="chore-modal-confirm">Yes — I just did this</button>
+    <button class="modal-btn modal-cancel" onclick="closeChoreModal()">Cancel</button>
+  </div>
 </div>
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERXN5__wVsbaA_MEY_dm8Fqw-r_lc3ihIHa3EDmDr9w/exec';
 
-const SECTIONS = [
-  { id: 'home',   label: 'Home & apartment',      color: '#2B6CB0' },
-  { id: 'health', label: 'Health',                 color: '#276749' },
-  { id: 'social', label: 'Relationships & friends', color: '#97266D' },
+const DEFAULT_CHORES = [
+  { id:'c1',  name:'Order paper towels',           intervalDays:14, lastDone:null },
+  { id:'c2',  name:'Order toilet paper',           intervalDays:14, lastDone:null },
+  { id:'c3',  name:'Order mouthwash & toothpaste', intervalDays:21, lastDone:null },
+  { id:'c4',  name:'Vacuum apartment',             intervalDays:7,  lastDone:null },
+  { id:'c5',  name:'Mop apartment',               intervalDays:14, lastDone:null },
+  { id:'c6',  name:'Clean bathroom',              intervalDays:7,  lastDone:null },
+  { id:'c7',  name:'Clean tub',                   intervalDays:14, lastDone:null },
+  { id:'c8',  name:'Make grocery list',            intervalDays:7,  lastDone:null },
+  { id:'c9',  name:'Do laundry',                  intervalDays:7,  lastDone:null },
+  { id:'c10', name:'Change bed sheets',           intervalDays:14, lastDone:null },
+  { id:'c11', name:'Take out trash',              intervalDays:4,  lastDone:null },
+  { id:'c12', name:'Wipe down kitchen surfaces',  intervalDays:5,  lastDone:null },
+  { id:'c13', name:'Clean out fridge',            intervalDays:14, lastDone:null },
 ];
 
-let tasks = [];
-let openSections = { home: true, health: true, social: true };
+let tasks  = [];
+let chores = JSON.parse(JSON.stringify(DEFAULT_CHORES));
+let people = { social: [], work: [] };
+let openSections = { home:true, health:true, social:true, work:true };
 let nextId = Date.now();
 let saveTimer = null;
 
-// ── Date ────────────────────────────────────────────────────────────────────
-const d = new Date();
-document.getElementById('top-date').innerHTML =
-  d.toLocaleDateString('en-US', { weekday: 'long' }) + '<br>' +
-  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const SECTIONS = [
+  { id:'home',   label:'Home & apartment',        color:'var(--c-home)',   mode:'chores'  },
+  { id:'health', label:'Health',                  color:'var(--c-health)', mode:'tasks'   },
+  { id:'social', label:'Relationships & friends', color:'var(--c-social)', mode:'people'  },
+  { id:'work',   label:'Work',                    color:'var(--c-work)',   mode:'tags'    },
+];
 
-// ── Sync UI ─────────────────────────────────────────────────────────────────
+// Date header
+const now = new Date();
+document.getElementById('top-date').innerHTML =
+  now.toLocaleDateString('en-US',{weekday:'long'}) + '<br>' +
+  now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
 function setSync(state, label) {
   document.getElementById('sync-pip').className = 'sync-pip ' + state;
   document.getElementById('sync-label').textContent = label;
 }
 
-// ── API ──────────────────────────────────────────────────────────────────────
-async function loadTasks() {
-  setSync('syncing', 'loading');
+async function loadData() {
+  setSync('syncing','loading');
   try {
-    const res = await fetch(API + '?action=getTasks');
+    const res  = await fetch(API + '?action=getData');
     const data = await res.json();
-    if (data.tasks) {
-      tasks = data.tasks.map(t => ({ ...t, done: t.done === true || t.done === 'TRUE' }));
-      if (tasks.length > 0) nextId = Math.max(...tasks.map(t => Number(t.id) || 0)) + 1;
-    }
-    setSync('synced', 'synced');
-  } catch (e) {
-    setSync('error', 'offline');
-  }
+    if (data.tasks)  tasks  = data.tasks.map(t => ({...t, done: t.done===true||t.done==='TRUE', tags: Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[])}));
+    if (data.chores) chores = data.chores.length ? data.chores : chores;
+    if (data.people) people = { social: data.people.social||[], work: data.people.work||[] };
+    if (tasks.length) nextId = Math.max(...tasks.map(t=>Number(t.id)||0)) + 1;
+    setSync('synced','synced');
+  } catch(e) { setSync('error','offline'); }
   render();
 }
 
-async function saveTasks() {
-  setSync('syncing', 'saving');
+async function saveAll() {
+  setSync('syncing','saving');
   try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveTasks', tasks }),
-    });
-    setSync('synced', 'saved');
-  } catch (e) {
-    setSync('error', 'save failed');
-  }
+    await fetch(API, { method:'POST', body: JSON.stringify({action:'saveData', tasks, chores, people}) });
+    setSync('synced','saved');
+  } catch(e) { setSync('error','save failed'); }
 }
 
-function scheduleSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveTasks, 1200);
-}
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveAll, 1200); }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+// Task actions
 function toggleDone(id) {
-  const t = tasks.find(t => t.id == id);
+  const t = tasks.find(t=>t.id==id);
   if (t) { t.done = !t.done; render(); scheduleSave(); }
 }
-
-function deleteTask(id) {
-  tasks = tasks.filter(t => t.id != id);
+function deleteTask(id) { tasks = tasks.filter(t=>t.id!=id); render(); scheduleSave(); }
+function dupeNextWeek(id) {
+  const t = tasks.find(t=>t.id==id);
+  if (!t) return;
+  const next = new Date(); next.setDate(next.getDate()+7);
+  const label = next.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  tasks.push({...t, id:nextId++, done:false, scheduledFor:label, due:''});
   render(); scheduleSave();
+  setSync('synced','duped → '+label);
+  setTimeout(()=>setSync('synced','saved'),2500);
 }
-
-function addTask(section, text, due) {
+function addTask(section, text, due, personId, tags) {
   if (!text.trim()) return;
-  tasks.push({ id: nextId++, section, text: text.trim(), done: false, due: due || '', createdAt: new Date().toISOString() });
+  tasks.push({ id:nextId++, section, text:text.trim(), done:false, due:due||'', personId:personId||'', tags:tags||[], scheduledFor:'', createdAt:new Date().toISOString() });
   render(); scheduleSave();
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// Chore actions
+let pendingChoreId = null;
+function openChoreModal(id) {
+  const c = chores.find(c=>c.id==id);
+  if (!c) return;
+  pendingChoreId = id;
+  document.getElementById('chore-modal-title').textContent = c.name;
+  const f = freshness(c);
+  document.getElementById('chore-modal-sub').textContent = f.label === 'never' ? 'never done before' : 'last done '+f.label;
+  document.getElementById('chore-modal-confirm').onclick = confirmChoreDone;
+  document.getElementById('chore-modal').classList.remove('hidden');
+}
+function confirmChoreDone() {
+  const c = chores.find(c=>c.id==pendingChoreId);
+  if (c) { c.lastDone = new Date().toISOString(); render(); scheduleSave(); }
+  closeChoreModal();
+}
+function closeChoreModal() { document.getElementById('chore-modal').classList.add('hidden'); pendingChoreId = null; }
+function deleteChore(id) { chores = chores.filter(c=>c.id!=id); render(); scheduleSave(); }
+function addChore(name) {
+  if (!name.trim()) return;
+  chores.push({ id:'c'+nextId++, name:name.trim(), intervalDays:7, lastDone:null });
+  render(); scheduleSave();
+}
+
+// People actions
+function addPerson(section, name) {
+  if (!name.trim()) return;
+  if (!people[section]) people[section] = [];
+  people[section].push({ id:'p'+nextId++, name:name.trim() });
+  render(); scheduleSave();
+}
+function deletePerson(section, id) {
+  people[section] = (people[section]||[]).filter(p=>p.id!=id);
+  tasks = tasks.map(t=>t.personId==id?{...t,personId:''}:t);
+  render(); scheduleSave();
+}
+
+// Freshness
+function freshness(chore) {
+  if (!chore.lastDone) return { pct:0, color:'var(--fresh-old)', label:'never' };
+  const daysSince = (Date.now() - new Date(chore.lastDone)) / 86400000;
+  const ratio = Math.max(0, 1 - daysSince / chore.intervalDays);
+  const pct = Math.round(ratio * 100);
+  const dStr = Math.round(daysSince) + 'd ago';
+  let color = ratio < 0.25 ? 'var(--fresh-old)' : ratio < 0.5 ? 'var(--fresh-stale)' : ratio < 0.75 ? 'var(--fresh-ok)' : 'var(--fresh-great)';
+  return { pct, color, label: dStr };
+}
+
+function isScheduledToday(t) {
+  if (!t.scheduledFor) return true;
+  const today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return t.scheduledFor === today;
+}
+
+// Render
 function render() {
   const root = document.getElementById('root');
-  const allTasks = tasks;
-  const doneTasks = allTasks.filter(t => t.done);
-  const pct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
+  const activeTasks   = tasks.filter(t => !t.scheduledFor || isScheduledToday(t));
+  const futureTasks   = tasks.filter(t => t.scheduledFor && !isScheduledToday(t));
+  const doneTasks     = activeTasks.filter(t => t.done);
 
   let html = `
     <div class="summary">
-      <div class="stat"><div class="stat-n">${allTasks.length}</div><div class="stat-l">total</div></div>
+      <div class="stat"><div class="stat-n">${activeTasks.length}</div><div class="stat-l">active</div></div>
       <div class="stat"><div class="stat-n">${doneTasks.length}</div><div class="stat-l">done</div></div>
-      <div class="stat"><div class="stat-n">${pct}%</div><div class="stat-l">complete</div></div>
+      <div class="stat"><div class="stat-n">${futureTasks.length}</div><div class="stat-l">upcoming</div></div>
     </div>
   `;
 
   SECTIONS.forEach(sec => {
-    const secTasks = tasks.filter(t => t.section === sec.id);
-    const secDone = secTasks.filter(t => t.done).length;
-    const secPct = secTasks.length ? Math.round(secDone / secTasks.length * 100) : 0;
-    const pending = secTasks.length - secDone;
     const isOpen = openSections[sec.id];
+    let badgeHtml = '', progPct = 0;
 
-    html += `<div class="section">`;
-
-    // Header
-    html += `
-      <div class="sec-header" onclick="toggleSection('${sec.id}')">
-        <div class="sec-pip" style="background:${sec.color}"></div>
-        <div class="sec-name">${sec.label}</div>
-        <span class="sec-badge ${pending > 0 ? 'badge-pending' : 'badge-done'}">
-          ${pending > 0 ? pending + ' left' : 'all done'}
-        </span>
-        <span class="sec-chevron ${isOpen ? 'open' : ''}">▼</span>
-      </div>
-    `;
-
-    // Progress
-    html += `<div class="prog-wrap"><div class="prog-fill" style="width:${secPct}%;background:${sec.color}"></div></div>`;
-
-    if (isOpen) {
-      // Tasks
-      html += `<div class="task-list">`;
-      if (secTasks.length === 0) {
-        html += `<div class="empty-msg">no tasks yet</div>`;
-      } else {
-        secTasks.forEach(t => {
-          const dueClass = t.due === 'urgent' ? 'urgent' : t.due === 'soon' ? 'soon' : '';
-          html += `
-            <div class="task-item ${t.done ? 'done' : ''}">
-              <div class="check-ring ${t.done ? 'checked' : ''}" onclick="toggleDone('${t.id}')"></div>
-              <div class="task-text-wrap">
-                <div class="task-text">${escHtml(t.text)}</div>
-                ${t.due ? `<div class="task-due ${dueClass}">${t.due}</div>` : ''}
-              </div>
-              <div class="del-btn" onclick="deleteTask('${t.id}')">✕</div>
-            </div>
-          `;
-        });
-      }
-      html += `</div>`;
-
-      // Add row
-      html += `
-        <div class="add-row">
-          <input class="add-input" id="inp-${sec.id}" placeholder="Add a task..." onkeydown="if(event.key==='Enter')submitAdd('${sec.id}')" />
-          <select class="due-sel" id="due-${sec.id}">
-            <option value="">no due</option>
-            <option value="soon">soon</option>
-            <option value="urgent">urgent</option>
-          </select>
-          <button class="add-submit" onclick="submitAdd('${sec.id}')">Add</button>
-        </div>
-      `;
+    if (sec.mode === 'chores') {
+      const stale = chores.filter(c=>freshness(c).pct<50).length;
+      badgeHtml = stale > 0 ? `<span class="sec-badge badge-pending">${stale} stale</span>` : `<span class="sec-badge badge-done">all fresh</span>`;
+    } else {
+      const st = tasks.filter(t=>t.section===sec.id&&(!t.scheduledFor||isScheduledToday(t)));
+      const dn = st.filter(t=>t.done).length;
+      const pn = st.length - dn;
+      progPct = st.length ? Math.round(dn/st.length*100) : 0;
+      badgeHtml = pn > 0 ? `<span class="sec-badge badge-pending">${pn} left</span>` : `<span class="sec-badge badge-done">all done</span>`;
     }
 
-    html += `</div>`;
+    let bodyHtml = '';
+    if (isOpen) {
+      if (sec.mode==='chores')  bodyHtml = renderChores();
+      else if (sec.mode==='people') bodyHtml = renderPeopleSection('social');
+      else if (sec.mode==='tags')   bodyHtml = renderTagsSection();
+      else bodyHtml = renderTasksSection(sec.id);
+    }
+
+    html += `
+      <div class="section">
+        <div class="sec-header" data-sec="${sec.id}">
+          <div class="sec-pip" style="background:${sec.color}"></div>
+          <div class="sec-name">${sec.label}</div>
+          ${badgeHtml}
+          <span class="sec-chevron ${isOpen?'open':''}">▼</span>
+        </div>
+        ${sec.mode!=='chores'?`<div class="prog-wrap"><div class="prog-fill" style="width:${progPct}%;background:${sec.color}"></div></div>`:''}
+        ${bodyHtml}
+      </div>
+    `;
   });
 
   root.innerHTML = html;
+  bindEvents();
 }
 
-function toggleSection(id) {
-  openSections[id] = !openSections[id];
-  render();
+function renderChores() {
+  const sorted = [...chores].sort((a,b)=>freshness(a).pct-freshness(b).pct);
+  let html = `<div class="chore-list">`;
+  if (!sorted.length) html += `<div class="empty-msg">no chores yet</div>`;
+  sorted.forEach(c => {
+    const f = freshness(c);
+    html += `
+      <div class="chore-item" data-chore="${c.id}">
+        <div class="chore-info">
+          <div class="chore-name">${escHtml(c.name)}</div>
+          <div class="chore-last" style="color:${f.color}">${f.label}</div>
+        </div>
+        <div class="freshness-bar-wrap">
+          <div class="freshness-bar-track"><div class="freshness-bar-fill" style="width:${f.pct}%;background:${f.color}"></div></div>
+          <div class="freshness-label" style="color:${f.color}">${f.pct}%</div>
+        </div>
+        <button class="chore-del" data-choredel="${c.id}">✕</button>
+      </div>`;
+  });
+  html += `</div>
+  <div class="tap-hint">tap any chore to mark it done</div>
+  <div class="add-chore-row">
+    <input class="add-input" id="chore-inp" placeholder="Add a chore..." />
+    <button class="add-submit" id="chore-add-btn">Add</button>
+  </div>`;
+  return html;
 }
 
-function submitAdd(secId) {
-  const inp = document.getElementById('inp-' + secId);
-  const due = document.getElementById('due-' + secId);
-  if (inp) { addTask(secId, inp.value, due ? due.value : ''); inp.value = ''; }
+function renderPeopleSection(secId) {
+  const secPeople = people[secId] || [];
+  const secTasks  = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
+  const grouped   = {};
+  secPeople.forEach(p=>{ grouped[p.id]=[]; });
+  grouped['__none__'] = [];
+  secTasks.forEach(t => {
+    const key = t.personId && grouped[t.personId]!==undefined ? t.personId : '__none__';
+    grouped[key].push(t);
+  });
+
+  let html = `<div class="people-bar">`;
+  if (!secPeople.length) html += `<span class="empty-msg" style="padding:0">add people below to group tasks</span>`;
+  secPeople.forEach(p => {
+    html += `<div class="person-chip">${escHtml(p.name)}<span class="chip-del" data-delperson="${p.id}" data-sec="${secId}">✕</span></div>`;
+  });
+  html += `</div>
+  <div class="add-person-row">
+    <input class="add-person-input" id="person-inp-${secId}" placeholder="Add a person..." />
+    <button class="add-person-btn" data-addperson="${secId}">+ Add</button>
+  </div>
+  <div class="people-divider"></div>
+  <div class="task-list">`;
+
+  secPeople.forEach(p => {
+    html += `<div class="person-group"><div class="person-label">${escHtml(p.name)}</div>`;
+    const pt = grouped[p.id]||[];
+    if (!pt.length) html += `<div class="empty-msg">nothing yet</div>`;
+    pt.forEach(t=>{ html += renderTaskRow(t); });
+    html += `</div>`;
+  });
+  if (grouped['__none__'].length) {
+    html += `<div class="person-group">`;
+    if (secPeople.length) html += `<div class="person-label">general</div>`;
+    grouped['__none__'].forEach(t=>{ html += renderTaskRow(t); });
+    html += `</div>`;
+  }
+  if (!secTasks.length && !secPeople.length) html += `<div class="empty-msg">add people above, then add tasks</div>`;
+  html += `</div>
+  <div class="add-row">
+    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
+    <select class="add-select" id="person-sel-${secId}">
+      <option value="">anyone</option>
+      ${secPeople.map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join('')}
+    </select>
+    <select class="add-select" id="due-${secId}">
+      <option value="">—</option>
+      <option value="soon">soon</option>
+      <option value="urgent">urgent</option>
+    </select>
+    <button class="add-submit" data-addbtn="${secId}">Add</button>
+  </div>`;
+  return html;
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function renderTagsSection() {
+  const secId = 'work';
+  const secTasks = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
+  let html = `<div class="task-list">`;
+  if (!secTasks.length) html += `<div class="empty-msg">no tasks yet</div>`;
+  secTasks.forEach(t=>{ html += renderTaskRow(t); });
+  html += `</div>
+  <div class="add-row">
+    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
+    <input class="add-input" id="tags-${secId}" placeholder="#tag" style="width:72px;flex:none" />
+    <select class="add-select" id="due-${secId}">
+      <option value="">—</option>
+      <option value="soon">soon</option>
+      <option value="urgent">urgent</option>
+    </select>
+    <button class="add-submit" data-addbtn="${secId}">Add</button>
+  </div>`;
+  return html;
 }
 
-loadTasks();
+function renderTasksSection(secId) {
+  const secTasks = tasks.filter(t=>t.section===secId&&(!t.scheduledFor||isScheduledToday(t)));
+  let html = `<div class="task-list">`;
+  if (!secTasks.length) html += `<div class="empty-msg">no tasks yet</div>`;
+  secTasks.forEach(t=>{ html += renderTaskRow(t); });
+  html += `</div>
+  <div class="add-row">
+    <input class="add-input" id="inp-${secId}" placeholder="Add a task..." />
+    <select class="add-select" id="due-${secId}">
+      <option value="">—</option>
+      <option value="soon">soon</option>
+      <option value="urgent">urgent</option>
+    </select>
+    <button class="add-submit" data-addbtn="${secId}">Add</button>
+  </div>`;
+  return html;
+}
+
+function renderTaskRow(t) {
+  const dueClass = t.due==='urgent'?'urgent':t.due==='soon'?'soon':'';
+  const tags = Array.isArray(t.tags)?t.tags:[];
+  const tagsHtml = tags.map(tag=>`<span class="task-tag">#${escHtml(tag)}</span>`).join('');
+  const schedHtml = t.scheduledFor?`<span class="task-scheduled">→ ${escHtml(t.scheduledFor)}</span>`:'';
+  const hasMeta = t.due||(tags.length>0)||t.scheduledFor;
+  return `
+    <div class="task-item ${t.done?'done':''}">
+      <div class="check-ring ${t.done?'checked':''}" data-check="${t.id}"></div>
+      <div class="task-body">
+        <div class="task-text">${escHtml(t.text)}</div>
+        ${hasMeta?`<div class="task-meta">
+          ${t.due?`<span class="task-due ${dueClass}">${t.due}</span>`:''}
+          ${tagsHtml}${schedHtml}
+        </div>`:''}
+      </div>
+      <div class="task-actions">
+        <button class="action-btn" data-dupe="${t.id}" title="Repeat next week">+7d</button>
+        <button class="action-btn del" data-del="${t.id}">✕</button>
+      </div>
+    </div>`;
+}
+
+function bindEvents() {
+  document.querySelectorAll('.sec-header').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('[data-check],[data-del],[data-dupe],[data-addbtn],[data-addperson],[data-delperson],[data-chore],[data-choredel],.add-input,.add-select,.add-person-input,.add-person-btn')) return;
+      openSections[el.dataset.sec] = !openSections[el.dataset.sec];
+      render();
+    });
+  });
+  document.querySelectorAll('[data-check]').forEach(el=>el.addEventListener('click',()=>toggleDone(el.dataset.check)));
+  document.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',()=>deleteTask(el.dataset.del)));
+  document.querySelectorAll('[data-dupe]').forEach(el=>el.addEventListener('click',()=>dupeNextWeek(el.dataset.dupe)));
+
+  document.querySelectorAll('[data-addbtn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.addbtn;
+      const inp = document.getElementById('inp-'+s);
+      if (!inp||!inp.value.trim()) return;
+      const due = document.getElementById('due-'+s)?.value;
+      const personId = document.getElementById('person-sel-'+s)?.value;
+      const tagInp = document.getElementById('tags-'+s);
+      const tags = tagInp ? tagInp.value.split(/[\s,]+/).map(t=>t.replace(/^#/,'')).filter(Boolean) : [];
+      addTask(s, inp.value, due, personId, tags);
+      inp.value = '';
+      if (tagInp) tagInp.value = '';
+    });
+  });
+
+  document.querySelectorAll('.add-input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key!=='Enter') return;
+      const s = inp.id.replace('inp-','');
+      document.querySelector(`[data-addbtn="${s}"]`)?.click();
+    });
+    inp.addEventListener('click', e=>e.stopPropagation());
+  });
+
+  document.querySelectorAll('[data-addperson]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.addperson;
+      const inp = document.getElementById('person-inp-'+s);
+      if (!inp||!inp.value.trim()) return;
+      addPerson(s, inp.value); inp.value='';
+    });
+  });
+  document.querySelectorAll('.add-person-input').forEach(inp => {
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter') document.querySelector(`[data-addperson="${inp.id.replace('person-inp-','')}"]`)?.click(); });
+    inp.addEventListener('click', e=>e.stopPropagation());
+  });
+  document.querySelectorAll('[data-delperson]').forEach(el => {
+    el.addEventListener('click', e=>{ e.stopPropagation(); deletePerson(el.dataset.sec, el.dataset.delperson); });
+  });
+
+  document.querySelectorAll('.chore-item').forEach(el => {
+    el.addEventListener('click', e=>{ if(!e.target.closest('[data-choredel]')) openChoreModal(el.dataset.chore); });
+  });
+  document.querySelectorAll('[data-choredel]').forEach(el => {
+    el.addEventListener('click', e=>{ e.stopPropagation(); deleteChore(el.dataset.choredel); });
+  });
+
+  const choreAddBtn = document.getElementById('chore-add-btn');
+  const choreInp    = document.getElementById('chore-inp');
+  if (choreAddBtn) choreAddBtn.addEventListener('click',()=>{ if(choreInp?.value.trim()){addChore(choreInp.value);choreInp.value='';} });
+  if (choreInp)    choreInp.addEventListener('keydown',e=>{ if(e.key==='Enter')choreAddBtn?.click(); });
+  if (choreInp)    choreInp.addEventListener('click',e=>e.stopPropagation());
+
+  document.getElementById('chore-modal').addEventListener('click',e=>{ if(e.target===document.getElementById('chore-modal'))closeChoreModal(); });
+}
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+loadData();
 </script>
 </body>
 </html>
