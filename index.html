@@ -500,6 +500,14 @@ async function saveAll(){
   }catch(e){setSync('error','save failed: '+e.message);console.error('Save failed:',e);}
 }
 function sched(){clearTimeout(D.saveTimer);D.saveTimer=setTimeout(saveAll,1200);}
+async function saveChoresNow(){
+  try{
+    const res=await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',chores:D.chores})});
+    const result=await res.json();
+    if(result.error){console.error('Chore save error:',result.error);setSync('error','chore save failed');}
+    else{console.log('Chores saved. lastDone:',D.chores.map(c=>c.id+':'+c.lastDone).join(', '));}
+  }catch(e){console.error('Chore save exception:',e);}
+}
 
 // ── Gamification ──────────────────────────────────────────────────────────────
 function addXP(amt){D.gamification.xp+=amt;const newIdx=getLevelIdx(D.gamification.xp);if(newIdx>D.gamification.level){D.gamification.level=newIdx;toast(LEVELS[newIdx].emoji+' Level up! '+LEVELS[newIdx].label,3000);fireConfetti();}checkPermBadges();}
@@ -530,10 +538,15 @@ function calcProactivePoints(dueDate){
   return 5;
 }
 function calcChoreProactivePoints(chore){
+  // Only award PP if: chore has been done before AND is being done while still fresh (not overdue)
   if(!chore.lastDone) return 0;
   const f=freshObj(chore);
-  if(f.pct>=75) return 12; // done very proactively
-  if(f.pct>=50) return 6;
+  // If already overdue, no proactive points
+  if(f.overdue) return 0;
+  // Award based on how early they are (pct of interval remaining)
+  if(f.pct>=80) return 10;
+  if(f.pct>=60) return 5;
+  if(f.pct>=40) return 2;
   return 0;
 }
 
@@ -659,8 +672,10 @@ function openChoreModal(id){
     checkWeekBadges();
     try{fetch(API,{method:'POST',body:JSON.stringify({action:'logChore',...choreEntry})});}catch(e){}
     renderAll();
-    // Save immediately (not debounced) so lastDone persists before any re-render
-    saveAll();
+    // Save just chores immediately with logging
+    saveChoresNow();
+    // Also full save after delay
+    sched();
     toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
     closeModal('chore-modal');
   };
