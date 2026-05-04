@@ -311,11 +311,21 @@ const API='https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERX
 // ── Dates (local, no UTC offset) ──────────────────────────────────────────────
 const TODAY=new Date();
 function localIso(d){const dd=d||new Date();return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');}
-function fmtDate(s){if(!s)return'';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
-function isOverdue(s){if(!s)return false;return new Date(s+'T12:00:00')<new Date(localIso())+'T00:00:00';}
+function fmtDate(s){if(!s)return'';const ds=toDateStr(s)||s;const d=new Date(ds+'T12:00:00');return isNaN(d)?'':d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function toDateStr(v){
+  if(!v)return null;
+  if(v instanceof Date)return localIso(v);
+  const s=String(v);
+  // already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  // full ISO timestamp - extract date part using local offset
+  if(s.includes('T')||s.includes('Z')){const d=new Date(s);return isNaN(d)?null:localIso(d);}
+  return null;
+}
+function isOverdue(s){if(!s)return false;const d=toDateStr(s);return d&&d<TODAY_ISO;}
 const TODAY_ISO=localIso();
 const TODAY_STR=TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-function getWeekStart(d){const dd=new Date(d||TODAY);dd.setDate(dd.getDate()-dd.getDay());return localIso(dd);}
+function getWeekStart(d){const dd=d instanceof Date?new Date(d):(d?new Date(toDateStr(d)+'T12:00:00'):new Date(TODAY));dd.setDate(dd.getDate()-dd.getDay());return localIso(dd);}
 const WEEK_START=getWeekStart();
 
 document.getElementById('top-date').innerHTML=TODAY.toLocaleDateString('en-US',{weekday:'long'})+'<br>'+TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -432,17 +442,18 @@ async function loadData(){
   try{
     const res=await fetch(API+'?action=getData');
     const data=await res.json();
-    if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:t.dueDate||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5}));
-    if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||8}));
+    if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||''}));
+    if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||8,lastDone:toDateStr(c.lastDone)||null}));
     else D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
-    if(data.people){D.people={social_family:data.people.social_family||data.people.social_inner||[],social_friends:data.people.social_friends||data.people.social_next||[],work:data.people.work||[]};}
+    if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
+    D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
     if(data.activities) D.activities=data.activities;
     if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
     if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
     if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
     if(data.journal) D.journal=data.journal;
     if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
-    if(data.relActs&&data.relActs.length) D.relActs=data.relActs; else D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
+    if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
     if(data.encycNotes) D.encycNotes=data.encycNotes;
     // load or init weekly summary
     if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START) D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START};
@@ -516,7 +527,8 @@ function markActive(){
 // ── Freshness (supports negative = overdue) ───────────────────────────────────
 function freshObj(item){
   if(!item.lastDone)return{pct:-100,rawDays:null,color:'#9B1C1C',label:'never done',overdue:true};
-  const daysSince=(Date.now()-new Date(item.lastDone))/86400000;
+  const _ld=toDateStr(item.lastDone)||item.lastDone;
+  const daysSince=(Date.now()-new Date(_ld+'T12:00:00'))/86400000;
   const ratio=1-daysSince/item.intervalDays;
   const pct=Math.round(ratio*100); // can be negative
   const color=pct<-50?'#9B1C1C':pct<0?'#DC2626':pct<25?'#D97706':pct<60?'#CA8A04':'#16A34A';
@@ -602,7 +614,7 @@ function openChoreModal(id){
   document.getElementById('cm-confirm').onclick=()=>{
     const c2=D.chores.find(c=>c.id==D.pendingChoreId);if(!c2)return;
     const pp=calcChoreProactivePoints(c2);
-    c2.lastDone=new Date().toISOString();
+    c2.lastDone=TODAY_ISO;
     const totalXP=(c2.xpValue||8)+pp;
     addXP(totalXP);markActive();
     D.gamification.allTimeChoresDone++;
@@ -653,7 +665,7 @@ function openContactModal(id,tier){
 }
 function confirmContact(){
   const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
-  if(p){p.lastContact=new Date().toISOString();addXP(10);markActive();D.weekSummary.communityTasks++;checkWeekBadges();renderAll();sched();toast('👥 Logged! +10 XP');}
+  if(p){p.lastContact=TODAY_ISO;addXP(10);markActive();D.weekSummary.communityTasks++;checkWeekBadges();renderAll();sched();toast('👥 Logged! +10 XP');}
   closeModal('contact-modal');
 }
 
@@ -680,7 +692,7 @@ function markRelAct(id){
   const r=D.relActs.find(r=>r.id==id);if(!r)return;
   if(!confirm('Mark "'+r.name+'" as done?'))return;
   const pp=freshObj(r).pct>=50?8:0;
-  r.lastDone=new Date().toISOString();
+  r.lastDone=TODAY_ISO;
   addXP(12+pp);markActive();
   D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=12+pp;
   if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
@@ -782,28 +794,6 @@ function rHome(){
   // Badges
   const earnedPerm=PERM_BADGES.filter(b=>g.badges.includes(b.id));
   const earnedWeek=WEEK_BADGES.filter(b=>D.weeklyBadges.includes(b.id));
-  html+=`<div class="badges-section"><div class="badges-hd">Badges earned this week</div>
-    <div class="badges-grid">
-      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`;}).join('')}
-    </div>
-    ${earnedPerm.length?`<div class="badges-hd" style="margin-top:12px">All-time badges</div><div class="badges-grid">${earnedPerm.map(b=>`<div class="badge-card earned"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`).join('')}</div>`:''}
-  </div>`;
-
-  // All-time stats
-  html+=`<div class="alltime-card"><div class="week-title" style="margin-bottom:10px">All-time stats</div>
-    <div class="alltime-grid">
-      <div class="at-stat"><div class="at-n">${g.allTimeTasksDone}</div><div class="at-l">tasks done</div></div>
-      <div class="at-stat"><div class="at-n">${g.allTimeChoresDone}</div><div class="at-l">chores done</div></div>
-      <div class="at-stat"><div class="at-n">${g.allTimeActivities||D.activities.length}</div><div class="at-l">workouts</div></div>
-    </div>
-  </div>`;
-
-  // This week completed tasks
-  if(doneTasks.length){
-    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length}</span></div>
-    <div class="tlist">${doneTasks.map(t=>`<div class="trow done-r"><div class="chk ck"></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div>${t.proactivePoints>0?`<div class="tmeta"><span class="tpp">+${t.proactivePoints}PP ⚡</span></div>`:''}</div></div>`).join('')}</div></div>`;
-  }
-
   // Weekly day planner
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
@@ -831,6 +821,28 @@ function rHome(){
       }).join('')}
     </div>
   </div>`;
+
+  html+=`<div class="badges-section"><div class="badges-hd">Badges earned this week</div>
+    <div class="badges-grid">
+      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`;}).join('')}
+    </div>
+    ${earnedPerm.length?`<div class="badges-hd" style="margin-top:12px">All-time badges</div><div class="badges-grid">${earnedPerm.map(b=>`<div class="badge-card earned"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`).join('')}</div>`:''}
+  </div>`;
+
+  // All-time stats
+  html+=`<div class="alltime-card"><div class="week-title" style="margin-bottom:10px">All-time stats</div>
+    <div class="alltime-grid">
+      <div class="at-stat"><div class="at-n">${g.allTimeTasksDone}</div><div class="at-l">tasks done</div></div>
+      <div class="at-stat"><div class="at-n">${g.allTimeChoresDone}</div><div class="at-l">chores done</div></div>
+      <div class="at-stat"><div class="at-n">${g.allTimeActivities||D.activities.length}</div><div class="at-l">workouts</div></div>
+    </div>
+  </div>`;
+
+  // This week completed tasks
+  if(doneTasks.length){
+    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length}</span></div>
+    <div class="tlist">${doneTasks.map(t=>`<div class="trow done-r"><div class="chk ck"></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div>${t.proactivePoints>0?`<div class="tmeta"><span class="tpp">+${t.proactivePoints}PP ⚡</span></div>`:''}</div></div>`).join('')}</div></div>`;
+  }
 
   document.getElementById('home-content').innerHTML=html;
 }
