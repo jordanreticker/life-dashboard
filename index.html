@@ -27,7 +27,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .tab.active{color:var(--text);}
 .tab-ic{font-size:20px;line-height:1;}
 .tab-lbl{font-size:9px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.04em;}
-#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+68px) 12px 40px;}
+#main{flex:1;overflow-y:auto;padding:calc(var(--safe-t)+88px) 12px 40px;}
 .pane{display:none;animation:fi 0.15s ease;}
 .pane.active{display:block;}
 @keyframes fi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
@@ -411,7 +411,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',
@@ -438,6 +438,9 @@ function fireConfetti(){
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 async function loadData(){
+  // Need week boundaries for chore log derivation
+  const _wdTemp=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);_wdTemp.push(d);}
+  const weekDays=_wdTemp;
   setSync('syncing','loading');
   try{
     const res=await fetch(API+'?action=getData');
@@ -456,12 +459,19 @@ async function loadData(){
     if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
     if(data.encycNotes) D.encycNotes=data.encycNotes;
     // load or init weekly summary
+    if(data.choreLog) D.choreLog=data.choreLog;
+    // Derive chore stats directly from ChoreLog - source of truth
+    const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6]);});
+    const wkChoresDone=thisWeekLogs.length;
+    const wkChoreXP=thisWeekLogs.reduce((s,l)=>s+Number(l.xpEarned||0),0);
+    const wkChorePP=thisWeekLogs.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
     if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START){
-      D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START};
-    } else if(data.weeklyStats&&data.weeklyStats.length){
-      const ws=(data.weeklyStats).find(w=>String(w.weekStart)===WEEK_START);
-      if(ws) D.weekSummary={...D.weekSummary,tasksDone:Number(ws.tasksDone)||0,choresDone:Number(ws.choresDone)||0,activitiesLogged:Number(ws.activitiesLogged)||0,xpEarned:Number(ws.xpEarned)||0,proactivePoints:Number(ws.proactivePoints)||0,weekStart:WEEK_START};
+      D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
+    } else {
+      D.weekSummary={...D.weekSummary,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
     }
+    // All-time chore stats from full log
+    D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
     if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
     updateStreak();checkPermBadges();checkWeekBadges();
     setSync('synced','synced');
@@ -622,10 +632,19 @@ function openChoreModal(id){
     c2.lastDone=TODAY_ISO;
     const totalXP=(c2.xpValue||8)+pp;
     addXP(totalXP);markActive();
-    D.gamification.allTimeChoresDone++;
-    D.weekSummary.choresDone++;D.weekSummary.xpEarned+=totalXP;
+    // Log to ChoreLog for accurate tracking
+    const choreEntry={id:D.nextId++,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
+    D.choreLog.push(choreEntry);
+    D.gamification.allTimeChoresDone=D.choreLog.length;
+    // Recount this week from log
+    const _wk=D.choreLog.filter(l=>l.date>=WEEK_START);
+    D.weekSummary.choresDone=_wk.length;
+    D.weekSummary.choreXP=_wk.reduce((s,l)=>s+Number(l.xpEarned||0),0);
+    D.weekSummary.chorePP=_wk.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
+    D.weekSummary.xpEarned+=totalXP;
     if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
     checkWeekBadges();
+    try{fetch(API,{method:'POST',body:JSON.stringify({action:'logChore',...choreEntry})});}catch(e){}
     renderAll();sched();
     toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
     closeModal('chore-modal');
@@ -775,11 +794,11 @@ function rHome(){
   if(g.streakDays>=2){html+=`<div class="streak-card"><div class="streak-ic">${g.streakDays>=30?'💫':g.streakDays>=7?'🔥':'⚡'}</div><div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>don't break the chain</p><span class="streak-best">best: ${g.bestStreak} days</span></div></div>`;}
 
   html+=`<div class="week-card"><div class="week-hd"><span class="week-title">this week</span><button class="reset-btn" onclick="openResetModal()">↺ Reset week</button></div>
-    <div class="week-stats">
+    <div class="week-stats" style="grid-template-columns:repeat(5,1fr)">
       <div class="ws"><div class="ws-n">${doneTasks.length}</div><div class="ws-l">tasks</div></div>
       <div class="ws"><div class="ws-n">${w.choresDone}</div><div class="ws-l">chores</div></div>
+      <div class="ws"><div class="ws-n">${w.choreXP||0}</div><div class="ws-l">chore XP</div></div>
       <div class="ws"><div class="ws-n">${w.activitiesLogged}</div><div class="ws-l">workouts</div></div>
-      <div class="ws"><div class="ws-n">${w.xpEarned}</div><div class="ws-l">XP</div></div>
       <div class="ws"><div class="ws-n pp">${w.proactivePoints}</div><div class="ws-l">PP ⚡</div></div>
     </div>
   </div>`;
@@ -818,9 +837,10 @@ function rHome(){
             ${isToday?'<span style="font-size:9px;font-family:\'DM Mono\',monospace;background:var(--text);color:#fff;padding:1px 6px;border-radius:10px">today</span>':''}
             ${!dayTasks.length?'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">nothing scheduled</span>':''}
           </div>
-          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);margin-bottom:3px">
+          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);margin-bottom:3px">
             <div style="width:3px;height:100%;min-height:14px;border-radius:2px;background:${t.section==='paige'?'var(--cpaige)':t.section==='work'?'var(--cwork)':t.section.startsWith('community')?'var(--ccommunity)':t.section==='health'?'var(--chealth)':'var(--cpersonal)'};flex-shrink:0"></div>
             <span style="font-size:12px;flex:1">${escH(t.text)}</span>
+            ${pName?`<span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:#F0F9FF;color:#0369A1">${escH(pName)}</span>`:''}
             ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
           </div>`;}).join('')}
         </div>`;
@@ -1087,7 +1107,6 @@ function trow(t){
         ${tags.map(g=>`<span class="ttag">#${escH(g)}</span>`).join('')}
         ${t.scheduledFor?`<span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3)">→ ${escH(t.scheduledFor)}</span>`:''}
         ${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints}PP ⚡</span>`:''}
-        ${getPersonName(t.personId)?`<span style="font-size:10px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:#F0F9FF;color:#0369A1">${escH(getPersonName(t.personId))}</span>`:''}
       </div>`:''}
     </div>
     <div class="tacts">
