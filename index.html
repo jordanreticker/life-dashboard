@@ -271,6 +271,17 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .loading{text-align:center;padding:40px 0;color:var(--t3);font-size:13px;font-family:'DM Mono',monospace;}
 .loading::after{content:'...';animation:dots 1.2s infinite;}
 @keyframes dots{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
+.goal-row{padding:10px 8px;border-bottom:0.5px solid var(--border);}
+.goal-row:last-child{border-bottom:none;}
+.goal-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.goal-name{flex:1;font-size:13px;}
+.goal-count{font-size:12px;font-family:'DM Mono',monospace;color:var(--t2);white-space:nowrap;}
+.goal-log-btn{font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:none;background:var(--chealth);color:#fff;cursor:pointer;white-space:nowrap;}
+.goal-log-btn:active{opacity:0.7;}
+.goal-log-btn.maxed{background:var(--t3);cursor:default;}
+.goal-prog-track{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;border:0.5px solid var(--border);}
+.goal-prog-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.goal-super{font-size:10px;font-family:'DM Mono',monospace;color:#92400E;background:#FEF3C7;padding:2px 7px;border-radius:20px;border:0.5px solid #FCD34D;}
 .sec-divider{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;padding:14px 0 6px;border-top:0.5px solid var(--border);margin-top:4px;}
 </style>
 </head>
@@ -411,7 +422,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',
@@ -453,15 +464,7 @@ async function loadData(){
     if(data.activities) D.activities=data.activities;
     if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
     if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
-    // Recalculate XP floor from ChoreLog so stale sheet data can't set it below actual earned
-    if(data.choreLog&&data.choreLog.length){
-      const choreXPTotal=(data.choreLog).reduce((s,l)=>s+Number(l.xpEarned||0),0);
-      const taskXPTotal=(data.tasks||[]).filter(t=>t.done).reduce((s,t)=>s+Number(t.xpValue||5),0);
-      const calculatedXP=choreXPTotal+taskXPTotal;
-      // Use whichever is higher — sheet or calculated
-      D.gamification.xp=Math.max(D.gamification.xp,calculatedXP);
-    }
-    // allTimeChoresDone = total rows in ChoreLog
+    // allTimeChoresDone = total rows in ChoreLog (source of truth)
     if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
     if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
     if(data.journal) D.journal=data.journal;
@@ -482,7 +485,12 @@ async function loadData(){
     }
     // All-time chore stats from full log
     D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
-    if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
+    if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({
+      ...g,
+      target:Number(g.target)||7,
+      logs:(g.logs||[]).filter(d=>d>=WEEK_START), // only keep this week's logs
+    }));
+        if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
     updateStreak();checkPermBadges();checkWeekBadges();
     setSync('synced','synced');
   }catch(e){setSync('error','offline');}
@@ -492,7 +500,7 @@ async function loadData(){
 async function saveAll(){
   setSync('syncing','saving');
   try{
-    const payload={action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    const payload={action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary},healthGoals:D.healthGoals};
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const result=await res.json();
     if(result.error){setSync('error','save error: '+result.error.slice(0,30));console.error('Save error:',result.error);}
@@ -592,6 +600,8 @@ function confirmReset(){
   D.tasks=D.tasks.filter(t=>!t.done);
   // reset weekly summary
   D.weekSummary={weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0};
+  // Reset health goal logs for new week
+  D.healthGoals=D.healthGoals.map(g=>({...g,logs:[]}));
   D.weeklyBadges=[];
   closeModal('reset-modal');renderAll();sched();toast('Week reset ✓');
 }
@@ -752,7 +762,35 @@ function markRelAct(id){
   renderAll();sched();toast('💕 Nice! +'+( 12+pp)+'XP');fireConfetti();
 }
 
-// ── Finances ──────────────────────────────────────────────────────────────────
+// ── Health goals ──────────────────────────────────────────────────────────────
+function addHealthGoal(name, target){
+  if(!name.trim())return;
+  D.healthGoals.push({id:'hg'+D.nextId++,name:name.trim(),target:Number(target)||7,logs:[]});
+  renderAll();sched();
+}
+function logHealthGoal(id){
+  const g=D.healthGoals.find(g=>g.id==id);if(!g)return;
+  if(g.logs.length>=g.target)return; // already maxed
+  g.logs.push(TODAY_ISO);
+  const hit=g.logs.length;const full=hit>=g.target;
+  if(full){
+    // Award super badge
+    const badgeId='goal_'+id;
+    if(!D.gamification.badges.includes(badgeId)){
+      D.gamification.badges.push(badgeId);
+      toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
+      fireConfetti();
+    }
+    addXP(50);
+  } else {
+    addXP(8);
+    toast('✓ '+hit+'/'+g.target+' +8XP');
+  }
+  markActive();renderAll();sched();
+}
+function deleteHealthGoal(id){
+  D.healthGoals=D.healthGoals.filter(g=>g.id!=id);renderAll();sched();
+}
 function openFinModal(id){
   D.editingFinId=id||null;
   const f=id?D.finances.find(f=>f.id==id):null;
@@ -1078,6 +1116,39 @@ function rLife(){
   // health tasks
   html+=miniTaskSec('health','Health tasks','var(--chealth)',hTasks,hDone);
 
+  // Weekly health goals
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🎯</span><div class="sec-name">Weekly goals</div><span class="sbadge sn">${D.healthGoals.length}</span></div>
+    <div id="goals-list">
+      ${!D.healthGoals.length?'<div class="emsg" style="padding:10px 8px">no goals yet — add one below</div>':''}
+      ${D.healthGoals.map(g=>{
+        const hit=g.logs.filter(d=>d>=WEEK_START).length;
+        const pct=Math.round(hit/g.target*100);
+        const full=hit>=g.target;
+        const color=full?'#F59E0B':hit>0?'var(--chealth)':'var(--border2)';
+        return`<div class="goal-row">
+          <div class="goal-top">
+            <span class="goal-name">${escH(g.name)}</span>
+            ${full?`<span class="goal-super">🌟 complete!</span>`:`<button class="goal-log-btn ${full?'maxed':''}" data-goallog="${g.id}">+ Log it</button>`}
+            <button class="abtn del" style="opacity:1;font-size:11px" data-goaldel="${g.id}">✕</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="goal-prog-track" style="flex:1"><div class="goal-prog-fill" style="width:${pct}%;background:${color}"></div></div>
+            <span class="goal-count">${hit}/${g.target}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="add-wrap"><div class="add-main">
+      <input class="inp f1" id="goal-inp" placeholder="e.g. Go to bed before 11pm"/>
+      <button class="badd" id="goal-add">Add</button>
+    </div>
+    <div class="add-extras" style="align-items:center;gap:6px">
+      <label style="font-size:11px;color:var(--t2);white-space:nowrap">Target:</label>
+      <input class="inp" id="goal-target" type="number" min="1" max="7" value="7" style="width:55px"/>
+      <label style="font-size:11px;color:var(--t2)">times/week</label>
+    </div></div>
+  </div>`;
+
   // Personal
   html+=`<div class="sec-divider">✦ Personal</div>`;
   html+=miniTaskSec('personal','Personal todos','var(--cpersonal)',pTasks,pDone);
@@ -1103,6 +1174,15 @@ function rLife(){
 
   document.getElementById('life-content').innerHTML=html;
   document.querySelectorAll('[data-acttype]').forEach(b=>b.addEventListener('click',()=>openActModal(b.dataset.acttype)));
+  document.querySelectorAll('[data-goallog]').forEach(b=>b.addEventListener('click',()=>logHealthGoal(b.dataset.goallog)));
+  document.querySelectorAll('[data-goaldel]').forEach(b=>b.addEventListener('click',()=>deleteHealthGoal(b.dataset.goaldel)));
+  const goalAdd=document.getElementById('goal-add');
+  const goalInp=document.getElementById('goal-inp');
+  goalAdd?.addEventListener('click',()=>{
+    const t=document.getElementById('goal-target');
+    if(goalInp?.value.trim()){addHealthGoal(goalInp.value,t?.value||7);goalInp.value='';if(t)t.value='7';}
+  });
+  goalInp?.addEventListener('keydown',e=>{if(e.key==='Enter')goalAdd?.click();});
   document.querySelectorAll('.moodbtn').forEach(b=>b.addEventListener('click',()=>{const prev=document.getElementById('jtext')?.value;D.selectedMood=b.dataset.mood;rLife();const ta=document.getElementById('jtext');if(ta&&prev)ta.value=prev;}));
   bindTaskEv('health');bindTaskEv('personal');
 }
