@@ -446,7 +446,7 @@ async function loadData(){
     const res=await fetch(API+'?action=getData');
     const data=await res.json();
     if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||''}));
-    if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||8,lastDone:toDateStr(c.lastDone)||null}));
+    if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||0,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7}));
     else D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
     if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
     D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
@@ -656,7 +656,7 @@ function openChoreEdit(id){
   D.editingChoreId=id||null;
   document.getElementById('ce-name').value=c.name||'';
   document.getElementById('ce-interval').value=c.intervalDays||7;
-  document.getElementById('ce-xp').value=c.xpValue||8;
+  document.getElementById('ce-xp').value=c.xpValue||0;
   document.getElementById('ce-confirm').onclick=()=>{
     const name=document.getElementById('ce-name').value.trim();
     const interval=parseInt(document.getElementById('ce-interval').value)||7;
