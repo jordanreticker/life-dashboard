@@ -456,7 +456,12 @@ async function loadData(){
     if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
     if(data.encycNotes) D.encycNotes=data.encycNotes;
     // load or init weekly summary
-    if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START) D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START};
+    if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START){
+      D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START};
+    } else if(data.weeklyStats&&data.weeklyStats.length){
+      const ws=(data.weeklyStats).find(w=>String(w.weekStart)===WEEK_START);
+      if(ws) D.weekSummary={...D.weekSummary,tasksDone:Number(ws.tasksDone)||0,choresDone:Number(ws.choresDone)||0,activitiesLogged:Number(ws.activitiesLogged)||0,xpEarned:Number(ws.xpEarned)||0,proactivePoints:Number(ws.proactivePoints)||0,weekStart:WEEK_START};
+    }
     if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
     updateStreak();checkPermBadges();checkWeekBadges();
     setSync('synced','synced');
@@ -797,7 +802,8 @@ function rHome(){
   // Weekly day planner
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
-  const scheduledTasks=D.tasks.filter(t=>!t.done&&t.dueDate&&new Date(t.dueDate+'T12:00:00')>=new Date(weekDays[0].toDateString())&&new Date(t.dueDate+'T12:00:00')<=new Date(weekDays[6].toDateString()));
+  const weekStartIso=localIso(weekDays[0]);const weekEndIso=localIso(weekDays[6]);
+  const scheduledTasks=D.tasks.filter(t=>!t.done&&t.dueDate&&t.dueDate>=weekStartIso&&t.dueDate<=weekEndIso);
   // Group by dueDate
   const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
   scheduledTasks.forEach(t=>{if(byDay[t.dueDate]!==undefined)byDay[t.dueDate].push(t);});
@@ -1065,6 +1071,7 @@ function miniTaskSec(secId,title,color,active,done){
 }
 
 // ── Task row ──────────────────────────────────────────────────────────────────
+function getPersonName(pid){if(!pid)return null;const all=[...(D.people.social_family||[]),...(D.people.social_friends||[]),...(D.people.work||[])];const p=all.find(p=>p.id==pid);return p?p.name:null;}
 function trow(t){
   const over=!t.done&&isOverdue(t.dueDate);
   const tags=Array.isArray(t.tags)?t.tags:[];
@@ -1080,6 +1087,7 @@ function trow(t){
         ${tags.map(g=>`<span class="ttag">#${escH(g)}</span>`).join('')}
         ${t.scheduledFor?`<span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3)">→ ${escH(t.scheduledFor)}</span>`:''}
         ${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints}PP ⚡</span>`:''}
+        ${getPersonName(t.personId)?`<span style="font-size:10px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:#F0F9FF;color:#0369A1">${escH(getPersonName(t.personId))}</span>`:''}
       </div>`:''}
     </div>
     <div class="tacts">
