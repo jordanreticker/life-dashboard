@@ -670,11 +670,9 @@ function openChoreModal(id){
     D.weekSummary.xpEarned+=totalXP;
     if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
     checkWeekBadges();
+    // ChoreLog write is the source of truth for lastDone - no need to write Chores sheet
     try{fetch(API,{method:'POST',body:JSON.stringify({action:'logChore',...choreEntry})});}catch(e){}
     renderAll();
-    // Save just chores immediately with logging
-    saveChoresNow();
-    // Also full save after delay
     sched();
     toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
     closeModal('chore-modal');
