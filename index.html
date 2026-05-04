@@ -396,7 +396,7 @@ const WEEK_BADGES=[
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let D={
-  tasks:[],chores:[],people:{social_inner:[],social_next:[],work:[]},
+  tasks:[],chores:[],people:{social_family:[],social_friends:[],work:[]},
   activities:[],questions:[],
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
@@ -408,7 +408,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'inner',
+  encycOpen:false,communityTier:'family',
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -435,7 +435,7 @@ async function loadData(){
     if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:t.dueDate||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5}));
     if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||8}));
     else D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
-    if(data.people){D.people={social_inner:data.people.social_inner||[],social_next:data.people.social_next||[],work:data.people.work||[]};}
+    if(data.people){D.people={social_family:data.people.social_family||data.people.social_inner||[],social_friends:data.people.social_friends||data.people.social_next||[],work:data.people.work||[]};}
     if(data.activities) D.activities=data.activities;
     if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
     if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
@@ -556,7 +556,7 @@ function toggleTask(id){
     D.weekSummary.tasksDone++;D.weekSummary.xpEarned+=baseXP+pp;
     if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
     if(t.section==='work')D.weekSummary.workTasks++;
-    if(t.section==='social_inner'||t.section==='social_next'||t.section==='community')D.weekSummary.communityTasks++;
+    if(t.section==='community_family'||t.section==='community_friends'||t.section==='community')D.weekSummary.communityTasks++;
     fireConfetti();toast('✓ +'+baseXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));
     checkWeekBadges();
   } else {t.completedAt='';t.proactivePoints=0;}
@@ -773,7 +773,7 @@ function rHome(){
   html+=`<div class="sum-grid">
     ${scCard('💕','Paige','var(--cpaige)','paige',{all:D.relActs.filter(r=>freshObj(r).overdue).length,done:D.relActs.filter(r=>!freshObj(r).overdue).length,over:0},'')}
     ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'')}
-    ${scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_inner,...D.people.social_next].length,done:w.communityTasks,over:0},'contacts')}
+    ${scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_family,...D.people.social_friends].length,done:w.communityTasks,over:0},'contacts')}
     <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
     ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),w.activitiesLogged+' sessions')}
     ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),'personal')}
@@ -803,6 +803,34 @@ function rHome(){
     html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length}</span></div>
     <div class="tlist">${doneTasks.map(t=>`<div class="trow done-r"><div class="chk ck"></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div>${t.proactivePoints>0?`<div class="tmeta"><span class="tpp">+${t.proactivePoints}PP ⚡</span></div>`:''}</div></div>`).join('')}</div></div>`;
   }
+
+  // Weekly day planner
+  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
+  const scheduledTasks=D.tasks.filter(t=>!t.done&&t.dueDate&&new Date(t.dueDate+'T12:00:00')>=new Date(weekDays[0].toDateString())&&new Date(t.dueDate+'T12:00:00')<=new Date(weekDays[6].toDateString()));
+  // Group by dueDate
+  const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
+  scheduledTasks.forEach(t=>{if(byDay[t.dueDate]!==undefined)byDay[t.dueDate].push(t);});
+  const hasAny=scheduledTasks.length>0;
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📆</span><div class="sec-name">This week by day</div><span class="sbadge sn">${scheduledTasks.length} scheduled</span></div>
+    <div style="padding:6px 8px 10px">
+      ${weekDays.map(d=>{
+        const iso=localIso(d);const dayTasks=byDay[iso]||[];const isToday=iso===TODAY_ISO;const isPast=new Date(iso+'T12:00:00')<new Date(TODAY_ISO+'T12:00:00');
+        return`<div style="margin-bottom:${dayTasks.length?10:4}px;opacity:${isPast&&!isToday?0.5:1}">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:11px;font-family:'DM Mono',monospace;font-weight:500;color:${isToday?'var(--text)':'var(--t2)'}">${DAYS[d.getDay()]} ${d.getDate()}</span>
+            ${isToday?'<span style="font-size:9px;font-family:\'DM Mono\',monospace;background:var(--text);color:#fff;padding:1px 6px;border-radius:10px">today</span>':''}
+            ${!dayTasks.length?'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">nothing scheduled</span>':''}
+          </div>
+          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);margin-bottom:3px">
+            <div style="width:3px;height:100%;min-height:14px;border-radius:2px;background:${t.section==='paige'?'var(--cpaige)':t.section==='work'?'var(--cwork)':t.section.startsWith('community')?'var(--ccommunity)':t.section==='health'?'var(--chealth)':'var(--cpersonal)'};flex-shrink:0"></div>
+            <span style="font-size:12px;flex:1">${escH(t.text)}</span>
+            ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
+          </div>`;}).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
 
   document.getElementById('home-content').innerHTML=html;
 }
@@ -880,15 +908,16 @@ function rCommunity(){
   const tier=D.communityTier;
   const key='social_'+tier;
   const ppl=D.people[key]||[];
-  const tasks=D.tasks.filter(t=>t.section==='community'&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
-  const doneTasks=D.tasks.filter(t=>t.section==='community'&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
+  const secKey='community_'+tier;
+  const tasks=D.tasks.filter(t=>t.section===secKey&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
+  const doneTasks=D.tasks.filter(t=>t.section===secKey&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
   const grp={};ppl.forEach(p=>{grp[p.id]=[];});grp['__']=[];
   tasks.forEach(t=>{const k=t.personId&&grp[t.personId]!==undefined?t.personId:'__';grp[k].push(t);});
 
-  let html=`<div class="tier-tabs"><button class="tier-tab ${tier==='inner'?'active':''}" data-tier="inner">⭐ Inner circle</button><button class="tier-tab ${tier==='next'?'active':''}" data-tier="next">👥 Next level</button></div>`;
+  let html=`<div class="tier-tabs"><button class="tier-tab ${tier==='family'?'active':''}" data-tier="family">👨‍👩‍👧 Family</button><button class="tier-tab ${tier==='friends'?'active':''}" data-tier="friends">👥 Friends</button></div>`;
 
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='inner'?'⭐':'👥'}</span><div class="sec-name">${tier==='inner'?'Inner circle':'Next level'}</div><span class="sbadge sn">${ppl.length} people</span></div>
-    <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map(p=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='inner'?7:14}):null;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}"><div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='family'?'👨‍👩‍👧':'👥'}</span><div class="sec-name">${tier==='family'?'Family':'Friends'}</div><span class="sbadge sn">${ppl.length} people</span></div>
+    <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map(p=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='family'?7:14}):null;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}"><div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
     <div class="apr"><input class="inp f1" id="pi-${key}" placeholder="Add a person..."/><button class="bsm" data-ap="${key}">+ Add</button></div>
     <div class="div"></div>
     <div class="tlist">
@@ -896,7 +925,7 @@ function rCommunity(){
       ${grp['__'].length?`<div><div class="plbl-row"><span class="plbl">general</span></div>${grp['__'].map(t=>trow(t)).join('')}</div>`:''}
       ${!tasks.length&&!ppl.length?'<div class="emsg">add people above then tasks below</div>':''}
       ${doneTasks.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${doneTasks.map(t=>trow(t)).join('')}`:''}</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-community" placeholder="Add a task..."/><button class="badd" data-ab="community">Add</button></div>
+    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-community" placeholder="Add a task..."/><button class="badd" id="comm-add-btn">Add</button></div>
     <div class="add-extras"><select class="sel" id="ps-community"><option value="">anyone</option>${ppl.map(p=>`<option value="${p.id}">${escH(p.name)}</option>`).join('')}</select><select class="sel" id="pr-community"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-community"/></div></div>
   </div>`;
 
@@ -906,7 +935,21 @@ function rCommunity(){
   document.querySelectorAll('[data-dp]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();delPerson(el.dataset.tier,el.dataset.dp);}));
   document.querySelectorAll('[data-contact]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-dp]'))return;openContactModal(el.dataset.contact,el.dataset.ctier);}));
   document.querySelectorAll('.apr .inp').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector(`[data-ap="${i.id.replace('pi-','')}"]`)?.click();}));
-  bindTaskEv('community');
+  // Wire community add button to tier-specific section
+  const commAddBtn=document.getElementById('comm-add-btn');
+  const commInp=document.getElementById('inp-community');
+  if(commAddBtn){commAddBtn.addEventListener('click',()=>{
+    if(!commInp?.value.trim())return;
+    const pri=document.getElementById('pr-community')?.value;
+    const dt=document.getElementById('dt-community')?.value;
+    const ps=document.getElementById('ps-community')?.value;
+    addTask('community_'+D.communityTier,commInp.value,pri,dt,ps,[]);
+    commInp.value='';
+    const dp=document.getElementById('dt-community');if(dp)dp.value='';
+    const pp=document.getElementById('pr-community');if(pp)pp.value='';
+  });}
+  if(commInp){commInp.addEventListener('keydown',e=>{if(e.key==='Enter')commAddBtn?.click();});commInp.addEventListener('click',e=>e.stopPropagation());}
+  bindTaskEv('community_family');bindTaskEv('community_friends');
 }
 
 // ── CHORES ────────────────────────────────────────────────────────────────────
