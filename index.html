@@ -453,6 +453,16 @@ async function loadData(){
     if(data.activities) D.activities=data.activities;
     if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
     if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
+    // Recalculate XP floor from ChoreLog so stale sheet data can't set it below actual earned
+    if(data.choreLog&&data.choreLog.length){
+      const choreXPTotal=(data.choreLog).reduce((s,l)=>s+Number(l.xpEarned||0),0);
+      const taskXPTotal=(data.tasks||[]).filter(t=>t.done).reduce((s,t)=>s+Number(t.xpValue||5),0);
+      const calculatedXP=choreXPTotal+taskXPTotal;
+      // Use whichever is higher — sheet or calculated
+      D.gamification.xp=Math.max(D.gamification.xp,calculatedXP);
+    }
+    // allTimeChoresDone = total rows in ChoreLog
+    if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
     if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
     if(data.journal) D.journal=data.journal;
     if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
@@ -630,10 +640,10 @@ function openChoreModal(id){
     const c2=D.chores.find(c=>c.id==D.pendingChoreId);if(!c2)return;
     const pp=calcChoreProactivePoints(c2);
     c2.lastDone=TODAY_ISO;
-    const totalXP=(c2.xpValue||8)+pp;
+    const totalXP=(Number(c2.xpValue)||0)+pp;
     addXP(totalXP);markActive();
     // Log to ChoreLog for accurate tracking
-    const choreEntry={id:D.nextId++,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
+    const choreEntry={id:Date.now(),choreId:c2.id,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
     D.choreLog.push(choreEntry);
     D.gamification.allTimeChoresDone=D.choreLog.length;
     // Recount this week from log
@@ -645,7 +655,9 @@ function openChoreModal(id){
     if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
     checkWeekBadges();
     try{fetch(API,{method:'POST',body:JSON.stringify({action:'logChore',...choreEntry})});}catch(e){}
-    renderAll();sched();
+    renderAll();
+    // Save immediately (not debounced) so lastDone persists before any re-render
+    saveAll();
     toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
     closeModal('chore-modal');
   };
