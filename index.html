@@ -492,9 +492,12 @@ async function loadData(){
 async function saveAll(){
   setSync('syncing','saving');
   try{
-    await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}})});
-    setSync('synced','saved');
-  }catch(e){setSync('error','save failed');}
+    const payload={action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
+    const result=await res.json();
+    if(result.error){setSync('error','save error: '+result.error.slice(0,30));console.error('Save error:',result.error);}
+    else setSync('synced','saved');
+  }catch(e){setSync('error','save failed: '+e.message);console.error('Save failed:',e);}
 }
 function sched(){clearTimeout(D.saveTimer);D.saveTimer=setTimeout(saveAll,1200);}
 
