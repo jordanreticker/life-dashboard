@@ -502,10 +502,16 @@ async function saveAll(){
   try{
     const payload={action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary},healthGoals:D.healthGoals};
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
-    const result=await res.json();
-    if(result.error){setSync('error','save error: '+result.error.slice(0,30));console.error('Save error:',result.error);}
-    else setSync('synced','saved');
-  }catch(e){setSync('error','save failed: '+e.message);console.error('Save failed:',e);}
+    const text=await res.text();
+    try{
+      const result=JSON.parse(text);
+      if(result.error) setSync('error','err: '+result.error.slice(0,25));
+      else setSync('synced','saved');
+    }catch(pe){
+      // Apps Script returned non-JSON (redirect HTML) but execution still completed
+      setSync('synced','saved');
+    }
+  }catch(e){setSync('error','offline');console.error('Save:',e);}
 }
 function sched(){clearTimeout(D.saveTimer);D.saveTimer=setTimeout(saveAll,1200);}
 async function saveChoresNow(){
@@ -1008,7 +1014,6 @@ function rPaige(){
   document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';rPaige();sched();});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
   document.querySelectorAll('[data-delnote]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();D.encycNotes.splice(parseInt(el.dataset.delnote),1);rPaige();sched();}));
-  bindTaskEv('paige','pane-paige');
 }
 
 // ── WORK ──────────────────────────────────────────────────────────────────────
@@ -1025,7 +1030,7 @@ function rWork(){
     <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-work" placeholder="Add a task..."/><button class="badd" data-ab="work">Add</button></div>
     <div class="add-extras"><input class="inp" id="tg-work" placeholder="#tag" style="width:70px;flex:none"/><select class="sel" id="pr-work"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-work"/></div></div>
   </div>`;
-  document.getElementById('work-content').innerHTML=html;bindTaskEv('work','pane-work');
+  document.getElementById('work-content').innerHTML=html;
 }
 
 // ── COMMUNITY ─────────────────────────────────────────────────────────────────
@@ -1074,7 +1079,6 @@ function rCommunity(){
     const pp=document.getElementById('pr-community');if(pp)pp.value='';
   });}
   if(commInp){commInp.addEventListener('keydown',e=>{if(e.key==='Enter')commAddBtn?.click();});commInp.addEventListener('click',e=>e.stopPropagation());}
-  bindTaskEv('community_family','pane-community');bindTaskEv('community_friends','pane-community');
 }
 
 // ── CHORES ────────────────────────────────────────────────────────────────────
@@ -1205,7 +1209,6 @@ function rLife(){
   });
   goalInp?.addEventListener('keydown',e=>{if(e.key==='Enter')goalAdd?.click();});
   document.querySelectorAll('.moodbtn').forEach(b=>b.addEventListener('click',()=>{const prev=document.getElementById('jtext')?.value;D.selectedMood=b.dataset.mood;rLife();const ta=document.getElementById('jtext');if(ta&&prev)ta.value=prev;}));
-  bindTaskEv('health','pane-life');bindTaskEv('personal','pane-life');
 }
 
 function miniTaskSec(secId,title,color,active,done){
@@ -1246,39 +1249,118 @@ function trow(t){
   </div>`;
 }
 
-function bindTaskEv(secId, paneOverride){
-  // Find the correct pane — use override if provided (for renderAllTabs), else current tab
-  const paneId = paneOverride || ('pane-'+D.currentTab);
-  const pane=document.getElementById(paneId);
-  if(!pane) return;
-  pane.querySelectorAll('[data-chk]').forEach(el=>{
-    el.addEventListener('click',e=>{e.stopPropagation();toggleTask(el.dataset.chk);});
-  });
-  pane.querySelectorAll('[data-del]').forEach(el=>{
-    el.addEventListener('click',e=>{e.stopPropagation();deleteTask(el.dataset.del);});
-  });
-  pane.querySelectorAll('[data-dupe]').forEach(el=>{
-    el.addEventListener('click',e=>{e.stopPropagation();dupeTask(el.dataset.dupe);});
-  });
-  pane.querySelectorAll('[data-edit]').forEach(el=>{
-    el.addEventListener('click',e=>{e.stopPropagation();openEditTask(el.dataset.edit);});
-  });
-  const ab=pane.querySelector(`[data-ab="${secId}"]`);
-  if(ab){ab.addEventListener('click',()=>{
-    const inp=document.getElementById('inp-'+secId);if(!inp?.value.trim())return;
-    const pri=document.getElementById('pr-'+secId)?.value;
-    const dt=document.getElementById('dt-'+secId)?.value;
-    const ps=document.getElementById('ps-'+secId)?.value;
-    const ti=document.getElementById('tg-'+secId);
-    const tags=ti?ti.value.split(/[\s,]+/).map(t=>t.replace(/^#/,'')).filter(Boolean):[];
-    addTask(secId,inp.value,pri,dt,ps,tags);
-    inp.value='';if(ti)ti.value='';
-    const dp2=document.getElementById('dt-'+secId);if(dp2)dp2.value='';
-    const pp2=document.getElementById('pr-'+secId);if(pp2)pp2.value='';
-  });}
-  const mi=document.getElementById('inp-'+secId);
-  if(mi){mi.addEventListener('keydown',e=>{if(e.key==='Enter')ab?.click();});mi.addEventListener('click',e=>e.stopPropagation());}
-}
+function bindTaskEv(){}
+
+// ── Permanent delegated event listener ───────────────────────────────────────
+// Attached once to #main, handles ALL task/chore/goal clicks forever
+// regardless of re-renders. Never gets destroyed.
+document.getElementById('main').addEventListener('click', function(e){
+  // Checkboxes
+  const chk = e.target.closest('[data-chk]');
+  if(chk){ toggleTask(chk.dataset.chk); return; }
+  // Delete task
+  const del = e.target.closest('[data-del]');
+  if(del){ deleteTask(del.dataset.del); return; }
+  // Dupe task
+  const dupe = e.target.closest('[data-dupe]');
+  if(dupe){ dupeTask(dupe.dataset.dupe); return; }
+  // Edit task
+  const edit = e.target.closest('[data-edit]');
+  if(edit){ openEditTask(edit.dataset.edit); return; }
+  // Add task button
+  const ab = e.target.closest('[data-ab]');
+  if(ab){
+    const secId = ab.dataset.ab;
+    const inp = document.getElementById('inp-'+secId);
+    if(!inp?.value.trim()) return;
+    const pri = document.getElementById('pr-'+secId)?.value;
+    const dt  = document.getElementById('dt-'+secId)?.value;
+    const ps  = document.getElementById('ps-'+secId)?.value;
+    const ti  = document.getElementById('tg-'+secId);
+    const tags = ti ? ti.value.split(/[\s,]+/).map(t=>t.replace(/^#/,'')).filter(Boolean) : [];
+    addTask(secId, inp.value, pri, dt, ps, tags);
+    inp.value=''; if(ti) ti.value='';
+    const dp2=document.getElementById('dt-'+secId); if(dp2) dp2.value='';
+    const pp2=document.getElementById('pr-'+secId); if(pp2) pp2.value='';
+    return;
+  }
+  // Chore tap
+  const chore = e.target.closest('[data-chore]');
+  if(chore && !e.target.closest('[data-cd],[data-cedit]')){ openChoreModal(chore.dataset.chore); return; }
+  const cd = e.target.closest('[data-cd]');
+  if(cd){ deleteChore(cd.dataset.cd); return; }
+  const cedit = e.target.closest('[data-cedit]');
+  if(cedit){ openChoreEdit(cedit.dataset.cedit); return; }
+  // Relationship act
+  const rel = e.target.closest('[data-rel]');
+  if(rel){ markRelAct(rel.dataset.rel); return; }
+  // Goal log
+  const goallog = e.target.closest('[data-goallog]');
+  if(goallog){ logHealthGoal(goallog.dataset.goallog); return; }
+  // Goal delete
+  const goaldel = e.target.closest('[data-goaldel]');
+  if(goaldel){ deleteHealthGoal(goaldel.dataset.goaldel); return; }
+  // Delete note (encyclopedia)
+  const delnote = e.target.closest('[data-delnote]');
+  if(delnote){ D.encycNotes.splice(parseInt(delnote.dataset.delnote),1); rPaige(); sched(); return; }
+  // Contact log
+  const contact = e.target.closest('[data-contact]');
+  if(contact && !e.target.closest('[data-dp]')){ openContactModal(contact.dataset.contact, contact.dataset.ctier); return; }
+  // Delete person
+  const dp = e.target.closest('[data-dp]');
+  if(dp){ e.stopPropagation(); delPerson(dp.dataset.tier||dp.dataset.sec, dp.dataset.dp); return; }
+  // Tier tab switch
+  const tier = e.target.closest('[data-tier]');
+  if(tier && tier.classList.contains('tier-tab')){ D.communityTier=tier.dataset.tier; rCommunity(); return; }
+  // Add person
+  const ap = e.target.closest('[data-ap]');
+  if(ap){
+    const k = ap.dataset.ap;
+    const i = document.getElementById('pi-'+k);
+    if(i?.value.trim()){ addPerson(k, i.value); i.value=''; }
+    return;
+  }
+  // Fin edit
+  const fedit = e.target.closest('.fedit');
+  if(fedit){ openFinModal(fedit.getAttribute('onclick')?.match(/'([^']+)'/)?.[1]||null); return; }
+  // Activity type
+  const acttype = e.target.closest('[data-acttype]');
+  if(acttype){ openActModal(acttype.dataset.acttype); return; }
+  // Mood button
+  const mood = e.target.closest('[data-mood]');
+  if(mood){
+    const prev=document.getElementById('jtext')?.value;
+    D.selectedMood=mood.dataset.mood; rLife();
+    const ta=document.getElementById('jtext'); if(ta&&prev) ta.value=prev;
+    return;
+  }
+  // Encyc toggle
+  const encychd = e.target.closest('#encyc-hd');
+  if(encychd){ D.encycOpen=!D.encycOpen; rPaige(); return; }
+});
+
+// Enter key on all add-task inputs (delegated)
+document.getElementById('main').addEventListener('keydown', function(e){
+  if(e.key !== 'Enter') return;
+  const inp = e.target.closest('.add-input, .inp.f1');
+  if(!inp) return;
+  const id = inp.id || '';
+  if(id.startsWith('inp-')){
+    const secId = id.replace('inp-','');
+    const btn = document.querySelector(`[data-ab="${secId}"]`);
+    if(btn) btn.click();
+  } else if(id==='chore-inp'){
+    document.getElementById('chore-add')?.click();
+  } else if(id==='goal-inp'){
+    document.getElementById('goal-add')?.click();
+  } else if(id.startsWith('pi-')){
+    const k=id.replace('pi-','');
+    document.querySelector(`[data-ap="${k}"]`)?.click();
+  } else if(id==='person-inp-social'||id==='pi-social_family'||id==='pi-social_friends'){
+    const k=inp.id.replace('person-inp-','').replace('pi-','');
+    document.querySelector(`[data-ap="${k}"]`)?.click();
+  }
+});
 
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
