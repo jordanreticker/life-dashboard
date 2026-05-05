@@ -656,7 +656,7 @@ function openEditTask(id){
     t2.text=document.getElementById('edit-text').value.trim()||t2.text;
     t2.priority=document.getElementById('edit-pri').value;
     t2.dueDate=document.getElementById('edit-date').value;
-    closeModal('edit-modal');renderAll();sched();toast('✏️ Updated');
+    closeModal('edit-modal');D.dirty.add('tasks');renderAll();sched();toast('✏️ Updated');
   };
   document.getElementById('edit-modal').classList.remove('hide');
 }
