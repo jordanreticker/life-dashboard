@@ -282,6 +282,24 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .goal-prog-track{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;border:0.5px solid var(--border);}
 .goal-prog-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
 .goal-super{font-size:10px;font-family:'DM Mono',monospace;color:#92400E;background:#FEF3C7;padding:2px 7px;border-radius:20px;border:0.5px solid #FCD34D;}
+.inbox-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.inbox-count-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.inbox-big{font-size:42px;font-weight:300;letter-spacing:-2px;line-height:1;}
+.inbox-big.zero{color:var(--chealth);}
+.inbox-big.warn{color:#D97706;}
+.inbox-big.danger{color:#DC2626;}
+.inbox-meta{flex:1;}
+.inbox-label{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;}
+.inbox-streak{font-size:12px;font-family:'DM Mono',monospace;color:var(--chealth);margin-top:3px;}
+.inbox-sparkline{display:flex;align-items:flex-end;gap:3px;height:28px;margin-bottom:10px;}
+.spark-bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;transition:height 0.3s;}
+.spark-day{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;}
+.spark-lbl{font-size:8px;font-family:'DM Mono',monospace;color:var(--t3);}
+.inbox-actions{display:flex;gap:6px;}
+.inbox-inp{width:80px;font-family:'DM Mono',monospace;font-size:16px;padding:8px 10px;border-radius:var(--r2);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);outline:none;text-align:center;}
+.inbox-set-btn{flex:1;font-size:13px;font-weight:500;padding:9px;border-radius:var(--r2);border:none;background:var(--text);color:#fff;cursor:pointer;}
+.inbox-zero-btn{flex:1;font-size:13px;font-weight:500;padding:9px;border-radius:var(--r2);border:none;background:var(--chealth);color:#fff;cursor:pointer;}
+.inbox-zero-btn:disabled{background:var(--t3);cursor:default;}
 .sec-divider{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;padding:14px 0 6px;border-top:0.5px solid var(--border);margin-top:4px;}
 </style>
 </head>
@@ -433,7 +451,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),
@@ -497,6 +515,7 @@ async function loadData(){
     // All-time chore stats from full log
     D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
     if(data.contactLog) D.contactLog=data.contactLog;
+    if(data.inboxLog) D.inboxLog=data.inboxLog;
     if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({
       ...g,
       target:Number(g.target)||7,
@@ -524,6 +543,7 @@ async function saveAll(){
   if(D.dirty.has('weekSummary')) payload.weeklySummary={weekStart:WEEK_START,data:D.weekSummary};
   if(D.dirty.has('healthGoals')) payload.healthGoals = D.healthGoals;
   if(D.dirty.has('contactLog'))  payload.contactLog  = D.contactLog;
+  if(D.dirty.has('inboxLog'))    payload.inboxLog    = D.inboxLog;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -1129,6 +1149,48 @@ function rWork(){
   document.getElementById('work-content').innerHTML=html;
 }
 
+// ── Inbox tracker ─────────────────────────────────────────────────────────────
+function setInboxCount(){
+  const val=parseInt(document.getElementById('inbox-inp')?.value);
+  if(isNaN(val)||val<0)return;
+  if(!D.inboxLog)D.inboxLog=[];
+  // Replace today's entry if exists, else add
+  const existing=D.inboxLog.findIndex(l=>l.date===TODAY_ISO);
+  const wasZero=existing>=0&&D.inboxLog[existing].count===0;
+  if(existing>=0) D.inboxLog[existing].count=val;
+  else D.inboxLog.push({date:TODAY_ISO,count:val});
+  // Award XP if hitting 0
+  if(val===0&&!wasZero){
+    addXP(200);markActive();
+    D.dirty.add('gamification');
+    toast('📬 Inbox zero! +200 XP');
+    fireConfetti();
+  }
+  D.dirty.add('inboxLog');
+  rCommunity();sched();
+}
+function getInboxStreak(){
+  if(!D.inboxLog||!D.inboxLog.length)return 0;
+  let streak=0;
+  const sorted=[...D.inboxLog].sort((a,b)=>b.date.localeCompare(a.date));
+  for(const entry of sorted){
+    if(entry.count===0) streak++;
+    else break;
+  }
+  return streak;
+}
+function getTodayInbox(){
+  return D.inboxLog?.find(l=>l.date===TODAY_ISO)?.count??null;
+}
+function getLast7Inbox(){
+  const days=[];
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(localIso(d));}
+  return days.map(iso=>{
+    const e=D.inboxLog?.find(l=>l.date===iso);
+    return{date:iso,count:e?.count??null};
+  });
+}
+
 // ── COMMUNITY ─────────────────────────────────────────────────────────────────
 function rCommunity(){
   const tier=D.communityTier;
@@ -1136,11 +1198,47 @@ function rCommunity(){
   const ppl=D.people[key]||[];
   const secKey='community_'+tier;
   const tasks=D.tasks.filter(t=>t.section===secKey&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
+
+  // ── Inbox card ──────────────────────────────────────────────────────────────
+  const todayCount=getTodayInbox();
+  const streak=getInboxStreak();
+  const last7=getLast7Inbox();
+  const maxCount=Math.max(...last7.map(d=>d.count??0),1);
+  const DAYS7=['S','M','T','W','T','F','S'];
+  const countClass=todayCount===null?'':todayCount===0?'zero':todayCount<50?'warn':'danger';
+  const alreadyZeroToday=todayCount===0;
+
+  let html=`<div class="inbox-card">
+    <div class="inbox-label">📬 Text inbox</div>
+    <div class="inbox-count-row">
+      <div class="inbox-big ${countClass}">${todayCount===null?'—':todayCount}</div>
+      <div class="inbox-meta">
+        <div style="font-size:12px;color:var(--t2)">${todayCount===null?'not logged today':todayCount===0?'inbox zero!':todayCount+' unread'}</div>
+        ${streak>0?`<div class="inbox-streak">🔥 ${streak}-day inbox zero streak</div>`:''}
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:3px;height:36px;margin-bottom:8px">
+      ${last7.map((d,i)=>{
+        const h=d.count===null?4:d.count===0?36:Math.max(6,Math.round((1-d.count/maxCount)*30)+4);
+        const color=d.count===null?'var(--border)':d.count===0?'var(--chealth)':d.count<50?'#D97706':'#DC2626';
+        const isToday=d.date===TODAY_ISO;
+        return`<div class="spark-day">
+          <div class="spark-bar" style="height:${h}px;background:${color};width:100%;${isToday?'outline:1.5px solid var(--text);outline-offset:1px':''}"></div>
+          <div class="spark-lbl" style="color:${isToday?'var(--text)':'var(--t3)'}">${DAYS7[(new Date(d.date+'T12:00:00')).getDay()]}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="inbox-actions">
+      <input class="inbox-inp" id="inbox-inp" type="number" min="0" placeholder="0" value="${todayCount===null?'':todayCount}"/>
+      <button class="inbox-set-btn" id="inbox-set-btn">Update count</button>
+      <button class="inbox-zero-btn" id="inbox-zero-btn" ${alreadyZeroToday?'disabled':''}>✓ Inbox zero</button>
+    </div>
+  </div>`;
   const doneTasks=D.tasks.filter(t=>t.section===secKey&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
   const grp={};ppl.forEach(p=>{grp[p.id]=[];});grp['__']=[];
   tasks.forEach(t=>{const k=t.personId&&grp[t.personId]!==undefined?t.personId:'__';grp[k].push(t);});
 
-  let html=`<div class="tier-tabs"><button class="tier-tab ${tier==='family'?'active':''}" data-tier="family">👨‍👩‍👧 Family</button><button class="tier-tab ${tier==='friends'?'active':''}" data-tier="friends">👥 Friends</button></div>`;
+  html+=`<div class="tier-tabs"><button class="tier-tab ${tier==='family'?'active':''}" data-tier="family">👨‍👩‍👧 Family</button><button class="tier-tab ${tier==='friends'?'active':''}" data-tier="friends">👥 Friends</button></div>`;
 
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='family'?'👨‍👩‍👧':'👥'}</span><div class="sec-name">${tier==='family'?'Family':'Friends'}</div><span class="sbadge sn">${ppl.length} people</span></div>
     <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map(p=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='family'?7:14}):null;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}"><div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
@@ -1168,6 +1266,14 @@ function rCommunity(){
   </div>`;
 
   document.getElementById('community-content').innerHTML=html;
+  // Inbox bindings
+  document.getElementById('inbox-set-btn')?.addEventListener('click',setInboxCount);
+  document.getElementById('inbox-zero-btn')?.addEventListener('click',()=>{
+    const inp=document.getElementById('inbox-inp');
+    if(inp)inp.value='0';
+    setInboxCount();
+  });
+  document.getElementById('inbox-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')setInboxCount();});
   document.querySelectorAll('.tier-tab').forEach(b=>b.addEventListener('click',()=>{D.communityTier=b.dataset.tier;rCommunity();}));
   document.querySelectorAll('[data-ap]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.ap;const i=document.getElementById('pi-'+k);if(i?.value.trim()){addPerson(k,i.value);i.value='';}}));
   document.querySelectorAll('[data-dp]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();delPerson(el.dataset.tier,el.dataset.dp);}));
