@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="JrDr"/>
@@ -312,7 +312,18 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 <div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
 <div class="mback hide" id="edit-modal"><div class="modal"><h3>Edit task</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="edit-text" placeholder="Task description"/><div style="display:flex;gap:6px"><select class="sel" id="edit-pri" style="flex:1"><option value="">no priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="edit-date" style="flex:1"/></div></div><button class="mbtn" id="edit-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="fin-modal"><div class="modal"><h3 id="fin-modal-title">Add entry</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="fin-label" placeholder="Label (e.g. Rent)"/><input class="inp f1" id="fin-amount" type="number" placeholder="Amount ($)"/><select class="sel" id="fin-type" style="width:100%"><option value="expense">Expense</option><option value="income">Income</option><option value="savings">Savings</option></select><select class="sel" id="fin-cat" style="width:100%"><option value="housing">Housing</option><option value="food">Food</option><option value="transport">Transport</option><option value="health">Health</option><option value="subscriptions">Subscriptions</option><option value="savings">Savings</option><option value="income">Income</option><option value="other">Other</option></select></div><button class="mbtn" id="fin-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('fin-modal')">Cancel</button></div></div>
-<div class="mback hide" id="contact-modal"><div class="modal"><h3 id="contact-title">Log contact</h3><div class="modal-sub" id="contact-sub"></div><button class="mbtn" id="contact-confirm">✓ Talked to them today</button><button class="mbtn mcancel" onclick="closeModal('contact-modal')">Cancel</button></div></div>
+<div class="mback hide" id="contact-modal"><div class="modal">
+  <h3 id="contact-title">Log contact</h3>
+  <div class="modal-sub" id="contact-sub"></div>
+  <div style="display:flex;gap:6px;margin-bottom:10px" id="contact-type-btns">
+    <button class="mbtn" style="flex:1;text-align:center;padding:10px 6px" data-ctype="text">💬 Text</button>
+    <button class="mbtn" style="flex:1;text-align:center;padding:10px 6px" data-ctype="call">📞 Call</button>
+    <button class="mbtn" style="flex:1;text-align:center;padding:10px 6px" data-ctype="hangout">🤝 Hangout</button>
+  </div>
+  <input class="inp f1" id="contact-note" placeholder="Notes (optional)" style="width:100%;margin-bottom:10px"/>
+  <button class="mbtn" id="contact-confirm" style="background:var(--text);color:#fff;border:none">Log it</button>
+  <button class="mbtn mcancel" onclick="closeModal('contact-modal')">Cancel</button>
+</div></div>
 <div class="mback hide" id="reset-modal"><div class="modal"><h3>Reset week?</h3><div class="modal-sub">This will clear all completed tasks from view and reset weekly stats. Open tasks stay. This cannot be undone.</div><button class="mbtn" id="reset-confirm" style="background:#DC2626;color:#fff;border:none">Yes, reset the week</button><button class="mbtn mcancel" onclick="closeModal('reset-modal')">Cancel</button></div></div>
 
 <div class="toast" id="toast"></div>
@@ -375,17 +386,17 @@ const MOOD_PROMPTS={'😊':['What made you smile today?','Who contributed most t
 
 // ── Level config ──────────────────────────────────────────────────────────────
 const LEVELS=[
-  {n:0, label:'Just Getting Started',emoji:'🌱'},
-  {n:100, label:'Building Habits',emoji:'🌿'},
-  {n:250, label:'Finding Rhythm',emoji:'⚡'},
-  {n:500, label:'Consistent',emoji:'🔥'},
-  {n:900, label:'Dedicated',emoji:'💪'},
-  {n:1500,label:'Focused',emoji:'🎯'},
-  {n:2500,label:'High Performer',emoji:'⭐'},
-  {n:4000,label:'Elite',emoji:'🏆'},
-  {n:6000,label:'Champion',emoji:'👑'},
-  {n:9000,label:'Legend',emoji:'💫'},
-  {n:13000,label:'GOAT',emoji:'🐐'},
+  {n:0,     label:'Just Getting Started',emoji:'🌱'},
+  {n:1000,  label:'Building Habits',     emoji:'🌿'},
+  {n:3000,  label:'Finding Rhythm',      emoji:'⚡'},
+  {n:7000,  label:'Consistent',          emoji:'🔥'},
+  {n:15000, label:'Dedicated',           emoji:'💪'},
+  {n:30000, label:'Focused',             emoji:'🎯'},
+  {n:55000, label:'High Performer',      emoji:'⭐'},
+  {n:90000, label:'Elite',              emoji:'🏆'},
+  {n:140000,label:'Champion',           emoji:'👑'},
+  {n:200000,label:'Legend',             emoji:'💫'},
+  {n:275000,label:'GOAT',              emoji:'🐐'},
 ];
 function getLevelIdx(xp){let i=0;for(let j=0;j<LEVELS.length;j++){if(xp>=LEVELS[j].n)i=j;}return i;}
 function xpPct(xp){const i=getLevelIdx(xp);const base=LEVELS[i].n;const next=LEVELS[i+1]?LEVELS[i+1].n:base+5000;return Math.min(100,Math.round((xp-base)/(next-base)*100));}
@@ -422,7 +433,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),
@@ -485,6 +496,7 @@ async function loadData(){
     }
     // All-time chore stats from full log
     D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
+    if(data.contactLog) D.contactLog=data.contactLog;
     if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({
       ...g,
       target:Number(g.target)||7,
@@ -552,9 +564,9 @@ function calcProactivePoints(dueDate){
   const due=new Date(dueDate+'T12:00:00');
   const daysLeft=Math.floor((due-new Date())/86400000);
   if(daysLeft<=0) return 0;
-  if(daysLeft>=7) return 15;
-  if(daysLeft>=3) return 10;
-  return 5;
+  if(daysLeft>=7) return 150;
+  if(daysLeft>=3) return 100;
+  return 50;
 }
 function calcChoreProactivePoints(chore){
   // Only award PP if: chore has been done before AND is being done while still fresh (not overdue)
@@ -563,9 +575,9 @@ function calcChoreProactivePoints(chore){
   // If already overdue, no proactive points
   if(f.overdue) return 0;
   // Award based on how early they are (pct of interval remaining)
-  if(f.pct>=80) return 10;
-  if(f.pct>=60) return 5;
-  if(f.pct>=40) return 2;
+  if(f.pct>=80) return 50;
+  if(f.pct>=60) return 25;
+  if(f.pct>=40) return 10;
   return 0;
 }
 
@@ -622,7 +634,7 @@ function toggleTask(id){
   const t=D.tasks.find(t=>t.id==id);if(!t)return;
   t.done=!t.done;
   if(t.done){
-    const baseXP=t.priority==='urgent'?20:t.priority==='high'?15:t.priority==='medium'?10:t.xpValue||5;
+    const baseXP=t.priority==='urgent'?300:t.priority==='high'?200:t.priority==='medium'?125:t.priority==='low'?75:t.xpValue||75;
     const pp=calcProactivePoints(t.dueDate);
     t.proactivePoints=pp;t.completedAt=TODAY_ISO;
     addXP(baseXP+pp);markActive();
@@ -728,18 +740,45 @@ function addPerson(tier,name){
   renderAll();sched();
 }
 function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);D.dirty.add('people');D.dirty.add('tasks');renderAll();sched();}
+let _contactType='text';
 function openContactModal(id,tier){
   const p=(D.people[tier]||[]).find(p=>p.id==id);if(!p)return;
-  D.pendingContactId=id;D.pendingContactTier=tier;
-  document.getElementById('contact-title').textContent='Log contact with '+p.name;
-  const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:14}):null;
-  document.getElementById('contact-sub').textContent=f?'last: '+f.label:'first time logging';
+  D.pendingContactId=id;D.pendingContactTier=tier;_contactType='text';
+  document.getElementById('contact-title').textContent='Log contact · '+p.name;
+  const recentLogs=(D.contactLog||[]).filter(l=>l.personId==id).slice(-3);
+  document.getElementById('contact-sub').innerHTML=
+    (p.lastContact?'last: '+fmtDate(p.lastContact):'no contact logged')+
+    (recentLogs.length?'<br><small style="color:var(--t3)">'+recentLogs.map(l=>l.type+(l.note?' — '+l.note:'')).join(' · ')+'</small>':'');
+  document.getElementById('contact-note').value='';
+  document.querySelectorAll('[data-ctype]').forEach(b=>{
+    b.style.background=b.dataset.ctype==='text'?'var(--text)':'var(--bg)';
+    b.style.color=b.dataset.ctype==='text'?'#fff':'var(--text)';
+    b.onclick=()=>{
+      _contactType=b.dataset.ctype;
+      document.querySelectorAll('[data-ctype]').forEach(x=>{
+        x.style.background=x.dataset.ctype===_contactType?'var(--text)':'var(--bg)';
+        x.style.color=x.dataset.ctype===_contactType?'#fff':'var(--text)';
+      });
+    };
+  });
   document.getElementById('contact-confirm').onclick=confirmContact;
   document.getElementById('contact-modal').classList.remove('hide');
 }
 function confirmContact(){
   const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
-  if(p){p.lastContact=TODAY_ISO;addXP(10);markActive();D.weekSummary.communityTasks++;D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');checkWeekBadges();renderAll();sched();toast('👥 Logged! +10 XP');}
+  if(!p)return;
+  const isFamily=D.pendingContactTier==='social_family';
+  const baseXP={text:75,call:150,hangout:300}[_contactType]||75;
+  const xp=isFamily?Math.round(baseXP*1.5):baseXP;
+  const note=document.getElementById('contact-note')?.value.trim()||'';
+  p.lastContact=TODAY_ISO;
+  if(!D.contactLog)D.contactLog=[];
+  D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp});
+  addXP(xp);markActive();D.weekSummary.communityTasks++;
+  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');
+  checkWeekBadges();renderAll();sched();
+  const em={text:'💬',call:'📞',hangout:'🤝'};
+  toast((em[_contactType]||'👥')+' Logged! +'+xp+' XP');
   closeModal('contact-modal');
 }
 
@@ -752,11 +791,12 @@ function openActModal(type){
     const notes=document.getElementById('act-notes').value;
     const dur=document.getElementById('act-dur').value;
     const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur};
-    D.activities.push(entry);addXP(15);markActive();
+    const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?150:200;
+D.activities.push(entry);addXP(actXP);markActive();
     D.gamification.allTimeActivities++;D.weekSummary.activitiesLogged++;D.weekSummary.xpEarned+=15;
     checkWeekBadges();
     try{await fetch(API,{method:'POST',body:JSON.stringify({action:'logActivity',...entry})});}catch(e){}
-    closeModal('act-modal');renderAll();sched();toast('💪 Logged! +15 XP');fireConfetti();
+    closeModal('act-modal');renderAll();sched();toast('💪 Logged! +'+actXP+' XP');fireConfetti();
   };
   document.getElementById('act-modal').classList.remove('hide');
 }
@@ -765,9 +805,9 @@ function openActModal(type){
 function markRelAct(id){
   const r=D.relActs.find(r=>r.id==id);if(!r)return;
   if(!confirm('Mark "'+r.name+'" as done?'))return;
-  const pp=freshObj(r).pct>=50?8:0;
+  const pp=freshObj(r).pct>=50?50:0;
   r.lastDone=TODAY_ISO;
-  addXP(12+pp);markActive();
+  addXP(150+pp);markActive();
   D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=12+pp;
   if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
   checkWeekBadges();
@@ -795,9 +835,9 @@ function logHealthGoal(id){
       toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
       fireConfetti();
     }
-    addXP(50);
+    addXP(500);
   } else {
-    addXP(8);
+    addXP(100);
     toast('✓ '+hit+'/'+g.target+' +8XP');
   }
   markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
@@ -821,7 +861,9 @@ function openFinModal(id){
     if(!label)return;
     if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.updatedAt=TODAY_ISO;}}
     else D.finances.push({id:D.nextId++,category,label,amount,type,updatedAt:TODAY_ISO});
-    D.dirty.add('finances');closeModal('fin-modal');renderAll();sched();
+    D.dirty.add('finances');
+    if(type==='savings'&&amount>0){addXP(50);D.dirty.add('gamification');toast('💰 Savings logged +50 XP');}
+    closeModal('fin-modal');renderAll();sched();
   };
   document.getElementById('fin-modal').classList.remove('hide');
 }
@@ -834,7 +876,7 @@ async function submitJournal(){
   D.journal.unshift(entry);
   try{await fetch(API,{method:'POST',body:JSON.stringify({action:'addJournal',...entry})});}catch(e){}
   document.getElementById('jtext').value='';D.selectedMood='';
-  renderAll();toast('📓 Saved');
+  addXP(100);D.dirty.add('gamification');renderAll();sched();toast('📓 Saved +100 XP');
 }
 
 function closeModal(id){document.getElementById(id).classList.add('hide');}
