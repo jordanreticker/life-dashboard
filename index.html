@@ -494,7 +494,7 @@ async function loadData(){
     updateStreak();checkPermBadges();checkWeekBadges();
     setSync('synced','synced');
   }catch(e){setSync('error','offline');}
-  renderAll();
+  renderAllTabs(); // render every tab once so all events get bound
 }
 
 async function saveAll(){
@@ -831,7 +831,15 @@ function switchTab(tab){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('pane-'+tab).classList.add('active');
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  D.currentTab=tab;document.getElementById('main').scrollTo(0,0);
+  D.currentTab=tab;
+  document.getElementById('main').scrollTo(0,0);
+  // Render the newly active tab
+  if(tab==='paige')    rPaige();
+  else if(tab==='work')     rWork();
+  else if(tab==='community')rCommunity();
+  else if(tab==='chores')   rChores();
+  else if(tab==='life')     rLife();
+  else if(tab==='home')     rHome();
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 ['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal'].forEach(id=>{
@@ -839,7 +847,20 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>swit
 });
 
 // ── Render ────────────────────────────────────────────────────────────────────
-function renderAll(){rHome();rPaige();rWork();rCommunity();rChores();rLife();}
+function renderAll(){
+  rHome(); // always update summary
+  const tab=D.currentTab;
+  if(tab==='paige')     rPaige();
+  else if(tab==='work')      rWork();
+  else if(tab==='community') rCommunity();
+  else if(tab==='chores')    rChores();
+  else if(tab==='life')      rLife();
+}
+function renderCurrent(){renderAll();}
+function renderAllTabs(){
+  // Called once on initial load to render every tab
+  rHome();rPaige();rWork();rCommunity();rChores();rLife();
+}
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function rHome(){
@@ -1226,11 +1247,24 @@ function trow(t){
 }
 
 function bindTaskEv(secId){
-  document.querySelectorAll('[data-chk]').forEach(el=>el.addEventListener('click',()=>toggleTask(el.dataset.chk)));
-  document.querySelectorAll('[data-del]').forEach(el=>el.addEventListener('click',()=>deleteTask(el.dataset.del)));
-  document.querySelectorAll('[data-dupe]').forEach(el=>el.addEventListener('click',()=>dupeTask(el.dataset.dupe)));
-  document.querySelectorAll('[data-edit]').forEach(el=>el.addEventListener('click',()=>openEditTask(el.dataset.edit)));
-  const ab=document.querySelector(`[data-ab="${secId}"]`);
+  // Use event delegation — attach to pane container, not individual elements
+  const paneId='pane-'+D.currentTab;
+  const pane=document.getElementById(paneId);
+  if(!pane||pane._taskEvBound){}
+  // Direct element binding (safe since we just re-rendered this pane)
+  pane.querySelectorAll('[data-chk]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();toggleTask(el.dataset.chk);});
+  });
+  pane.querySelectorAll('[data-del]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();deleteTask(el.dataset.del);});
+  });
+  pane.querySelectorAll('[data-dupe]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();dupeTask(el.dataset.dupe);});
+  });
+  pane.querySelectorAll('[data-edit]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();openEditTask(el.dataset.edit);});
+  });
+  const ab=pane.querySelector(`[data-ab="${secId}"]`);
   if(ab){ab.addEventListener('click',()=>{
     const inp=document.getElementById('inp-'+secId);if(!inp?.value.trim())return;
     const pri=document.getElementById('pr-'+secId)?.value;
