@@ -425,7 +425,7 @@ let D={
   finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
-  nextId:Date.now(),saveTimer:null,currentTab:'home',
+  nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
@@ -498,19 +498,24 @@ async function loadData(){
 }
 
 async function saveAll(){
+  if(D.dirty.size===0){setSync('synced','saved');return;}
   setSync('syncing','saving');
+  const payload={action:'saveData'};
+  if(D.dirty.has('tasks'))       payload.tasks       = D.tasks;
+  if(D.dirty.has('chores'))      payload.chores      = D.chores;
+  if(D.dirty.has('people'))      payload.people      = D.people;
+  if(D.dirty.has('gamification'))payload.gamification= D.gamification;
+  if(D.dirty.has('finances'))    payload.finances    = D.finances;
+  if(D.dirty.has('weeklyStats')) payload.weeklyStats = D.weeklyStats;
+  if(D.dirty.has('relActs'))     payload.relActs     = D.relActs;
+  if(D.dirty.has('encycNotes'))  payload.encycNotes  = D.encycNotes;
+  if(D.dirty.has('weekSummary')) payload.weeklySummary={weekStart:WEEK_START,data:D.weekSummary};
+  if(D.dirty.has('healthGoals')) payload.healthGoals = D.healthGoals;
   try{
-    const payload={action:'saveData',tasks:D.tasks,chores:D.chores,people:D.people,gamification:D.gamification,finances:D.finances,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary},healthGoals:D.healthGoals};
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
-    try{
-      const result=JSON.parse(text);
-      if(result.error) setSync('error','err: '+result.error.slice(0,25));
-      else setSync('synced','saved');
-    }catch(pe){
-      // Apps Script returned non-JSON (redirect HTML) but execution still completed
-      setSync('synced','saved');
-    }
+    try{const r=JSON.parse(text);if(r.error)setSync('error','err: '+r.error.slice(0,25));else{D.dirty.clear();setSync('synced','saved');}}
+    catch(pe){D.dirty.clear();setSync('synced','saved');}
   }catch(e){setSync('error','offline');console.error('Save:',e);}
 }
 function sched(){clearTimeout(D.saveTimer);D.saveTimer=setTimeout(saveAll,1200);}
@@ -524,7 +529,7 @@ async function saveChoresNow(){
 }
 
 // ── Gamification ──────────────────────────────────────────────────────────────
-function addXP(amt){D.gamification.xp+=amt;const newIdx=getLevelIdx(D.gamification.xp);if(newIdx>D.gamification.level){D.gamification.level=newIdx;toast(LEVELS[newIdx].emoji+' Level up! '+LEVELS[newIdx].label,3000);fireConfetti();}checkPermBadges();}
+function addXP(amt){D.gamification.xp+=amt;D.dirty.add('gamification');const newIdx=getLevelIdx(D.gamification.xp);if(newIdx>D.gamification.level){D.gamification.level=newIdx;toast(LEVELS[newIdx].emoji+' Level up! '+LEVELS[newIdx].label,3000);fireConfetti();}checkPermBadges();}
 
 function checkPermBadges(){
   PERM_BADGES.forEach(b=>{
@@ -609,7 +614,7 @@ function confirmReset(){
   // Reset health goal logs for new week
   D.healthGoals=D.healthGoals.map(g=>({...g,logs:[]}));
   D.weeklyBadges=[];
-  closeModal('reset-modal');renderAll();sched();toast('Week reset ✓');
+  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('weeklyStats');closeModal('reset-modal');renderAll();sched();toast('Week reset ✓');
 }
 
 // ── Task actions ──────────────────────────────────────────────────────────────
@@ -629,15 +634,16 @@ function toggleTask(id){
     fireConfetti();toast('✓ +'+baseXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));
     checkWeekBadges();
   } else {t.completedAt='';t.proactivePoints=0;}
+  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');
   renderAll();sched();
 }
-function deleteTask(id){D.tasks=D.tasks.filter(t=>t.id!=id);renderAll();sched();}
+function deleteTask(id){D.tasks=D.tasks.filter(t=>t.id!=id);D.dirty.add('tasks');renderAll();sched();}
 function dupeTask(id){
   const t=D.tasks.find(t=>t.id==id);if(!t)return;
   const next=new Date();next.setDate(next.getDate()+7);
   const lbl=next.toLocaleDateString('en-US',{month:'short',day:'numeric'});
   D.tasks.push({...t,id:D.nextId++,done:false,scheduledFor:lbl,dueDate:'',proactivePoints:0,completedAt:''});
-  renderAll();sched();toast('📋 Duped → '+lbl);
+  D.dirty.add('tasks');renderAll();sched();toast('📋 Duped → '+lbl);
 }
 function openEditTask(id){
   const t=D.tasks.find(t=>t.id==id);if(!t)return;
@@ -658,7 +664,7 @@ function addTask(section,text,priority,dueDate,personId,tags){
   if(!text.trim())return;
   const xpValue=priority==='urgent'?20:priority==='high'?15:priority==='medium'?10:5;
   D.tasks.push({id:D.nextId++,section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue});
-  markActive();renderAll();sched();
+  markActive();D.dirty.add('tasks');renderAll();sched();
 }
 
 // ── Chore actions ─────────────────────────────────────────────────────────────
@@ -708,11 +714,11 @@ function openChoreEdit(id){
     if(!name)return;
     if(D.editingChoreId){const c2=D.chores.find(c=>c.id==D.editingChoreId);if(c2){c2.name=name;c2.intervalDays=interval;c2.xpValue=xp;}}
     else D.chores.push({id:'c'+D.nextId++,name,intervalDays:interval,lastDone:null,xpValue:xp});
-    closeModal('chore-edit-modal');renderAll();sched();
+    D.dirty.add('chores');closeModal('chore-edit-modal');renderAll();sched();
   };
   document.getElementById('chore-edit-modal').classList.remove('hide');
 }
-function deleteChore(id){D.chores=D.chores.filter(c=>c.id!=id);renderAll();sched();}
+function deleteChore(id){D.chores=D.chores.filter(c=>c.id!=id);D.dirty.add('chores');renderAll();sched();}
 
 // ── People / contact ──────────────────────────────────────────────────────────
 function addPerson(tier,name){
@@ -721,7 +727,7 @@ function addPerson(tier,name){
   D.people[tier].push({id:'p'+D.nextId++,name:name.trim(),tier,lastContact:null});
   renderAll();sched();
 }
-function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);renderAll();sched();}
+function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);D.dirty.add('people');D.dirty.add('tasks');renderAll();sched();}
 function openContactModal(id,tier){
   const p=(D.people[tier]||[]).find(p=>p.id==id);if(!p)return;
   D.pendingContactId=id;D.pendingContactTier=tier;
@@ -733,7 +739,7 @@ function openContactModal(id,tier){
 }
 function confirmContact(){
   const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
-  if(p){p.lastContact=TODAY_ISO;addXP(10);markActive();D.weekSummary.communityTasks++;checkWeekBadges();renderAll();sched();toast('👥 Logged! +10 XP');}
+  if(p){p.lastContact=TODAY_ISO;addXP(10);markActive();D.weekSummary.communityTasks++;D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');checkWeekBadges();renderAll();sched();toast('👥 Logged! +10 XP');}
   closeModal('contact-modal');
 }
 
@@ -772,7 +778,7 @@ function markRelAct(id){
 function addHealthGoal(name, target){
   if(!name.trim())return;
   D.healthGoals.push({id:'hg'+D.nextId++,name:name.trim(),target:Number(target)||7,logs:[]});
-  renderAll();sched();
+  D.dirty.add('healthGoals');renderAll();sched();
 }
 function logHealthGoal(id){
   const g=D.healthGoals.find(g=>g.id==id);if(!g)return;
@@ -792,7 +798,7 @@ function logHealthGoal(id){
     addXP(8);
     toast('✓ '+hit+'/'+g.target+' +8XP');
   }
-  markActive();renderAll();sched();
+  markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
 }
 function deleteHealthGoal(id){
   D.healthGoals=D.healthGoals.filter(g=>g.id!=id);renderAll();sched();
@@ -813,11 +819,11 @@ function openFinModal(id){
     if(!label)return;
     if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.updatedAt=TODAY_ISO;}}
     else D.finances.push({id:D.nextId++,category,label,amount,type,updatedAt:TODAY_ISO});
-    closeModal('fin-modal');renderAll();sched();
+    D.dirty.add('finances');closeModal('fin-modal');renderAll();sched();
   };
   document.getElementById('fin-modal').classList.remove('hide');
 }
-function deleteFin(id){D.finances=D.finances.filter(f=>f.id!=id);renderAll();sched();}
+function deleteFin(id){D.finances=D.finances.filter(f=>f.id!=id);D.dirty.add('finances');renderAll();sched();}
 
 // ── Journal ───────────────────────────────────────────────────────────────────
 async function submitJournal(){
@@ -1011,7 +1017,7 @@ function rPaige(){
   document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
   document.querySelectorAll('[data-rel]').forEach(el=>el.addEventListener('click',()=>markRelAct(el.dataset.rel)));
   document.getElementById('encyc-hd')?.addEventListener('click',e=>{if(e.target.closest('[data-delnote],[id="encyc-add"],[id="encyc-inp"],[id="encyc-cat"]'))return;D.encycOpen=!D.encycOpen;rPaige();});
-  document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';rPaige();sched();});
+  document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';D.dirty.add('encycNotes');rPaige();sched();});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
   document.querySelectorAll('[data-delnote]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();D.encycNotes.splice(parseInt(el.dataset.delnote),1);rPaige();sched();}));
 }
@@ -1302,7 +1308,7 @@ document.getElementById('main').addEventListener('click', function(e){
   if(goaldel){ deleteHealthGoal(goaldel.dataset.goaldel); return; }
   // Delete note (encyclopedia)
   const delnote = e.target.closest('[data-delnote]');
-  if(delnote){ D.encycNotes.splice(parseInt(delnote.dataset.delnote),1); rPaige(); sched(); return; }
+  if(delnote){ D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
   // Contact log
   const contact = e.target.closest('[data-contact]');
   if(contact && !e.target.closest('[data-dp]')){ openContactModal(contact.dataset.contact, contact.dataset.ctier); return; }
