@@ -1008,7 +1008,7 @@ function rPaige(){
   document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';rPaige();sched();});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
   document.querySelectorAll('[data-delnote]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();D.encycNotes.splice(parseInt(el.dataset.delnote),1);rPaige();sched();}));
-  bindTaskEv('paige');
+  bindTaskEv('paige','pane-paige');
 }
 
 // ── WORK ──────────────────────────────────────────────────────────────────────
@@ -1025,7 +1025,7 @@ function rWork(){
     <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-work" placeholder="Add a task..."/><button class="badd" data-ab="work">Add</button></div>
     <div class="add-extras"><input class="inp" id="tg-work" placeholder="#tag" style="width:70px;flex:none"/><select class="sel" id="pr-work"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-work"/></div></div>
   </div>`;
-  document.getElementById('work-content').innerHTML=html;bindTaskEv('work');
+  document.getElementById('work-content').innerHTML=html;bindTaskEv('work','pane-work');
 }
 
 // ── COMMUNITY ─────────────────────────────────────────────────────────────────
@@ -1074,7 +1074,7 @@ function rCommunity(){
     const pp=document.getElementById('pr-community');if(pp)pp.value='';
   });}
   if(commInp){commInp.addEventListener('keydown',e=>{if(e.key==='Enter')commAddBtn?.click();});commInp.addEventListener('click',e=>e.stopPropagation());}
-  bindTaskEv('community_family');bindTaskEv('community_friends');
+  bindTaskEv('community_family','pane-community');bindTaskEv('community_friends','pane-community');
 }
 
 // ── CHORES ────────────────────────────────────────────────────────────────────
@@ -1205,7 +1205,7 @@ function rLife(){
   });
   goalInp?.addEventListener('keydown',e=>{if(e.key==='Enter')goalAdd?.click();});
   document.querySelectorAll('.moodbtn').forEach(b=>b.addEventListener('click',()=>{const prev=document.getElementById('jtext')?.value;D.selectedMood=b.dataset.mood;rLife();const ta=document.getElementById('jtext');if(ta&&prev)ta.value=prev;}));
-  bindTaskEv('health');bindTaskEv('personal');
+  bindTaskEv('health','pane-life');bindTaskEv('personal','pane-life');
 }
 
 function miniTaskSec(secId,title,color,active,done){
@@ -1246,12 +1246,11 @@ function trow(t){
   </div>`;
 }
 
-function bindTaskEv(secId){
-  // Use event delegation — attach to pane container, not individual elements
-  const paneId='pane-'+D.currentTab;
+function bindTaskEv(secId, paneOverride){
+  // Find the correct pane — use override if provided (for renderAllTabs), else current tab
+  const paneId = paneOverride || ('pane-'+D.currentTab);
   const pane=document.getElementById(paneId);
-  if(!pane||pane._taskEvBound){}
-  // Direct element binding (safe since we just re-rendered this pane)
+  if(!pane) return;
   pane.querySelectorAll('[data-chk]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();toggleTask(el.dataset.chk);});
   });
