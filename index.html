@@ -782,6 +782,8 @@ function addHealthGoal(name, target){
 }
 function logHealthGoal(id){
   const g=D.healthGoals.find(g=>g.id==id);if(!g)return;
+  // Prevent double-fire: check if already logged today
+  if(g.logs.filter(d=>d===TODAY_ISO).length>0)return;
   if(g.logs.length>=g.target)return; // already maxed
   g.logs.push(TODAY_ISO);
   const hit=g.logs.length;const full=hit>=g.target;
@@ -897,7 +899,7 @@ function rHome(){
       <div class="ws"><div class="ws-n">${doneTasks.length}</div><div class="ws-l">tasks</div></div>
       <div class="ws"><div class="ws-n">${w.choresDone}</div><div class="ws-l">chores</div></div>
       <div class="ws"><div class="ws-n">${w.choreXP||0}</div><div class="ws-l">chore XP</div></div>
-      <div class="ws"><div class="ws-n">${w.activitiesLogged}</div><div class="ws-l">workouts</div></div>
+      <div class="ws"><div class="ws-n">${D.activities.filter(a=>a.date>=WEEK_START).length}</div><div class="ws-l">sessions</div></div>
       <div class="ws"><div class="ws-n pp">${w.proactivePoints}</div><div class="ws-l">PP ⚡</div></div>
     </div>
   </div>`;
@@ -910,8 +912,8 @@ function rHome(){
     ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'')}
     ${scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_family,...D.people.social_friends].length,done:w.communityTasks,over:0},'contacts')}
     <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
-    ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),w.activitiesLogged+' sessions')}
-    ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),'personal')}
+    ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions')}
+    ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved')}
   </div>`;
 
   // Badges
@@ -1205,15 +1207,13 @@ function rLife(){
 
   document.getElementById('life-content').innerHTML=html;
   document.querySelectorAll('[data-acttype]').forEach(b=>b.addEventListener('click',()=>openActModal(b.dataset.acttype)));
-  document.querySelectorAll('[data-goallog]').forEach(b=>b.addEventListener('click',()=>logHealthGoal(b.dataset.goallog)));
-  document.querySelectorAll('[data-goaldel]').forEach(b=>b.addEventListener('click',()=>deleteHealthGoal(b.dataset.goaldel)));
+  // goal buttons handled by delegated listener on #main
   const goalAdd=document.getElementById('goal-add');
   const goalInp=document.getElementById('goal-inp');
-  goalAdd?.addEventListener('click',()=>{
+  if(goalAdd) goalAdd.onclick=()=>{
     const t=document.getElementById('goal-target');
     if(goalInp?.value.trim()){addHealthGoal(goalInp.value,t?.value||7);goalInp.value='';if(t)t.value='7';}
-  });
-  goalInp?.addEventListener('keydown',e=>{if(e.key==='Enter')goalAdd?.click();});
+  };
   document.querySelectorAll('.moodbtn').forEach(b=>b.addEventListener('click',()=>{const prev=document.getElementById('jtext')?.value;D.selectedMood=b.dataset.mood;rLife();const ta=document.getElementById('jtext');if(ta&&prev)ta.value=prev;}));
 }
 
