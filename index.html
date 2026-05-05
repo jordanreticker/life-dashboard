@@ -523,6 +523,7 @@ async function saveAll(){
   if(D.dirty.has('encycNotes'))  payload.encycNotes  = D.encycNotes;
   if(D.dirty.has('weekSummary')) payload.weeklySummary={weekStart:WEEK_START,data:D.weekSummary};
   if(D.dirty.has('healthGoals')) payload.healthGoals = D.healthGoals;
+  if(D.dirty.has('contactLog'))  payload.contactLog  = D.contactLog;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -775,7 +776,7 @@ function confirmContact(){
   if(!D.contactLog)D.contactLog=[];
   D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp});
   addXP(xp);markActive();D.weekSummary.communityTasks++;
-  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');
+  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
   checkWeekBadges();renderAll();sched();
   const em={text:'💬',call:'📞',hangout:'🤝'};
   toast((em[_contactType]||'👥')+' Logged! +'+xp+' XP');
@@ -1146,7 +1147,19 @@ function rCommunity(){
     <div class="apr"><input class="inp f1" id="pi-${key}" placeholder="Add a person..."/><button class="bsm" data-ap="${key}">+ Add</button></div>
     <div class="div"></div>
     <div class="tlist">
-      ${ppl.map(p=>{const pt=grp[p.id]||[];return`<div><div class="plbl-row"><span class="plbl">${escH(p.name)}</span></div>${!pt.length?'':''}${pt.map(t=>trow(t)).join('')}</div>`;}).join('')}
+      ${ppl.map(p=>{
+        const pt=grp[p.id]||[];
+        const logs=(D.contactLog||[]).filter(l=>l.personId==p.id).slice(-3).reverse();
+        const logHtml=logs.length?`<div style="margin:4px 0 6px;display:flex;flex-direction:column;gap:3px">
+          ${logs.map(l=>`<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 0">
+            <span>${{text:'💬',call:'📞',hangout:'🤝'}[l.type]||'👥'}</span>
+            <span style="color:var(--t2)">${fmtDate(l.date)}</span>
+            ${l.note?`<span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(l.note)}</span>`:''}
+            <span style="color:var(--xp)">+${l.xp}</span>
+          </div>`).join('')}
+        </div>`:'';
+        return`<div><div class="plbl-row"><span class="plbl">${escH(p.name)}</span></div>${logHtml}${pt.map(t=>trow(t)).join('')}</div>`;
+      }).join('')}
       ${grp['__'].length?`<div><div class="plbl-row"><span class="plbl">general</span></div>${grp['__'].map(t=>trow(t)).join('')}</div>`:''}
       ${!tasks.length&&!ppl.length?'<div class="emsg">add people above then tasks below</div>':''}
       ${doneTasks.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${doneTasks.map(t=>trow(t)).join('')}`:''}</div>
