@@ -2390,10 +2390,10 @@ function rChores(){
     const nonStaples=active.filter(i=>!i.staple);
     const doneOpenKey=name==='shopping'?'shopDoneOpen':'groDoneOpen';
     const doneOpen=D[doneOpenKey]===true;
-    const renderItem=(i,isDone)=>'<div class="list-item '+(isDone?'done':'')+'"><div class="chk '+(isDone?'ck':'')+'" data-listchk="'+name+':'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn" style="opacity:'+(i.staple?'1':'0.5')+';font-size:11px" data-liststar="'+name+':'+i.id+'">'+(i.staple?'★':'☆')+'</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="'+name+':'+i.id+'">✕</button></div>';
+    const renderItem=(i,isDone)=>'<div class="list-item '+(isDone?'done':'')+'"><div class="chk '+(isDone?'ck':'')+'" data-listchk="'+name+':'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn" style="opacity:1;font-size:18px;padding:2px 6px;color:'+(i.staple?'#F59E0B':'var(--t3)')+';line-height:1" data-liststar="'+name+':'+i.id+'">'+(i.staple?'★':'☆')+'</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="'+name+':'+i.id+'">✕</button></div>';
     let inner='';
     if(staples.length){
-      inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:2px 6px 4px">★ staples</div>';
+      inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:#F59E0B;padding:2px 6px 4px;font-weight:500">★ staples</div>';
       inner+=staples.map(i=>renderItem(i,false)).join('');
     }
     if(nonStaples.length){
