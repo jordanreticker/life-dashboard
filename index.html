@@ -246,6 +246,15 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 /* encyclopedia */
 .encyc-list{padding:6px 8px 4px;}
+.encyc-filters{display:flex;flex-wrap:wrap;gap:5px;padding:6px 8px 8px;border-bottom:0.5px solid var(--border);margin-bottom:4px;}
+.encyc-filter{font-size:10px;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:12px;background:var(--bg);color:var(--t2);cursor:pointer;border:0.5px solid transparent;}
+.encyc-filter.active{background:var(--cpaige);color:#fff;}
+.encyc-filter:hover{border-color:var(--cpaige);}
+.encyc-item.done-item{opacity:0.5;}
+.encyc-item.done-item .encyc-txt{text-decoration:line-through;}
+.encyc-check{width:14px;height:14px;border:1px solid var(--border2);border-radius:3px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;}
+.encyc-check.checked{background:var(--cpaige);border-color:var(--cpaige);}
+
 .encyc-item{display:flex;align-items:center;gap:8px;padding:7px 5px;border-radius:var(--r2);margin-bottom:2px;}
 .encyc-item:active{background:var(--bg);}
 .encyc-body{flex:1;min-width:0;}
@@ -634,7 +643,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -1888,12 +1897,38 @@ function rPaige(){
 
   // Paigecyclopedia
   html+=`<div class="sec"><div class="sec-hd" id="encyc-hd" style="cursor:pointer"><span class="sec-ic">📖</span><div class="sec-name">Paigecyclopedia</div><span class="sbadge sn">${notes.length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.encycOpen?'▲':'▼'}</span></div>
-  ${D.encycOpen?`<div class="encyc-list">${!notes.length?'<div class="emsg">add gift ideas, things she loves...</div>':''}${notes.map((n,i)=>`<div class="encyc-item"><div class="encyc-body"><div class="encyc-txt">${escH(n.text)}</div>${n.cat?`<div class="encyc-cat">${escH(n.cat)}</div>`:''}</div><button class="abtn del" style="opacity:1" data-delnote="${i}">✕</button></div>`).join('')}</div>
-  <div class="add-wrap"><div class="add-main"><input class="inp f1" id="encyc-inp" placeholder="Add a note..."/><button class="badd" id="encyc-add">Add</button></div><div class="add-extras"><input class="inp" id="encyc-cat" placeholder="category" style="width:110px;flex:none"/></div></div>`:``}
+  ${D.encycOpen?(()=>{
+      const allCats=[...new Set(notes.map(n=>n.cat).filter(Boolean))].sort();
+      const activeFilter=D.encycFilter||'';
+      const filtered=activeFilter?notes.filter(n=>(n.cat||'').toLowerCase()===activeFilter.toLowerCase()):notes;
+      const isActionable=cat=>['dateideas','giftideas','gift ideas','date ideas','dateidea','giftidea'].includes((cat||'').toLowerCase().replace(/\s+/g,''));
+      let body='';
+      if(allCats.length){
+        body+='<div class="encyc-filters"><span class="encyc-filter '+(!activeFilter?'active':'')+'" data-encfilter="">all ('+notes.length+')</span>'+allCats.map(c=>'<span class="encyc-filter '+(activeFilter===c?'active':'')+'" data-encfilter="'+escH(c)+'">'+escH(c)+' ('+notes.filter(n=>(n.cat||'').toLowerCase()===c.toLowerCase()).length+')</span>').join('')+'</div>';
+      }
+      body+='<div class="encyc-list">'+(!filtered.length?'<div class="emsg">no notes here yet</div>':'')+filtered.map(n=>{
+        const i=notes.indexOf(n);
+        const isDone=n.done===true;
+        const showCheck=isActionable(n.cat);
+        return '<div class="encyc-item '+(isDone?'done-item':'')+'">'+
+          (showCheck?'<div class="encyc-check '+(isDone?'checked':'')+'" data-enctoggle="'+i+'">'+(isDone?'✓':'')+'</div>':'')+
+          '<div class="encyc-body"><div class="encyc-txt">'+escH(n.text)+'</div>'+
+          (n.cat?'<div class="encyc-cat">'+escH(n.cat)+'</div>':'')+
+          (n.completedNote?'<div style="font-size:10px;color:var(--t3);font-style:italic;margin-top:2px">"'+escH(n.completedNote)+'"</div>':'')+
+          '</div><button class="abtn del" style="opacity:1" data-delnote="'+i+'">✕</button></div>';
+      }).join('')+'</div>';
+      body+='<div class="add-wrap"><div class="add-main"><input class="inp f1" id="encyc-inp" placeholder="Add a note..."/><button class="badd" id="encyc-add">Add</button></div><div class="add-extras"><input class="inp" id="encyc-cat" placeholder="category" style="width:110px;flex:none"/></div></div>';
+      return body;
+    })():''}
   </div>`;
 
   // Daily question (under Paigecyclopedia)
-  if(q){html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(q)}</div><button class="qbtn" id="nxtq-paige">Next question ↻</button><div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div></div>`;}
+  // Always render question card (even if questions array empty, show prompt to add)
+  if(qs.length>0){
+    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(q||qs[0])}</div><button class="qbtn" id="nxtq-paige">Next question ↻</button><div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div></div>`;
+  } else {
+    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">Loading questions... (run setupAllSheets in Apps Script if missing)</div></div>`;
+  }
 
   document.getElementById('paige-content').innerHTML=html;
   document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
@@ -2124,39 +2159,47 @@ function rChores(){
   const choresShown=D.choresExpanded?sorted:sorted.slice(0,7);
   const choresHidden=sorted.length-choresShown.length;
   const overdue=sorted.filter(c=>freshObj(c).overdue).length;
-  // Shopping & grocery lists at top of chores tab
-  const shopOpen=D.shoppingOpen===true;
-  const groOpen=D.groceryOpen===true;
-  const shopActive=(D.shoppingList||[]).filter(i=>!i.done);
-  const shopDone=(D.shoppingList||[]).filter(i=>i.done);
-  const groActive=(D.groceryList||[]).filter(i=>!i.done);
-  const groDone=(D.groceryList||[]).filter(i=>i.done);
+  // Shopping & grocery lists at top of chores tab — always rendered, just toggled visible
+  const shopList=D.shoppingList||[];
+  const groList=D.groceryList||[];
+  const renderListItems=(arr,name)=>{
+    const active=arr.filter(i=>!i.done);
+    const done=arr.filter(i=>i.done);
+    let inner='';
+    inner+=active.map(i=>`<div class="list-item"><div class="chk" data-listchk="${name}:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="${name}:${i.id}">✕</button></div>`).join('');
+    if(done.length){
+      inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>';
+      inner+=done.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="${name}:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="${name}:${i.id}">✕</button></div>`).join('');
+    }
+    if(!arr.length) inner='<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>';
+    return inner;
+  };
   
-  let html=`<div class="list-card">
+  let html='';
+  // Shopping list
+  html+=`<div class="list-card">
     <div class="list-hd" data-listtoggle="shopping">
-      <div class="list-hd-l"><span class="list-icon">🛍️</span><span class="list-name">Misc shopping</span><span class="list-count">${shopActive.length}</span></div>
-      <span class="list-toggle">${shopOpen?'▲':'▼'}</span>
+      <div class="list-hd-l"><span class="list-icon">🛍️</span><span class="list-name">Misc shopping</span><span class="list-count">${shopList.filter(i=>!i.done).length}</span></div>
+      <span class="list-toggle">${D.shoppingOpen?'▲':'▼'}</span>
     </div>
-    ${shopOpen?`<div class="list-items">
-      ${shopActive.map(i=>`<div class="list-item"><div class="chk" data-listchk="shopping:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:${i.id}">✕</button></div>`).join('')}
-      ${shopDone.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>${shopDone.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="shopping:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:${i.id}">✕</button></div>`).join('')}`:''}
-      ${!shopActive.length&&!shopDone.length?'<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>':''}
+    <div style="display:${D.shoppingOpen?'block':'none'}">
+      <div class="list-items">${renderListItems(shopList,'shopping')}</div>
+      <div class="list-add"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" data-listadd="shopping">Add</button></div>
     </div>
-    <div class="list-add"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" data-listadd="shopping">Add</button></div>`:''}
-  </div>
-  <div class="list-card">
+  </div>`;
+  // Grocery list
+  html+=`<div class="list-card">
     <div class="list-hd" data-listtoggle="grocery">
-      <div class="list-hd-l"><span class="list-icon">🛒</span><span class="list-name">Grocery list</span><span class="list-count">${groActive.length}</span></div>
-      <span class="list-toggle">${groOpen?'▲':'▼'}</span>
+      <div class="list-hd-l"><span class="list-icon">🛒</span><span class="list-name">Grocery list</span><span class="list-count">${groList.filter(i=>!i.done).length}</span></div>
+      <span class="list-toggle">${D.groceryOpen?'▲':'▼'}</span>
     </div>
-    ${groOpen?`<div class="list-items">
-      ${groActive.map(i=>`<div class="list-item"><div class="chk" data-listchk="grocery:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="grocery:${i.id}">✕</button></div>`).join('')}
-      ${groDone.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>${groDone.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="grocery:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="grocery:${i.id}">✕</button></div>`).join('')}`:''}
-      ${!groActive.length&&!groDone.length?'<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>':''}
+    <div style="display:${D.groceryOpen?'block':'none'}">
+      <div class="list-items">${renderListItems(groList,'grocery')}</div>
+      <div class="list-add"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" data-listadd="grocery">Add</button></div>
     </div>
-    <div class="list-add"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" data-listadd="grocery">Add</button></div>`:''}
-  </div>
-  <div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
+  </div>`;
+  
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
     <div class="tlist">${!choresShown.length?'<div class="emsg">no chores</div>':''}${choresShown.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
       <div class="cinfo"><div class="cname">${escH(c.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue}XP${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
@@ -2423,6 +2466,29 @@ document.getElementById('main').addEventListener('click', function(e){
   // Goal delete
   const goaldel = e.target.closest('[data-goaldel]');
   if(goaldel){ deleteHealthGoal(goaldel.dataset.goaldel); return; }
+  // Encyclopedia filter
+  const encfilter = e.target.closest('[data-encfilter]');
+  if(encfilter){ D.encycFilter=encfilter.dataset.encfilter; rPaige(); return; }
+  // Encyclopedia toggle complete (date/gift ideas)
+  const enctoggle = e.target.closest('[data-enctoggle]');
+  if(enctoggle){
+    e.stopPropagation();
+    const idx=parseInt(enctoggle.dataset.enctoggle);
+    const n=D.encycNotes[idx];
+    if(n){
+      if(!n.done){
+        const note=prompt('Done! Add a note about how it went (optional):');
+        n.done=true;
+        if(note&&note.trim()) n.completedNote=note.trim();
+      } else {
+        n.done=false;
+        n.completedNote='';
+      }
+      D.dirty.add('encycNotes');rPaige();sched();
+      if(n.done){addXP(50);D.dirty.add('gamification');toast('💕 Marked complete +50 XP');haptic('success');}
+    }
+    return;
+  }
   // Delete note (encyclopedia)
   const delnote = e.target.closest('[data-delnote]');
   if(delnote){ e.stopPropagation(); D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
