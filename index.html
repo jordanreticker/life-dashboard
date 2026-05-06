@@ -1417,11 +1417,12 @@ function rHome(){
   </div>`;
 
   html+=`<div class="week-card"><div class="week-hd"><span class="week-title">this week</span><button class="reset-btn" onclick="openResetModal()">↺ Reset week</button></div>
-    <div class="week-stats" style="grid-template-columns:repeat(5,1fr)">
+    <div class="week-stats" style="grid-template-columns:repeat(6,1fr)">
       <div class="ws"><div class="ws-n">${doneTasks.length}</div><div class="ws-l">tasks</div></div>
       <div class="ws"><div class="ws-n">${w.choresDone}</div><div class="ws-l">chores</div></div>
       <div class="ws"><div class="ws-n">${w.choreXP||0}</div><div class="ws-l">chore XP</div></div>
       <div class="ws"><div class="ws-n">${D.activities.filter(a=>a.date>=WEEK_START).length}</div><div class="ws-l">sessions</div></div>
+      <div class="ws"><div class="ws-n">${(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length}</div><div class="ws-l">connects</div></div>
       <div class="ws"><div class="ws-n pp">${(D.tasks.filter(t=>t.done&&t.completedAt&&t.completedAt>=WEEK_START).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0)+(D.choreLog||[]).filter(l=>l.date>=WEEK_START).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0))}</div><div class="ws-l">PP ⚡</div></div>
     </div>
   </div>`;
