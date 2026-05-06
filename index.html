@@ -367,15 +367,18 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="tab" data-tab="chores"><span class="tab-ic">🏠</span><span class="tab-lbl">Home</span></button>
     <button class="tab" data-tab="life"><span class="tab-ic">✦</span><span class="tab-lbl">Life</span></button>
   </nav>
-  <div id="main"><div id="ptr-indicator" style="position:absolute;top:calc(var(--safe-t) + 80px);left:50%;transform:translateX(-50%) translateY(-30px);font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);background:var(--surface);padding:6px 14px;border-radius:20px;border:0.5px solid var(--border);transition:transform 0.2s,opacity 0.2s;opacity:0;z-index:30">↓ pull to refresh</div>
-    <div class="pane active" id="pane-home"><div class="topbar"><div><h1>JrDr's<br/><b>Office</b></h1></div><div class="topbar-r" style="display:flex;align-items:center;gap:8px"><button id="search-toggle" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2)">🔍</button><div class="topbar-date" id="top-date"></div></div></div>
-<div id="search-bar" style="display:none;margin-bottom:14px"><input class="inp f1" id="search-inp" placeholder="Search tasks, chores, notes..." style="width:100%"/></div>
-<div id="search-results" style="display:none;margin-bottom:14px"></div><div class="sync-row"><div class="pip" id="sync-pip"></div><span class="sync-txt" id="sync-txt">connecting</span></div><div id="home-content"><div class="loading">loading</div></div></div>
-    <div class="pane" id="pane-paige"><div class="topbar"><h1><b>💕 Paige</b></h1></div><div id="paige-content"><div class="loading">loading</div></div></div>
-    <div class="pane" id="pane-work"><div class="topbar"><h1><b>💼 Work</b></h1></div><div id="work-content"><div class="loading">loading</div></div></div>
-    <div class="pane" id="pane-community"><div class="topbar"><h1><b>👥 Community</b></h1></div><div id="community-content"><div class="loading">loading</div></div></div>
-    <div class="pane" id="pane-chores"><div class="topbar"><h1><b>🏠 Home</b></h1></div><div id="chores-content"><div class="loading">loading</div></div></div>
-    <div class="pane" id="pane-life"><div class="topbar"><h1><b>✦ Life</b></h1></div><div id="life-content"><div class="loading">loading</div></div></div>
+  <div id="search-overlay" style="display:none;position:fixed;top:calc(var(--safe-t) + 84px);left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-bottom:0.5px solid var(--border);padding:10px 12px;z-index:45;box-shadow:0 4px 12px rgba(0,0,0,0.04)">
+  <input class="inp f1" id="search-inp" placeholder="Search tasks, chores, notes..." style="width:100%"/>
+  <div id="search-results" style="display:none;margin-top:8px;max-height:60vh;overflow-y:auto"></div>
+</div>
+<div id="main"><div id="ptr-indicator" style="position:absolute;top:calc(var(--safe-t) + 80px);left:50%;transform:translateX(-50%) translateY(-30px);font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);background:var(--surface);padding:6px 14px;border-radius:20px;border:0.5px solid var(--border);transition:transform 0.2s,opacity 0.2s;opacity:0;z-index:30">↓ pull to refresh</div>
+    <div class="pane active" id="pane-home"><div class="topbar"><div><h1>JrDr's<br/><b>Office</b></h1></div><div class="topbar-r" style="display:flex;align-items:center;gap:8px"><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2)">🔍</button><div class="topbar-date" id="top-date"></div></div></div>
+<div class="sync-row"><div class="pip" id="sync-pip"></div><span class="sync-txt" id="sync-txt">connecting</span></div><div id="home-content"><div class="loading">loading</div></div></div>
+    <div class="pane" id="pane-paige"><div class="topbar"><h1><b>💕 Paige</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="paige-content"><div class="loading">loading</div></div></div>
+    <div class="pane" id="pane-work"><div class="topbar"><h1><b>💼 Work</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="work-content"><div class="loading">loading</div></div></div>
+    <div class="pane" id="pane-community"><div class="topbar"><h1><b>👥 Community</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="community-content"><div class="loading">loading</div></div></div>
+    <div class="pane" id="pane-chores"><div class="topbar"><h1><b>🏠 Home</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="chores-content"><div class="loading">loading</div></div></div>
+    <div class="pane" id="pane-life"><div class="topbar"><h1><b>✦ Life</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="life-content"><div class="loading">loading</div></div></div>
   </div>
 </div>
 
@@ -735,6 +738,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('tasks'))       payload.tasks       = D.tasks;
   if(D.dirty.has('chores'))      payload.chores      = D.chores;
   if(D.dirty.has('people'))      payload.people      = D.people;
+  if(D.dirty.has('activities'))  payload.activities  = D.activities;
   if(D.dirty.has('gamification'))payload.gamification= D.gamification;
   if(D.dirty.has('finances'))    payload.finances    = D.finances;
   if(D.dirty.has('weeklyStats')) payload.weeklyStats = D.weeklyStats;
@@ -1169,16 +1173,28 @@ function openActModal(type){
   D.pendingActType=type;
   document.getElementById('act-type-lbl').textContent=type;
   document.getElementById('act-notes').value='';document.getElementById('act-dur').value='';
-  document.getElementById('act-confirm').onclick=async()=>{
+  const btn=document.getElementById('act-confirm');
+  btn.disabled=false;
+  btn.textContent='Log it';
+  btn.onclick=()=>{
+    if(btn.disabled)return; // guard against double-tap
+    btn.disabled=true;
+    btn.textContent='Logging...';
     const notes=document.getElementById('act-notes').value;
     const dur=document.getElementById('act-dur').value;
     const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur};
     const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?150:200;
-D.activities.push(entry);addXP(actXP);markActive();
-    D.gamification.allTimeActivities++;D.weekSummary.activitiesLogged++;D.weekSummary.xpEarned+=15;
+    D.activities.push(entry);
+    addXP(actXP);markActive();
+    D.gamification.allTimeActivities++;
+    D.weekSummary.activitiesLogged++;
+    D.weekSummary.xpEarned+=actXP;
+    D.dirty.add('activities');D.dirty.add('gamification');D.dirty.add('weekSummary');
     checkWeekBadges();
-    try{await fetch(API,{method:'POST',body:JSON.stringify({action:'logActivity',...entry})});}catch(e){}
-    closeModal('act-modal');renderAll();sched();toast('💪 Logged! +'+actXP+' XP');fireConfetti();
+    closeModal('act-modal');
+    renderAll();sched();
+    haptic('success');
+    toast('💪 Logged! +'+actXP+' XP');fireConfetti();
   };
   document.getElementById('act-modal').classList.remove('hide');
 }
@@ -1429,16 +1445,16 @@ function closeModal(id){document.getElementById(id).classList.add('hide');}
 
 // ── Search ────────────────────────────────────────────────────────────────────
 function toggleSearch(){
-  const bar=document.getElementById('search-bar');
+  const overlay=document.getElementById('search-overlay');
   const inp=document.getElementById('search-inp');
-  const isOpen=bar.style.display!=='none';
+  const isOpen=overlay.style.display!=='none';
   if(isOpen){
-    bar.style.display='none';
+    overlay.style.display='none';
     document.getElementById('search-results').style.display='none';
     inp.value='';
   } else {
-    bar.style.display='block';
-    inp.focus();
+    overlay.style.display='block';
+    setTimeout(()=>inp.focus(),50);
   }
 }
 function runSearch(query){
@@ -1487,7 +1503,7 @@ function switchTab(tab){
   else if(tab==='home')     rHome();
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-document.getElementById('search-toggle').addEventListener('click',toggleSearch);
+document.querySelectorAll('.search-btn').forEach(b=>b.addEventListener('click',toggleSearch));
 document.getElementById('search-inp').addEventListener('input',e=>runSearch(e.target.value));
 ['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal','day-result-modal','paige-date-modal','weekly-review-modal','focus-modal'].forEach(id=>{
   const el=document.getElementById(id);
