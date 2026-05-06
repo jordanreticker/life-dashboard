@@ -446,14 +446,13 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 </div></div>
 
 <div class="mback hide" id="focus-modal"><div class="modal">
-  <h3>Weekly focuses with Paige</h3>
-  <div class="modal-sub">3 things you want to actively work on. Replace anytime.</div>
+  <h3 id="focus-modal-title">Edit focus</h3>
+  <div class="modal-sub">A focus is something you want to actively work on. Add notes anytime.</div>
   <div style="display:flex;flex-direction:column;gap:8px;margin:14px 0">
-    <input class="inp f1" id="focus-1" placeholder="Focus 1 (e.g. Present conversations, no phone)" style="width:100%"/>
-    <input class="inp f1" id="focus-2" placeholder="Focus 2 (e.g. Real check-ins, not just logistics)" style="width:100%"/>
-    <input class="inp f1" id="focus-3" placeholder="Focus 3 (e.g. Initiate physical affection more)" style="width:100%"/>
+    <input class="inp f1" id="focus-text" placeholder="What do you want to focus on?" style="width:100%"/>
+    <textarea class="inp f1" id="focus-notes" placeholder="Notes / progress / reflections (optional)" style="width:100%;min-height:60px;resize:vertical"></textarea>
   </div>
-  <button class="mbtn" id="focus-confirm" style="background:var(--cpaige);color:#fff;border:none">Save focuses</button>
+  <button class="mbtn" id="focus-confirm" style="background:var(--cpaige);color:#fff;border:none">Save</button>
   <button class="mbtn mcancel" onclick="closeModal('focus-modal')">Cancel</button>
 </div></div>
 <div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
@@ -662,12 +661,12 @@ let D={
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
   finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},
   weeklyBadges:[],  // earned this week
-  weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
+  weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -766,7 +765,23 @@ function applyData(data){
   if(data.inboxLog) D.inboxLog=data.inboxLog;
   if(data.dayResults) D.dayResults=data.dayResults;
   if(data.paigeDates) D.paigeDates=data.paigeDates;
-  if(data.paigeFocuses) D.paigeFocuses=data.paigeFocuses;
+  if(data.paigeFocuses){
+    D.paigeFocuses=data.paigeFocuses.map((f,i)=>{
+      if(typeof f==='string'){
+        return{id:'pf'+(Date.now()+i),text:f,notes:'',status:'active',createdAt:TODAY_ISO,completedAt:'',reactivatedAt:'',sortOrder:i+1};
+      }
+      return{
+        id:f.id||('pf'+(Date.now()+i)),
+        text:f.text||'',
+        notes:f.notes||'',
+        status:f.status||'active',
+        createdAt:f.createdAt||TODAY_ISO,
+        completedAt:f.completedAt||'',
+        reactivatedAt:f.reactivatedAt||'',
+        sortOrder:Number(f.sortOrder)||(i+1),
+      };
+    });
+  }
   if(data.shoppingList) D.shoppingList=data.shoppingList;
   if(data.groceryList) D.groceryList=data.groceryList;
   if(data.xpValues) D.xpValues=data.xpValues;
@@ -1007,10 +1022,18 @@ function openWeeklyReview(){
 function confirmReset(){
   const week=D.weekSummary;
   const existing=D.weeklyStats.findIndex(w=>w.weekStart===WEEK_START);
-  const record={weekStart:WEEK_START,...week};
+  const record={
+    weekStart:WEEK_START,
+    tasksDone:Number(week.tasksDone)||0,
+    choresDone:Number(week.choresDone)||0,
+    activitiesLogged:Number(week.activitiesLogged)||0,
+    contactsLogged:Number(week.contactsLogged)||0,
+    xpEarned:Number(week.xpEarned)||0,
+    proactivePoints:Number(week.proactivePoints)||0,
+  };
   if(existing>=0)D.weeklyStats[existing]=record;else D.weeklyStats.push(record);
   D.tasks=D.tasks.filter(t=>!t.done);
-  D.weekSummary={weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0};
+  D.weekSummary={weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0};
   D.healthGoals=D.healthGoals.map(g=>({...g,logs:[]}));
   D.weeklyBadges=[];
   D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('weeklyStats');D.dirty.add('healthGoals');
@@ -1295,7 +1318,9 @@ function confirmContact(){
   p.lastContact=TODAY_ISO;
   if(!D.contactLog)D.contactLog=[];
   D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp:totalXP});
-  addXP(totalXP);markActive();D.weekSummary.communityTasks++;
+  addXP(totalXP);markActive();
+  D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+1;
+  D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalXP;
   D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
   checkWeekBadges();renderAll();sched();
   const em={text:'💬',call:'📞',hangout:'🤝'};
@@ -1304,10 +1329,49 @@ function confirmContact(){
 }
 
 // ── Activities ────────────────────────────────────────────────────────────────
+function renderBowlingGames(){
+  const list=document.getElementById('bowling-games-list');
+  if(!list)return;
+  const games=D._pendingBowlingGames||[];
+  let html_='';
+  games.forEach((g,i)=>{
+    html_+='<div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--t2);width:48px">Game '+(i+1)+'</span><input type="number" min="0" max="300" class="inp" data-bowlingidx="'+i+'" value="'+g+'" placeholder="0-300" style="flex:1"/><button type="button" class="abtn del" data-bowlingdel="'+i+'" style="opacity:1;font-size:10px">x</button></div>';
+  });
+  list.innerHTML=html_;
+  list.querySelectorAll('[data-bowlingidx]').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      D._pendingBowlingGames[parseInt(e.target.dataset.bowlingidx)]=e.target.value;
+    });
+  });
+  list.querySelectorAll('[data-bowlingdel]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      const idx=parseInt(e.currentTarget.dataset.bowlingdel);
+      D._pendingBowlingGames.splice(idx,1);
+      if(D._pendingBowlingGames.length===0)D._pendingBowlingGames=[''];
+      renderBowlingGames();
+    });
+  });
+  const addBtn=document.getElementById('bowling-add-game');
+  if(addBtn) addBtn.style.display=games.length>=8?'none':'block';
+}
 function openActModal(type){
   D.pendingActType=type;
+  D._pendingBowlingGames=type==='bowling'?['']:[];
   document.getElementById('act-type-lbl').textContent=type;
   document.getElementById('act-notes').value='';document.getElementById('act-dur').value='';
+  const bowlSec=document.getElementById('bowling-games-section');
+  if(bowlSec) bowlSec.style.display=type==='bowling'?'block':'none';
+  if(type==='bowling') renderBowlingGames();
+  const addBtn=document.getElementById('bowling-add-game');
+  if(addBtn){
+    addBtn.onclick=()=>{
+      if(D._pendingBowlingGames.length<8){
+        D._pendingBowlingGames.push('');
+        renderBowlingGames();
+      }
+    };
+  }
   const btn=document.getElementById('act-confirm');
   btn.disabled=false;
   btn.textContent='Log it';
@@ -1317,8 +1381,11 @@ function openActModal(type){
     btn.textContent='Logging...';
     const notes=document.getElementById('act-notes').value;
     const dur=document.getElementById('act-dur').value;
-    const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur};
     const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');
+    const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur,xp:actXP};
+    if(D.pendingActType==='bowling'&&Array.isArray(D._pendingBowlingGames)){
+      D._pendingBowlingGames.forEach((g,i)=>{if(i<8&&g!==''&&g!=null) entry['game'+(i+1)]=Number(g)||0;});
+    }
     D.activities.push(entry);
     addXP(actXP);markActive();
     D.gamification.allTimeActivities++;
@@ -1448,9 +1515,9 @@ function logHealthGoal(id){
       toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
       haptic('heavy');fireBigConfetti();
     }
-    addXP(xp('health_goal_full_week'));
+    const hgwXP=xp('health_goal_full_week');addXP(hgwXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgwXP;D.dirty.add('weekSummary');
   } else {
-    addXP(xp('health_goal_daily'));
+    const hgdXP=xp('health_goal_daily');addXP(hgdXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgdXP;D.dirty.add('weekSummary');
     toast('✓ '+hit+'/'+g.target+' +8XP');
   }
   markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
@@ -1475,7 +1542,7 @@ function openFinModal(id){
     if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.updatedAt=TODAY_ISO;}}
     else D.finances.push({id:D.nextId++,category,label,amount,type,updatedAt:TODAY_ISO});
     D.dirty.add('finances');
-    if(type==='savings'&&amount>0){addXP(xp('savings_log'));D.dirty.add('gamification');toast('💰 Savings logged +'+xp('savings_log')+' XP');}
+    if(type==='savings'&&amount>0){const svXP=xp('savings_log');addXP(svXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+svXP;D.dirty.add('gamification');D.dirty.add('weekSummary');toast('Savings logged +'+svXP+' XP');}
     closeModal('fin-modal');renderAll();sched();
   };
   document.getElementById('fin-modal').classList.remove('hide');
@@ -1489,7 +1556,7 @@ async function submitJournal(){
   D.journal.unshift(entry);
   try{await fetch(API,{method:'POST',body:JSON.stringify({action:'addJournal',...entry})});}catch(e){}
   document.getElementById('jtext').value='';D.selectedMood='';
-  addXP(xp('journal_entry'));D.dirty.add('gamification');renderAll();sched();toast('📓 Saved +'+xp('journal_entry')+' XP');
+  const jeXP=xp('journal_entry');addXP(jeXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+jeXP;D.dirty.add('gamification');D.dirty.add('weekSummary');renderAll();sched();toast('Saved +'+jeXP+' XP');
 }
 
 // ── Day result (7-game series) ────────────────────────────────────────────────
@@ -1560,18 +1627,24 @@ function confirmDayResult(){
   else D.dayResults.push(record);
   D.dirty.add('dayResults');
   if(isNew){
-    addXP(_drType==='win'?xp('day_win'):xp('day_loss'));
+    const drXP=_drType==='win'?xp('day_win'):xp('day_loss');
+    addXP(drXP);
+    D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+drXP;
     markActive();
-    D.dirty.add('gamification');
+    D.dirty.add('gamification');D.dirty.add('weekSummary');
     // Check if week was won (4+ wins)
     const weekWins=D.dayResults.filter(r=>r.date>=WEEK_START&&r.date<=localIso(new Date(new Date(WEEK_START+'T12:00:00').getTime()+6*86400000))&&r.result==='win').length;
     if(weekWins===4){
-      addXP(xp('series_win'));
-      toast('🏆 Series won! 4-day victory! +'+xp('series_win')+' XP',4000);
+      const sXP=xp('series_win');addXP(sXP);
+      D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+sXP;
+      D.dirty.add('weekSummary');
+      toast('Series won! 4-day victory! +'+sXP+' XP',4000);
       haptic('heavy');fireBigConfetti();
     } else if(weekWins===7){
-      addXP(xp('series_sweep'));
-      toast('🌟 SWEEP! Perfect week! +'+xp('series_sweep')+' XP',5000);
+      const swXP=xp('series_sweep');addXP(swXP);
+      D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+swXP;
+      D.dirty.add('weekSummary');
+      toast('SWEEP! Perfect week! +'+swXP+' XP',5000);
       haptic('heavy');fireBigConfetti();
     }
   }
@@ -2017,21 +2090,62 @@ function scCard(icon,name,color,tab,stat,extra){
 
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
 // ── Paige focuses ─────────────────────────────────────────────────────────────
-function openFocusModal(){
-  const f=D.paigeFocuses||[];
-  document.getElementById('focus-1').value=f[0]||'';
-  document.getElementById('focus-2').value=f[1]||'';
-  document.getElementById('focus-3').value=f[2]||'';
+function openFocusModal(focusId){
+  D.editingFocusId=focusId||null;
+  const focus=focusId?(D.paigeFocuses||[]).find(f=>f.id==focusId):null;
+  document.getElementById('focus-modal-title').textContent=focus?'Edit focus':'Add focus';
+  document.getElementById('focus-text').value=focus?focus.text:'';
+  document.getElementById('focus-notes').value=focus?focus.notes:'';
   document.getElementById('focus-confirm').onclick=()=>{
-    const f1=document.getElementById('focus-1').value.trim();
-    const f2=document.getElementById('focus-2').value.trim();
-    const f3=document.getElementById('focus-3').value.trim();
-    D.paigeFocuses=[f1,f2,f3].filter(Boolean);
+    const text=document.getElementById('focus-text').value.trim();
+    const notes=document.getElementById('focus-notes').value.trim();
+    if(!text)return;
+    if(focusId){
+      const f=D.paigeFocuses.find(x=>x.id==focusId);
+      if(f){f.text=text;f.notes=notes;}
+    } else {
+      const activeCount=(D.paigeFocuses||[]).filter(f=>f.status==='active').length;
+      if(activeCount>=3){toast('Max 3 active focuses');return;}
+      const order=(D.paigeFocuses||[]).filter(f=>f.status==='active').reduce((m,f)=>Math.max(m,f.sortOrder||0),0)+1;
+      if(!D.paigeFocuses)D.paigeFocuses=[];
+      D.paigeFocuses.push({id:'pf'+Date.now(),text,notes,status:'active',createdAt:TODAY_ISO,completedAt:'',reactivatedAt:'',sortOrder:order});
+    }
     D.dirty.add('paigeFocuses');
     closeModal('focus-modal');renderAll();sched();
-    toast('💕 Focuses updated');
+    toast('Focus saved');
   };
   document.getElementById('focus-modal').classList.remove('hide');
+  setTimeout(()=>document.getElementById('focus-text')?.focus(),100);
+}
+function completeFocus(id){
+  const f=(D.paigeFocuses||[]).find(x=>x.id==id);
+  if(!f)return;
+  f.status='completed';f.completedAt=TODAY_ISO;
+  D.dirty.add('paigeFocuses');renderAll();sched();
+  haptic('success');toast('Focus completed');
+}
+function reactivateFocus(id){
+  const f=(D.paigeFocuses||[]).find(x=>x.id==id);
+  if(!f)return;
+  const activeCount=(D.paigeFocuses||[]).filter(x=>x.status==='active').length;
+  if(activeCount>=3){toast('Max 3 active focuses');return;}
+  f.status='active';f.reactivatedAt=TODAY_ISO;f.completedAt='';
+  D.dirty.add('paigeFocuses');renderAll();sched();
+  toast('Focus reactivated');
+}
+function archiveFocus(id){
+  const f=(D.paigeFocuses||[]).find(x=>x.id==id);
+  if(!f)return;
+  if(!confirm('Archive "'+f.text+'"? Can be reactivated later.'))return;
+  f.status='archived';
+  D.dirty.add('paigeFocuses');renderAll();sched();
+}
+function deleteFocus(id){
+  const f=(D.paigeFocuses||[]).find(x=>x.id==id);
+  if(!f)return;
+  if(!confirm('Permanently delete "'+f.text+'"?'))return;
+  D.paigeFocuses=D.paigeFocuses.filter(x=>x.id!=id);
+  D.dirty.add('paigeFocuses');renderAll();sched();
 }
 
 function rPaige(){
@@ -2046,20 +2160,38 @@ function rPaige(){
   let html='';
   
   // Weekly focuses card - always at top
-  const focuses=D.paigeFocuses||[];
-  html+=`<div class="focus-card">
-    <div class="focus-hd">
-      <div class="focus-title">💕 weekly focuses</div>
-      <button class="focus-edit-btn" id="focus-edit">${focuses.length?'Edit':'+ Set focuses'}</button>
-    </div>
-    <div class="focus-list">
-      ${[0,1,2].map(i=>{
-        const f=focuses[i];
-        return f?`<div class="focus-row"><span class="focus-num">${i+1}</span><span class="focus-text">${escH(f)}</span></div>`
-          :`<div class="focus-empty-row">Focus ${i+1} — tap edit to set</div>`;
-      }).join('')}
-    </div>
-  </div>`;
+  const allFocuses=D.paigeFocuses||[];
+  const activeFocuses=allFocuses.filter(f=>f.status==='active').sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+  const pastFocuses=allFocuses.filter(f=>f.status==='completed'||f.status==='archived').sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||''));
+  const pastOpen=D.pastFocusesOpen===true;
+  let focusHtml='<div class="focus-card"><div class="focus-hd"><div class="focus-title">💕 active focuses</div>';
+  if(activeFocuses.length<3){focusHtml+='<button class="focus-edit-btn" data-focusadd="1">+ Add focus</button>';}
+  focusHtml+='</div><div class="focus-list">';
+  if(activeFocuses.length){
+    activeFocuses.forEach((f,i)=>{
+      focusHtml+='<div class="focus-row" style="display:flex;align-items:flex-start;gap:8px;padding:10px;cursor:pointer" data-focusedit="'+f.id+'"><span class="focus-num" style="margin-top:1px">'+(i+1)+'</span><div style="flex:1"><div class="focus-text">'+escH(f.text)+'</div>';
+      if(f.notes){focusHtml+='<div style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.3">'+escH(f.notes)+'</div>';}
+      focusHtml+='</div><button class="abtn" style="opacity:1;font-size:14px;color:var(--chealth)" data-focuscomplete="'+f.id+'" title="Complete">✓</button><button class="abtn del" style="opacity:0.7;font-size:11px" data-focusarchive="'+f.id+'" title="Archive">✕</button></div>';
+    });
+  } else {
+    focusHtml+='<div class="focus-empty-row">No active focuses — tap + Add focus to set one</div>';
+  }
+  focusHtml+='</div></div>';
+  html+=focusHtml;
+  if(pastFocuses.length){
+    let pastHtml='<div class="sec"><div class="sec-hd" id="past-focus-hd" style="cursor:pointer"><span class="sec-ic">📜</span><div class="sec-name">Past focuses</div><span class="sbadge sn">'+pastFocuses.length+'</span><span style="font-size:10px;color:var(--t3);margin-left:auto">'+(pastOpen?'▲':'▼')+'</span></div>';
+    if(pastOpen){
+      pastHtml+='<div style="padding:6px 8px 8px">';
+      pastFocuses.forEach(f=>{
+        pastHtml+='<div style="padding:8px;border-radius:var(--r2);background:var(--bg);margin-bottom:6px;display:flex;align-items:flex-start;gap:8px"><div style="flex:1"><div style="font-size:13px;'+(f.status==='completed'?'color:var(--text)':'color:var(--t3);font-style:italic')+'">'+escH(f.text)+'</div>';
+        if(f.notes){pastHtml+='<div style="font-size:11px;color:var(--t3);margin-top:2px">'+escH(f.notes)+'</div>';}
+        pastHtml+='<div style="font-size:9px;font-family:\'DM Mono\',monospace;color:var(--t3);margin-top:3px">'+(f.status==='completed'?'✓ completed':'archived')+(f.completedAt?' · '+fmtDate(f.completedAt):'')+'</div></div><button class="abtn" style="opacity:1;font-size:14px;color:var(--cpaige)" data-focusreactivate="'+f.id+'" title="Reactivate">↻</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-focusdelete="'+f.id+'" title="Delete">✕</button></div>';
+      });
+      pastHtml+='</div>';
+    }
+    pastHtml+='</div>';
+    html+=pastHtml;
+  }
   
 
   const staleRel=sorted.filter(r=>freshObj(r).overdue).length;
@@ -2228,9 +2360,11 @@ function setInboxCount(){
   else D.inboxLog.push({date:TODAY_ISO,count:val});
   // Award XP if hitting 0
   if(val===0&&!wasZero){
-    addXP(xp('inbox_zero'));markActive();
-    D.dirty.add('gamification');
-    toast('📬 Inbox zero! +'+xp('inbox_zero')+' XP');
+    const izXP=xp('inbox_zero');
+    addXP(izXP);markActive();
+    D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+izXP;
+    D.dirty.add('gamification');D.dirty.add('weekSummary');
+    toast('Inbox zero! +'+izXP+' XP');
     haptic('success');fireBigConfetti();
   }
   D.dirty.add('inboxLog');
@@ -2705,9 +2839,21 @@ document.getElementById('main').addEventListener('click', function(e){
   if(e.target.closest('#journal-set-lock')){ setJournalLock(); return; }
   if(e.target.closest('#journal-relock')){ relockJournal(); return; }
   if(e.target.closest('#journal-clear-lock')){ clearJournalLock(); return; }
-  // Paige focus edit
-  const focusEdit = e.target.closest('#focus-edit');
-  if(focusEdit){ openFocusModal(); return; }
+  // Paige focuses
+  const focusAdd = e.target.closest('[data-focusadd]');
+  if(focusAdd){ openFocusModal(); return; }
+  const focusEdit = e.target.closest('[data-focusedit]');
+  if(focusEdit && !e.target.closest('[data-focuscomplete],[data-focusarchive]')){ openFocusModal(focusEdit.dataset.focusedit); return; }
+  const focusComplete = e.target.closest('[data-focuscomplete]');
+  if(focusComplete){ e.stopPropagation(); completeFocus(focusComplete.dataset.focuscomplete); return; }
+  const focusArchive = e.target.closest('[data-focusarchive]');
+  if(focusArchive){ e.stopPropagation(); archiveFocus(focusArchive.dataset.focusarchive); return; }
+  const focusReactivate = e.target.closest('[data-focusreactivate]');
+  if(focusReactivate){ reactivateFocus(focusReactivate.dataset.focusreactivate); return; }
+  const focusDelete = e.target.closest('[data-focusdelete]');
+  if(focusDelete){ deleteFocus(focusDelete.dataset.focusdelete); return; }
+  const pastFocusHd = e.target.closest('#past-focus-hd');
+  if(pastFocusHd){ D.pastFocusesOpen=!D.pastFocusesOpen; rPaige(); return; }
   // Paige important dates
   const pdedit = e.target.closest('[data-pdedit]');
   if(pdedit){ openPaigeDateModal(pdedit.dataset.pdedit); return; }
@@ -2763,7 +2909,7 @@ document.getElementById('main').addEventListener('click', function(e){
         n.completedNote='';
       }
       D.dirty.add('encycNotes');rPaige();sched();
-      if(n.done){addXP(xp('encyc_complete'));D.dirty.add('gamification');toast('💕 Marked complete +'+xp('encyc_complete')+' XP');haptic('success');}
+      if(n.done){const ecXP=xp('encyc_complete');addXP(ecXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+ecXP;D.dirty.add('gamification');D.dirty.add('weekSummary');toast('Marked complete +'+ecXP+' XP');haptic('success');}
     }
     return;
   }
