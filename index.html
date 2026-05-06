@@ -295,6 +295,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .overdue-hd-ic{font-size:14px;}
 .overdue-hd-name{font-size:12px;font-weight:500;color:#991B1B;}
 .overdue-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:0.5px solid #FECACA;}
+.trow.overdue-row .ttxt{font-weight:600;color:#DC2626;}
+.trow.overdue-row{background:#FEF2F2;}
 .overdue-row:first-child{border-top:none;}
 .overdue-text{flex:1;font-size:12px;color:#7F1D1D;}
 .overdue-section{font-size:9px;font-family:'DM Mono',monospace;color:#991B1B;padding:1px 5px;border-radius:4px;background:#FEE2E2;}
@@ -1748,10 +1750,10 @@ function rHome(){
             ${isToday?`<span style="font-size:9px;font-family:'DM Mono',monospace;background:var(--text);color:#fff;padding:1px 6px;border-radius:10px">today</span>`:''}
             ${!dayTasks.length?'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">nothing scheduled</span>':''}
           </div>
-          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);margin-bottom:3px">
+          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);const isOver=isOverdue(t.dueDate);return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:${isOver?'#FEF2F2':'var(--bg)'};border-radius:var(--r2);margin-bottom:3px">
             <div style="width:3px;height:100%;min-height:14px;border-radius:2px;background:${t.section==='paige'?'var(--cpaige)':t.section==='work'?'var(--cwork)':t.section.startsWith('community')?'var(--ccommunity)':t.section==='health'?'var(--chealth)':'var(--cpersonal)'};flex-shrink:0"></div>
             <div class="chk ${t.done?'ck':''}" data-chk="${t.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div>
-            <span style="font-size:12px;flex:1;${t.done?'text-decoration:line-through;color:var(--t3)':''}">${escH(t.text)}</span>
+            <span style="font-size:12px;flex:1;${t.done?'text-decoration:line-through;color:var(--t3)':isOver?'font-weight:600;color:#DC2626':''}">${escH(t.text)}</span>
             ${pName?`<span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:#F0F9FF;color:#0369A1">${escH(pName)}</span>`:''}
             ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
           </div>`;}).join('')}
@@ -1924,7 +1926,8 @@ function rWork(){
 
   const taskCard=t=>{
     const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';
-    return`<div class="trow ${t.done?'done-r':''}" style="margin-bottom:3px">
+    const isOver=!t.done&&isOverdue(t.dueDate);
+    return`<div class="trow ${t.done?'done-r':''} ${isOver?'overdue-row':''}" style="margin-bottom:3px">
       <div class="chk ${t.done?'ck':''}" data-chk="${t.id}"></div>
       <div class="tbody">
         <div class="ttxt">${escH(t.text)}</div>
@@ -2121,13 +2124,47 @@ function rChores(){
   const choresShown=D.choresExpanded?sorted:sorted.slice(0,7);
   const choresHidden=sorted.length-choresShown.length;
   const overdue=sorted.filter(c=>freshObj(c).overdue).length;
-  let html=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
-    <div class="tlist">${!sorted.length?'<div class="emsg">no chores</div>':''}${sorted.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
+  // Shopping & grocery lists at top of chores tab
+  const shopOpen=D.shoppingOpen===true;
+  const groOpen=D.groceryOpen===true;
+  const shopActive=(D.shoppingList||[]).filter(i=>!i.done);
+  const shopDone=(D.shoppingList||[]).filter(i=>i.done);
+  const groActive=(D.groceryList||[]).filter(i=>!i.done);
+  const groDone=(D.groceryList||[]).filter(i=>i.done);
+  
+  let html=`<div class="list-card">
+    <div class="list-hd" data-listtoggle="shopping">
+      <div class="list-hd-l"><span class="list-icon">🛍️</span><span class="list-name">Misc shopping</span><span class="list-count">${shopActive.length}</span></div>
+      <span class="list-toggle">${shopOpen?'▲':'▼'}</span>
+    </div>
+    ${shopOpen?`<div class="list-items">
+      ${shopActive.map(i=>`<div class="list-item"><div class="chk" data-listchk="shopping:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:${i.id}">✕</button></div>`).join('')}
+      ${shopDone.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>${shopDone.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="shopping:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:${i.id}">✕</button></div>`).join('')}`:''}
+      ${!shopActive.length&&!shopDone.length?'<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>':''}
+    </div>
+    <div class="list-add"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" data-listadd="shopping">Add</button></div>`:''}
+  </div>
+  <div class="list-card">
+    <div class="list-hd" data-listtoggle="grocery">
+      <div class="list-hd-l"><span class="list-icon">🛒</span><span class="list-name">Grocery list</span><span class="list-count">${groActive.length}</span></div>
+      <span class="list-toggle">${groOpen?'▲':'▼'}</span>
+    </div>
+    ${groOpen?`<div class="list-items">
+      ${groActive.map(i=>`<div class="list-item"><div class="chk" data-listchk="grocery:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="grocery:${i.id}">✕</button></div>`).join('')}
+      ${groDone.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>${groDone.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="grocery:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="grocery:${i.id}">✕</button></div>`).join('')}`:''}
+      ${!groActive.length&&!groDone.length?'<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>':''}
+    </div>
+    <div class="list-add"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" data-listadd="grocery">Add</button></div>`:''}
+  </div>
+  <div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
+    <div class="tlist">${!choresShown.length?'<div class="emsg">no chores</div>':''}${choresShown.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
       <div class="cinfo"><div class="cname">${escH(c.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue}XP${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
       <button class="abtn" style="opacity:1;font-size:12px" data-cedit="${c.id}">✏️</button>
       <button class="cdelbtn" data-cd="${c.id}">✕</button>
     </div>`;}).join('')}</div>
+    ${choresHidden>0?`<button class="expand-btn" data-choresexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${choresHidden} more</button>`:''}
+    ${D.choresExpanded&&sorted.length>7?`<button class="expand-btn" data-choresexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
     <div class="hint">tap chore to mark done · ✏️ to edit</div>
     <div class="add-wrap"><div class="add-main"><input class="inp f1" id="chore-inp" placeholder="New chore name..."/><button class="badd" id="chore-add">Add</button></div>
     <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="chore-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div><input class="inp" id="chore-xp" type="number" min="1" value="8" placeholder="XP" style="width:55px"/></div></div>
