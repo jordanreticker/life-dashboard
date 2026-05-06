@@ -667,7 +667,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -831,6 +831,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
   if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
   if(D.dirty.has('xpValues'))   payload.xpValues    = D.xpValues;
+  if(D.dirty.has('journalLock'))payload.journalLockHash = D.journalLockHash;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -1376,6 +1377,55 @@ function confirmRelAct(){
   closeModal('rel-modal');
 }
 
+// ── Journal lock ──────────────────────────────────────────────────────────────
+async function hashPw(pw){
+  const enc=new TextEncoder().encode(pw);
+  const buf=await crypto.subtle.digest('SHA-256',enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function setJournalLock(){
+  const pw=prompt('Set a password to lock past journal entries:');
+  if(!pw||pw.length<3){toast('Password must be at least 3 chars');return;}
+  const confirm=prompt('Confirm password:');
+  if(pw!==confirm){toast('Passwords do not match');return;}
+  D.journalLockHash=await hashPw(pw);
+  D.journalUnlocked=true;
+  D.dirty.add('journalLock');
+  renderAll();sched();
+  toast('Locked. Re-locks on reload.');
+}
+async function unlockJournal(){
+  const inp=document.getElementById('journal-pw');
+  if(!inp)return;
+  const hash=await hashPw(inp.value);
+  if(hash===D.journalLockHash){
+    D.journalUnlocked=true;
+    haptic('success');
+    renderAll();
+    toast('Unlocked');
+  } else {
+    haptic('heavy');
+    toast('Wrong password');
+    inp.value='';
+  }
+}
+function relockJournal(){
+  D.journalUnlocked=false;
+  renderAll();
+  toast('Locked');
+}
+async function clearJournalLock(){
+  const pw=prompt('Enter current password to remove the lock:');
+  if(!pw)return;
+  const hash=await hashPw(pw);
+  if(hash!==D.journalLockHash){toast('Wrong password');return;}
+  D.journalLockHash='';
+  D.journalUnlocked=false;
+  D.dirty.add('journalLock');
+  renderAll();sched();
+  toast('Password removed');
+}
+
 // ── Health goals ──────────────────────────────────────────────────────────────
 function addHealthGoal(name, target){
   if(!name.trim())return;
@@ -1626,6 +1676,19 @@ function toggleListItem(name,id){
   if(item.done){haptic('success');addXP(xp('list_item_done'));D.dirty.add('gamification');}
   else haptic('light');
   D.dirty.add(list);rHome();sched();
+}
+function toggleStaple(name,id){
+  const list=name==='shopping'?'shoppingList':'groceryList';
+  const item=D[list].find(i=>i.id==id);
+  if(!item)return;
+  item.staple=!item.staple;
+  D.dirty.add(list);rChores();sched();
+  haptic('light');
+}
+function toggleDoneSection(name){
+  const key=name==='shopping'?'shopDoneOpen':'groDoneOpen';
+  D[key]=!D[key];
+  rChores();
 }
 function deleteListItem(name,id){
   const list=name==='shopping'?'shoppingList':'groceryList';
@@ -2323,11 +2386,25 @@ function rChores(){
   const renderListItems=(arr,name)=>{
     const active=arr.filter(i=>!i.done);
     const done=arr.filter(i=>i.done);
+    const staples=active.filter(i=>i.staple);
+    const nonStaples=active.filter(i=>!i.staple);
+    const doneOpenKey=name==='shopping'?'shopDoneOpen':'groDoneOpen';
+    const doneOpen=D[doneOpenKey]===true;
+    const renderItem=(i,isDone)=>'<div class="list-item '+(isDone?'done':'')+'"><div class="chk '+(isDone?'ck':'')+'" data-listchk="'+name+':'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn" style="opacity:'+(i.staple?'1':'0.5')+';font-size:11px" data-liststar="'+name+':'+i.id+'">'+(i.staple?'★':'☆')+'</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="'+name+':'+i.id+'">✕</button></div>';
     let inner='';
-    inner+=active.map(i=>`<div class="list-item"><div class="chk" data-listchk="${name}:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="${name}:${i.id}">✕</button></div>`).join('');
+    if(staples.length){
+      inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:2px 6px 4px">★ staples</div>';
+      inner+=staples.map(i=>renderItem(i,false)).join('');
+    }
+    if(nonStaples.length){
+      if(staples.length) inner+='<div style="height:6px"></div>';
+      inner+=nonStaples.map(i=>renderItem(i,false)).join('');
+    }
     if(done.length){
-      inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:4px 6px 2px;border-top:0.5px solid var(--border);margin-top:4px">done</div>';
-      inner+=done.map(i=>`<div class="list-item done"><div class="chk ck" data-listchk="${name}:${i.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">${escH(i.text)}</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="${name}:${i.id}">✕</button></div>`).join('');
+      inner+='<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:6px 6px 4px;border-top:0.5px solid var(--border);margin-top:4px;cursor:pointer" data-doneopen="'+name+'"><span>'+(doneOpen?'▲':'▼')+'</span><span>previously bought ('+done.length+')</span><span style="flex:1;height:0.5px;background:var(--border)"></span><span style="font-size:9px">tap to re-add</span></div>';
+      if(doneOpen){
+        inner+=done.map(i=>renderItem(i,true)).join('');
+      }
     }
     if(!arr.length) inner='<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>';
     return inner;
@@ -2465,8 +2542,29 @@ function rLife(){
     </div>
     <button class="badd" style="width:100%;margin-top:6px" onclick="submitJournal()">Save entry</button></div>
   </div>`;
-  if(D.journal.length){html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📚</span><div class="sec-name">Past entries</div><span class="sbadge sn">${D.journal.length}</span></div>
-    <div class="jentries">${D.journal.slice(0,15).map(e=>`<div class="jentry"><div class="jeheader"><span class="jemood">${e.mood||''}</span><span class="jedate">${fmtDate(e.date)}</span></div><div class="jetxt">${escH(e.text)}</div></div>`).join('')}</div></div>`;}
+  if(D.journal.length){
+    const journalUnlocked=D.journalUnlocked===true;
+    const journalOpen=D.journalEntriesOpen===true;
+    const lockSet=!!D.journalLockHash;
+    let pastHtml='<div class="sec"><div class="sec-hd" id="journal-hd" style="cursor:pointer"><span class="sec-ic">📚</span><div class="sec-name">Past entries</div><span class="sbadge sn">'+D.journal.length+'</span>';
+    if(lockSet) pastHtml+='<span style="font-size:11px;margin-left:4px">'+(journalUnlocked?'🔓':'🔒')+'</span>';
+    pastHtml+='<span style="font-size:10px;color:var(--t3);margin-left:auto">'+(journalOpen?'▲':'▼')+'</span></div>';
+    if(journalOpen){
+      if(lockSet&&!journalUnlocked){
+        pastHtml+='<div style="padding:14px 8px;text-align:center"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">🔒 Journal entries are locked</div><input type="password" class="inp" id="journal-pw" placeholder="Password" style="width:160px;text-align:center;margin-bottom:8px"/><button class="badd" id="journal-unlock" style="display:block;margin:0 auto">Unlock</button><div style="font-size:9px;color:var(--t3);font-family:\'DM Mono\',monospace;margin-top:10px">forgot? remove via clear button when unlocked</div></div>';
+      } else {
+        pastHtml+='<div class="jentries">'+D.journal.slice(0,15).map(e=>'<div class="jentry"><div class="jeheader"><span class="jemood">'+(e.mood||'')+'</span><span class="jedate">'+fmtDate(e.date)+'</span></div><div class="jetxt">'+escH(e.text)+'</div></div>').join('');
+        if(!lockSet){
+          pastHtml+='<div style="padding:8px;text-align:center;border-top:0.5px solid var(--border);margin-top:6px"><button class="abtn" id="journal-set-lock" style="opacity:1;font-size:11px;color:var(--t2)">🔒 Set password</button></div>';
+        } else {
+          pastHtml+='<div style="padding:8px;text-align:center;border-top:0.5px solid var(--border);margin-top:6px;display:flex;gap:8px;justify-content:center"><button class="abtn" id="journal-relock" style="opacity:1;font-size:11px;color:var(--t2)">🔒 Lock now</button><button class="abtn" id="journal-clear-lock" style="opacity:1;font-size:11px;color:var(--t2)">remove password</button></div>';
+        }
+        pastHtml+='</div>';
+      }
+    }
+    pastHtml+='</div>';
+    html+=pastHtml;
+  }
 
   document.getElementById('life-content').innerHTML=html;
   document.querySelectorAll('[data-acttype]').forEach(b=>b.addEventListener('click',()=>openActModal(b.dataset.acttype)));
@@ -2562,6 +2660,12 @@ document.getElementById('main').addEventListener('click', function(e){
     if(inp?.value.trim()){addListItem('grocery',inp.value);inp.value='';}
     return;
   }
+  // Staple toggle
+  const listStar = e.target.closest('[data-liststar]');
+  if(listStar){ e.stopPropagation(); const [n,id]=listStar.dataset.liststar.split(':'); toggleStaple(n,id); return; }
+  // Previously bought section toggle
+  const doneOpen = e.target.closest('[data-doneopen]');
+  if(doneOpen){ toggleDoneSection(doneOpen.dataset.doneopen); return; }
   // List item check/delete
   const listChk = e.target.closest('[data-listchk]');
   if(listChk){ const [n,id]=listChk.dataset.listchk.split(':'); toggleListItem(n,id); return; }
@@ -2591,6 +2695,15 @@ document.getElementById('main').addEventListener('click', function(e){
   if(cd){ deleteChore(cd.dataset.cd); return; }
   const cedit = e.target.closest('[data-cedit]');
   if(cedit){ openChoreEdit(cedit.dataset.cedit); return; }
+  // Journal section toggle
+  const jhd = e.target.closest('#journal-hd');
+  if(jhd && !e.target.closest('#journal-pw,#journal-unlock,#journal-set-lock,#journal-relock,#journal-clear-lock')){
+    D.journalEntriesOpen=!D.journalEntriesOpen; rLife(); return;
+  }
+  if(e.target.closest('#journal-unlock')){ unlockJournal(); return; }
+  if(e.target.closest('#journal-set-lock')){ setJournalLock(); return; }
+  if(e.target.closest('#journal-relock')){ relockJournal(); return; }
+  if(e.target.closest('#journal-clear-lock')){ clearJournalLock(); return; }
   // Paige focus edit
   const focusEdit = e.target.closest('#focus-edit');
   if(focusEdit){ openFocusModal(); return; }
