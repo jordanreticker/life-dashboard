@@ -2334,27 +2334,15 @@ function rChores(){
   };
   
   let html='';
-  // Shopping list
-  html+=`<div class="list-card">
-    <div class="list-hd" data-listtoggle="shopping">
-      <div class="list-hd-l"><span class="list-icon">🛍️</span><span class="list-name">Misc shopping</span><span class="list-count">${shopList.filter(i=>!i.done).length}</span></div>
-      <span class="list-toggle">${D.shoppingOpen?'▲':'▼'}</span>
-    </div>
-    <div style="display:${D.shoppingOpen?'block':'none'}">
-      <div class="list-items">${renderListItems(shopList,'shopping')}</div>
-      <div class="list-add"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" data-listadd="shopping">Add</button></div>
-    </div>
+  // Shopping list - matches Paigecyclopedia pattern
+  html+=`<div class="sec"><div class="sec-hd" id="shop-hd" style="cursor:pointer"><span class="sec-ic">🛍️</span><div class="sec-name">Misc shopping</div><span class="sbadge sn">${shopList.filter(i=>!i.done).length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.shoppingOpen?'▲':'▼'}</span></div>
+  ${D.shoppingOpen?`<div class="list-items" style="padding:6px 8px 4px">${renderListItems(shopList,'shopping')}</div>
+    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" id="shop-add">Add</button></div></div>`:''}
   </div>`;
-  // Grocery list
-  html+=`<div class="list-card">
-    <div class="list-hd" data-listtoggle="grocery">
-      <div class="list-hd-l"><span class="list-icon">🛒</span><span class="list-name">Grocery list</span><span class="list-count">${groList.filter(i=>!i.done).length}</span></div>
-      <span class="list-toggle">${D.groceryOpen?'▲':'▼'}</span>
-    </div>
-    <div style="display:${D.groceryOpen?'block':'none'}">
-      <div class="list-items">${renderListItems(groList,'grocery')}</div>
-      <div class="list-add"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" data-listadd="grocery">Add</button></div>
-    </div>
+  // Grocery list - matches Paigecyclopedia pattern
+  html+=`<div class="sec"><div class="sec-hd" id="gro-hd" style="cursor:pointer"><span class="sec-ic">🛒</span><div class="sec-name">Grocery list</div><span class="sbadge sn">${groList.filter(i=>!i.done).length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.groceryOpen?'▲':'▼'}</span></div>
+  ${D.groceryOpen?`<div class="list-items" style="padding:6px 8px 4px">${renderListItems(groList,'grocery')}</div>
+    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" id="gro-add">Add</button></div></div>`:''}
   </div>`;
   
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
@@ -2384,6 +2372,11 @@ function rChores(){
   });
   ai?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('chore-add')?.click();});
   ai?.addEventListener('click',e=>e.stopPropagation());
+  // Shopping/grocery input bindings
+  document.getElementById('shop-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('shop-add')?.click();});
+  document.getElementById('shop-inp')?.addEventListener('click',e=>e.stopPropagation());
+  document.getElementById('gro-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('gro-add')?.click();});
+  document.getElementById('gro-inp')?.addEventListener('click',e=>e.stopPropagation());
 }
 
 // ── LIFE (Health + Personal + Finances + Journal) ─────────────────────────────
@@ -2547,20 +2540,33 @@ document.getElementById('main').addEventListener('click', function(e){
   // Edit task
   const edit = e.target.closest('[data-edit]');
   if(edit){ openEditTask(edit.dataset.edit); return; }
-  // Shopping/grocery list toggle
-  const listTog = e.target.closest('[data-listtoggle]');
-  if(listTog){ toggleListSection(listTog.dataset.listtoggle); return; }
+  // Shopping/grocery list toggle (matches Paigecyclopedia pattern)
+  const shopHd = e.target.closest('#shop-hd');
+  if(shopHd && !e.target.closest('#shop-inp,#shop-add,[data-listchk],[data-listdel]')){
+    D.shoppingOpen=!D.shoppingOpen; rChores(); return;
+  }
+  const groHd = e.target.closest('#gro-hd');
+  if(groHd && !e.target.closest('#gro-inp,#gro-add,[data-listchk],[data-listdel]')){
+    D.groceryOpen=!D.groceryOpen; rChores(); return;
+  }
+  // Shopping/grocery add buttons
+  const shopAdd = e.target.closest('#shop-add');
+  if(shopAdd){
+    const inp=document.getElementById('shop-inp');
+    if(inp?.value.trim()){addListItem('shopping',inp.value);inp.value='';}
+    return;
+  }
+  const groAdd = e.target.closest('#gro-add');
+  if(groAdd){
+    const inp=document.getElementById('gro-inp');
+    if(inp?.value.trim()){addListItem('grocery',inp.value);inp.value='';}
+    return;
+  }
+  // List item check/delete
   const listChk = e.target.closest('[data-listchk]');
   if(listChk){ const [n,id]=listChk.dataset.listchk.split(':'); toggleListItem(n,id); return; }
   const listDel = e.target.closest('[data-listdel]');
   if(listDel){ const [n,id]=listDel.dataset.listdel.split(':'); deleteListItem(n,id); return; }
-  const listAdd = e.target.closest('[data-listadd]');
-  if(listAdd){
-    const n=listAdd.dataset.listadd;
-    const inp=document.getElementById(n==='shopping'?'shop-inp':'gro-inp');
-    if(inp?.value.trim()){addListItem(n,inp.value);inp.value='';}
-    return;
-  }
   // Add task button
   const ab = e.target.closest('[data-ab]');
   if(ab){
