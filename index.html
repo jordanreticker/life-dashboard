@@ -605,57 +605,72 @@ function fireConfetti(){
 }
 
 // ── Load ──────────────────────────────────────────────────────────────────────
+function applyData(data){
+  const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
+  if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
+  if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||0,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7}));
+  else if(!D.chores.length) D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
+  if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
+  D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
+  if(data.activities) D.activities=data.activities;
+  if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
+  if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
+  if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
+  if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
+  if(data.journal) D.journal=data.journal;
+  if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
+  if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else if(!D.relActs.length) D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
+  if(data.encycNotes) D.encycNotes=data.encycNotes;
+  if(data.choreLog) D.choreLog=data.choreLog;
+  const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6]);});
+  const wkChoresDone=thisWeekLogs.length;
+  const wkChoreXP=thisWeekLogs.reduce((s,l)=>s+Number(l.xpEarned||0),0);
+  const wkChorePP=thisWeekLogs.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
+  if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START){
+    D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
+  } else {
+    D.weekSummary={...D.weekSummary,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
+  }
+  D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
+  if(data.contactLog) D.contactLog=data.contactLog;
+  if(data.inboxLog) D.inboxLog=data.inboxLog;
+  if(data.dayResults) D.dayResults=data.dayResults;
+  if(data.paigeDates) D.paigeDates=data.paigeDates;
+  if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:(g.logs||[]).filter(d=>d>=WEEK_START)}));
+  if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
+  updateStreak();checkPermBadges();checkWeekBadges();
+}
+
 async function loadData(){
-  // Need week boundaries for chore log derivation
-  const _wdTemp=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);_wdTemp.push(d);}
-  const weekDays=_wdTemp;
-  setSync('syncing','loading');
+  // ── Stage 1: Load from localStorage cache for instant render ──
+  let cacheUsed=false;
+  try{
+    const cached=localStorage.getItem('jrdr-cache-v2');
+    if(cached){
+      const parsed=JSON.parse(cached);
+      if(parsed&&parsed.data){
+        applyData(parsed.data);
+        rHome(); // render home immediately from cache
+        setSync('syncing','refreshing');
+        cacheUsed=true;
+      }
+    }
+  }catch(e){console.warn('Cache load failed',e);}
+  if(!cacheUsed) setSync('syncing','loading');
+  // ── Stage 2: Fetch fresh data ──
   try{
     const res=await fetch(API+'?action=getData');
     const data=await res.json();
-    if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
-    if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||0,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7}));
-    else D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
-    if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
-    D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
-    if(data.activities) D.activities=data.activities;
-    if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
-    if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
-    // allTimeChoresDone = total rows in ChoreLog (source of truth)
-    if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
-    if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
-    if(data.journal) D.journal=data.journal;
-    if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
-    if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
-    if(data.encycNotes) D.encycNotes=data.encycNotes;
-    // load or init weekly summary
-    if(data.choreLog) D.choreLog=data.choreLog;
-    // Derive chore stats directly from ChoreLog - source of truth
-    const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6]);});
-    const wkChoresDone=thisWeekLogs.length;
-    const wkChoreXP=thisWeekLogs.reduce((s,l)=>s+Number(l.xpEarned||0),0);
-    const wkChorePP=thisWeekLogs.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
-    if(data.weeklySummary&&data.weeklySummary.weekStart===WEEK_START){
-      D.weekSummary={...D.weekSummary,...data.weeklySummary.data,weekStart:WEEK_START,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
-    } else {
-      D.weekSummary={...D.weekSummary,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
-    }
-    // All-time chore stats from full log
-    D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
-    if(data.contactLog) D.contactLog=data.contactLog;
-    if(data.inboxLog) D.inboxLog=data.inboxLog;
-    if(data.dayResults) D.dayResults=data.dayResults;
-    if(data.paigeDates) D.paigeDates=data.paigeDates;
-    if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({
-      ...g,
-      target:Number(g.target)||7,
-      logs:(g.logs||[]).filter(d=>d>=WEEK_START), // only keep this week's logs
-    }));
-        if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
-    updateStreak();checkPermBadges();checkWeekBadges();
+    applyData(data);
+    try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
     setSync('synced','synced');
   }catch(e){setSync('error','offline');}
-  renderAllTabs(); // render every tab once so all events get bound
+  // Render home now (full data); other tabs lazy-render on tab switch
+  rHome();
+  D.tabsRendered={home:true};
+  // Pre-render other tabs in idle time so switching is instant
+  const idle=window.requestIdleCallback||((cb)=>setTimeout(cb,200));
+  idle(()=>{rPaige();idle(()=>{rWork();idle(()=>{rCommunity();idle(()=>{rChores();idle(()=>{rLife();});});});});});
 }
 
 async function saveAll(){
@@ -1320,8 +1335,8 @@ function switchTab(tab){
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   D.currentTab=tab;
   document.getElementById('main').scrollTo(0,0);
-  // Render the newly active tab
-  if(tab==='paige')    rPaige();
+  // Always render on switch — keeps data fresh after edits in other tabs
+  if(tab==='paige')         rPaige();
   else if(tab==='work')     rWork();
   else if(tab==='community')rCommunity();
   else if(tab==='chores')   rChores();
@@ -1475,7 +1490,8 @@ function rHome(){
           </div>
           ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);margin-bottom:3px">
             <div style="width:3px;height:100%;min-height:14px;border-radius:2px;background:${t.section==='paige'?'var(--cpaige)':t.section==='work'?'var(--cwork)':t.section.startsWith('community')?'var(--ccommunity)':t.section==='health'?'var(--chealth)':'var(--cpersonal)'};flex-shrink:0"></div>
-            <span style="font-size:12px;flex:1">${escH(t.text)}</span>
+            <div class="chk ${t.done?'ck':''}" data-chk="${t.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div>
+            <span style="font-size:12px;flex:1;${t.done?'text-decoration:line-through;color:var(--t3)':''}">${escH(t.text)}</span>
             ${pName?`<span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:#F0F9FF;color:#0369A1">${escH(pName)}</span>`:''}
             ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
           </div>`;}).join('')}
