@@ -770,6 +770,7 @@ function applyData(data){
   if(data.shoppingList) D.shoppingList=data.shoppingList;
   if(data.groceryList) D.groceryList=data.groceryList;
   if(data.xpValues) D.xpValues=data.xpValues;
+  if(data.journalLockHash!==undefined&&data.journalLockHash!==null) D.journalLockHash=String(data.journalLockHash||'');
   if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:(g.logs||[]).filter(d=>d>=WEEK_START)}));
   if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
   updateStreak();checkPermBadges();checkWeekBadges();
@@ -850,7 +851,7 @@ async function saveAll(retryCount){
         D.lastSavedAt=Date.now();
         // Refresh cache so reload shows correct state
         try{
-          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
           localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
         }catch(e){}
         setSync('synced','saved');
