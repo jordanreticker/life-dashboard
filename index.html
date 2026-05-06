@@ -95,7 +95,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .badge-card.earned{background:#FEF3C7;border-color:#FCD34D;}
 .badge-card.weekly{background:#EDE9F8;border-color:#C4B5FD;}
 .badge-ic{font-size:22px;margin-bottom:4px;}
-.badge-name{font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);line-height:1.3;}
+.badge-name{font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);line-height:1.3;;font-weight:500;}
+.badge-desc{font-size:9px;text-align:center;color:var(--t3);margin-top:2px;line-height:1.2;font-family:'DM Mono',monospace;}
 .badge-card.earned .badge-name{color:#92400E;}
 .badge-card.weekly .badge-name{color:#5B21B6;}
 .badge-locked{opacity:0.35;}
@@ -1773,9 +1774,10 @@ function rHome(){
 
   html+=`<div class="badges-section"><div class="badges-hd">Badges earned this week</div>
     <div class="badges-grid">
-      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`;}).join('')}
+      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}
     </div>
-    ${earnedPerm.length?`<div class="badges-hd" style="margin-top:12px">All-time badges</div><div class="badges-grid">${earnedPerm.map(b=>`<div class="badge-card earned"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div></div>`).join('')}</div>`:''}
+    <div class="badges-hd" style="margin-top:12px">All-time badges</div>
+    <div class="badges-grid">${PERM_BADGES.map(b=>{const earned=D.gamification.badges.includes(b.id);return`<div class="badge-card ${earned?'earned':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}</div>
   </div>`;
 
   // All-time stats
@@ -2074,14 +2076,21 @@ function rCommunity(){
         ${streak>0?`<div class="inbox-streak">🔥 ${streak}-day inbox zero streak</div>`:''}
       </div>
     </div>
-    <div style="display:flex;align-items:flex-end;gap:3px;height:36px;margin-bottom:8px">
+    <div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:10px;padding:0 4px">
       ${last7.map((d,i)=>{
-        const h=d.count===null?4:d.count===0?36:Math.max(6,Math.round((1-d.count/maxCount)*30)+4);
+        // Bar height: relative to max count this week (or to today's count if today is highest)
+        // Empty days get a tiny placeholder, zero days get a tiny green base, others scale relative to max
+        let h;
+        if(d.count===null) h=6;
+        else if(d.count===0) h=10;
+        else h=Math.max(14,Math.round((d.count/maxCount)*72));
         const color=d.count===null?'var(--border)':d.count===0?'var(--chealth)':d.count<50?'#D97706':'#DC2626';
         const isToday=d.date===TODAY_ISO;
-        return`<div class="spark-day">
+        const showCount=d.count!==null&&d.count>0;
+        return`<div class="spark-day" style="justify-content:flex-end">
+          ${showCount?`<div style="font-size:9px;font-family:'DM Mono',monospace;color:${color};margin-bottom:2px;font-weight:500">${d.count}</div>`:''}
           <div class="spark-bar" style="height:${h}px;background:${color};width:100%;${isToday?'outline:1.5px solid var(--text);outline-offset:1px':''}"></div>
-          <div class="spark-lbl" style="color:${isToday?'var(--text)':'var(--t3)'}">${DAYS7[(new Date(d.date+'T12:00:00')).getDay()]}</div>
+          <div class="spark-lbl" style="color:${isToday?'var(--text)':'var(--t3)'};margin-top:3px">${DAYS7[(new Date(d.date+'T12:00:00')).getDay()]}</div>
         </div>`;
       }).join('')}
     </div>
