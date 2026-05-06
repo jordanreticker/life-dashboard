@@ -322,6 +322,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .series-day.win{background:var(--chealth);color:#fff;border-color:var(--chealth);}
 .series-day.loss{background:#DC2626;color:#fff;border-color:#DC2626;}
 .series-day.future{opacity:0.35;cursor:default;}
+.series-day.partial{background:#FEF3C7;color:#92400E;border-color:#FCD34D;}
 .series-day.today{outline:2px solid var(--text);outline-offset:1px;}
 .series-day-name{font-size:9px;font-family:'DM Mono',monospace;line-height:1;margin-bottom:2px;}
 .series-day-result{font-size:14px;font-weight:600;line-height:1;}
@@ -428,7 +429,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <input class="inp f1" id="dr-stat2" placeholder="Reason 2..." style="width:100%;margin-bottom:6px"/>
   <input class="inp f1" id="dr-stat3" placeholder="Reason 3..." style="width:100%;margin-bottom:10px"/>
   <textarea class="inp f1" id="dr-notes" placeholder="Notes (optional)" style="width:100%;min-height:60px;margin-bottom:10px;resize:vertical"></textarea>
-  <button class="mbtn" id="dr-confirm" style="background:var(--text);color:#fff;border:none">Save day result</button>
+  <div style="font-size:10px;color:var(--t3);margin:6px 0 10px;font-family:'DM Mono',monospace;text-align:center">Skip W/L to save stats only · come back later to commit</div><button class="mbtn" id="dr-confirm" style="background:var(--text);color:#fff;border:none">Save</button>
   <button class="mbtn mcancel" onclick="closeModal('day-result-modal')">Cancel</button>
 </div></div>
 
@@ -1378,7 +1379,7 @@ function openDayResult(date){
   _drType=null;
   const existing=D.dayResults.find(r=>r.date===targetDate);
   if(existing){
-    _drType=existing.result;
+    _drType=existing.result||null;
     document.getElementById('dr-stat1').value=existing.stat1||'';
     document.getElementById('dr-stat2').value=existing.stat2||'';
     document.getElementById('dr-stat3').value=existing.stat3||'';
@@ -1391,7 +1392,7 @@ function openDayResult(date){
   }
   const dateLabel=targetDate===TODAY_ISO?'today':fmtDateSmart(targetDate);
   document.getElementById('dr-title').textContent='How did '+dateLabel+' go?';
-  document.getElementById('dr-sub').textContent=existing?'Update your result':'Mark this day as a win or a loss';
+  document.getElementById('dr-sub').textContent=existing?(existing.result?'Update your result':'Continue logging — pick W/L when ready'):'Add 3 reasons + W/L · or save stats now';
   document.querySelectorAll('[data-drtype]').forEach(b=>{
     const sel=b.dataset.drtype===_drType;
     b.style.background=sel?(b.dataset.drtype==='win'?'var(--chealth)':'#DC2626'):'var(--bg)';
@@ -1409,12 +1410,25 @@ function openDayResult(date){
   document.getElementById('day-result-modal').classList.remove('hide');
 }
 function confirmDayResult(){
-  if(!_drType){toast('Pick win or loss first');return;}
+  // Allow saving stats without committing W/L yet
   const s1=document.getElementById('dr-stat1').value.trim();
   const s2=document.getElementById('dr-stat2').value.trim();
   const s3=document.getElementById('dr-stat3').value.trim();
-  if(!s1||!s2||!s3){toast('All 3 reasons required');return;}
   const notes=document.getElementById('dr-notes').value.trim();
+  // If no W/L picked, just save the stats without finalizing
+  if(!_drType){
+    if(!s1&&!s2&&!s3&&!notes){toast('Add at least one stat or note');return;}
+    const date=D.pendingDayDate;
+    const existingIdx=D.dayResults.findIndex(r=>r.date===date);
+    const record={date,result:'',stat1:s1,stat2:s2,stat3:s3,notes};
+    if(existingIdx>=0)D.dayResults[existingIdx]={...D.dayResults[existingIdx],...record,result:D.dayResults[existingIdx].result||''};
+    else D.dayResults.push(record);
+    D.dirty.add('dayResults');
+    closeModal('day-result-modal');renderAll();sched();
+    toast('💾 Stats saved · come back to commit W/L');
+    return;
+  }
+  if(!s1||!s2||!s3){toast('All 3 reasons required to commit W/L');return;}
   const date=D.pendingDayDate;
   const existingIdx=D.dayResults.findIndex(r=>r.date===date);
   const isNew=existingIdx<0;
@@ -1634,6 +1648,31 @@ function rHome(){
 
   if(g.streakDays>=2){html+=`<div class="streak-card"><div class="streak-ic">${g.streakDays>=30?'💫':g.streakDays>=7?'🔥':'⚡'}</div><div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>don't break the chain</p><span class="streak-best">best: ${g.bestStreak} days</span></div></div>`;}
 
+  // ── Overdue list (above today's snapshot) ─────────────────────────
+  if(overdue.length){
+    const _PRIO={urgent:0,high:1,medium:2,low:3,'':4};
+    const sortedOverdue=[...overdue].sort((a,b)=>{
+      const pd=((_PRIO[a.priority||'']??4)-(_PRIO[b.priority||'']??4));
+      if(pd!==0)return pd;
+      return (a.dueDate||'').localeCompare(b.dueDate||'');
+    });
+    const sectionLabel={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',community:'👥'};
+    html+=`<div class="overdue-list-card">
+      <div class="overdue-hd"><span class="overdue-hd-ic">⚠️</span><span class="overdue-hd-name">${overdue.length} overdue · sorted by priority</span></div>
+      ${sortedOverdue.map(t=>{
+        const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';
+        const daysOver=Math.floor((new Date(TODAY_ISO+'T12:00:00')-new Date(t.dueDate+'T12:00:00'))/86400000);
+        return`<div class="overdue-row">
+          <div class="chk" data-chk="${t.id}" style="border-color:#DC2626;width:16px;height:16px"></div>
+          <span class="overdue-section">${sectionLabel[t.section]||'•'}</span>
+          ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
+          <span class="overdue-text">${escH(t.text)}</span>
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:#991B1B;white-space:nowrap">${daysOver}d</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
   // ── Today's snapshot ───────────────────────────────────────────────────
   const todayDue=active.filter(t=>t.dueDate===TODAY_ISO);
   const todayHigh=todayDue.filter(t=>t.priority==='urgent'||t.priority==='high').length;
@@ -1676,8 +1715,10 @@ function rHome(){
         const r=D.dayResults.find(x=>x.date===iso);
         const isFuture=iso>TODAY_ISO;
         const isToday=iso===TODAY_ISO;
-        const cls=r?(r.result==='win'?'win':'loss'):isFuture?'future':'';
-        const symbol=r?(r.result==='win'?'W':'L'):isFuture?'·':isToday?'?':'·';
+        const hasStats=r&&(r.stat1||r.stat2||r.stat3||r.notes);
+        const isPartial=hasStats&&!r.result;
+        const cls=r&&r.result==='win'?'win':r&&r.result==='loss'?'loss':isFuture?'future':isPartial?'partial':'';
+        const symbol=r&&r.result==='win'?'W':r&&r.result==='loss'?'L':isFuture?'·':isPartial?'•':isToday?'?':'·';
         return`<div class="series-day ${cls} ${isToday?'today':''}" data-drday="${iso}">
           <div class="series-day-name">${SDAYS[d.getDay()].slice(0,1)}</div>
           <div class="series-day-result">${symbol}</div>
@@ -1693,41 +1734,27 @@ function rHome(){
       <div class="ws"><div class="ws-n">${w.choresDone}</div><div class="ws-l">chores</div></div>
       <div class="ws"><div class="ws-n">${w.choreXP||0}</div><div class="ws-l">chore XP</div></div>
       <div class="ws"><div class="ws-n">${D.activities.filter(a=>a.date>=WEEK_START).length}</div><div class="ws-l">sessions</div></div>
-      <div class="ws"><div class="ws-n">${(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length}</div><div class="ws-l">connects</div></div>
+      <div class="ws"><div class="ws-n">${new Set((D.contactLog||[]).filter(l=>l.date>=WEEK_START).map(l=>l.personId)).size}</div><div class="ws-l">connects</div></div>
       <div class="ws"><div class="ws-n pp">${(D.tasks.filter(t=>t.done&&t.completedAt&&t.completedAt>=WEEK_START).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0)+(D.choreLog||[]).filter(l=>l.date>=WEEK_START).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0))}</div><div class="ws-l">PP ⚡</div></div>
     </div>
   </div>`;
-
-  // Overdue tasks - detailed list sorted by priority then date
-  if(overdue.length){
-    const PRI={urgent:0,high:1,medium:2,low:3,'':4};
-    const sortedOverdue=[...overdue].sort((a,b)=>{
-      const pd=((PRI[a.priority||'']??4)-(PRI[b.priority||'']??4));
-      if(pd!==0)return pd;
-      return (a.dueDate||'').localeCompare(b.dueDate||'');
-    });
-    const sectionLabel={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',community:'👥'};
-    html+=`<div class="overdue-list-card">
-      <div class="overdue-hd"><span class="overdue-hd-ic">⚠️</span><span class="overdue-hd-name">${overdue.length} overdue · sorted by priority</span></div>
-      ${sortedOverdue.map(t=>{
-        const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';
-        const daysOver=Math.floor((new Date(TODAY_ISO+'T12:00:00')-new Date(t.dueDate+'T12:00:00'))/86400000);
-        return`<div class="overdue-row">
-          <div class="chk" data-chk="${t.id}" style="border-color:#DC2626;width:16px;height:16px"></div>
-          <span class="overdue-section">${sectionLabel[t.section]||'•'}</span>
-          ${t.priority?`<span class="tpri ${priCls}" style="font-size:9px">${t.priority}</span>`:''}
-          <span class="overdue-text">${escH(t.text)}</span>
-          <span style="font-size:10px;font-family:'DM Mono',monospace;color:#991B1B;white-space:nowrap">${daysOver}d</span>
-        </div>`;
-      }).join('')}
-    </div>`;
-  }
 
   // summary cards
   html+=`<div class="sum-grid">
     ${scCard('💕','Paige','var(--cpaige)','paige',{all:D.relActs.filter(r=>freshObj(r).overdue).length,done:D.relActs.filter(r=>!freshObj(r).overdue).length,over:0},'')}
     ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'')}
-    ${(()=>{const wkContacts=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length;return scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_family,...D.people.social_friends].length,done:wkContacts,over:0},wkContacts+' circle connects');})()}
+    ${(()=>{
+      const wkLogs=(D.contactLog||[]).filter(l=>l.date>=WEEK_START);
+      const distinctIds=new Set(wkLogs.map(l=>l.personId));
+      const fam=D.people.social_family||[];
+      const fri=D.people.social_friends||[];
+      const famHit=fam.filter(p=>distinctIds.has(p.id)).length;
+      const friHit=fri.filter(p=>distinctIds.has(p.id)).length;
+      const famPct=fam.length?Math.round(famHit/fam.length*100):0;
+      const friPct=fri.length?Math.round(friHit/fri.length*100):0;
+      const sub=`${distinctIds.size} connects · ${famPct}% fam · ${friPct}% fri`;
+      return scCard('👥','Community','var(--ccommunity)','community',{all:fam.length+fri.length,done:distinctIds.size,over:0},sub);
+    })()}
     <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
     ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions')}
     ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved')}
@@ -1789,10 +1816,46 @@ function rHome(){
     </div>
   </div>`;
 
-  // This week completed tasks
+  // This week completed tasks - grouped by date, newest first
   if(doneTasks.length){
+    const groupedByDate={};
+    doneTasks.forEach(t=>{
+      const d=t.completedAt||TODAY_ISO;
+      if(!groupedByDate[d])groupedByDate[d]=[];
+      groupedByDate[d].push(t);
+    });
+    const sortedDates=Object.keys(groupedByDate).sort().reverse();
+    const sectionEmoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',community:'👥'};
+    let dayBlocks='';
+    sortedDates.forEach(d=>{
+      const items=groupedByDate[d];
+      const dt=new Date(d+'T12:00:00');
+      const isToday=d===TODAY_ISO;
+      const yest=new Date();yest.setDate(yest.getDate()-1);
+      const isYest=d===localIso(yest);
+      const dayLabel=isToday?'Today':isYest?'Yesterday':dt.toLocaleDateString('en-US',{weekday:'long'});
+      const dateLabel=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      dayBlocks+=`<div style="margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 4px 4px;font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em">
+          <span style="color:${isToday?'var(--text)':'var(--t3)'};font-weight:${isToday?'500':'400'}">${dayLabel}</span>
+          <span style="color:var(--t3)">${dateLabel}</span>
+          <span style="flex:1;height:0.5px;background:var(--border)"></span>
+          <span style="color:var(--t3)">${items.length}</span>
+        </div>
+        ${items.map(t=>`<div class="trow done-r" style="margin-bottom:2px">
+          <div class="chk ck"></div>
+          <div class="tbody">
+            <div class="ttxt">${escH(t.text)}</div>
+            <div class="tmeta">
+              <span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${sectionEmoji[t.section]||'·'} ${t.section.replace('community_','')}</span>
+              ${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints}PP ⚡</span>`:''}
+            </div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    });
     html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length}</span></div>
-    <div class="tlist">${doneTasks.map(t=>`<div class="trow done-r"><div class="chk ck"></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div>${t.proactivePoints>0?`<div class="tmeta"><span class="tpp">+${t.proactivePoints}PP ⚡</span></div>`:''}</div></div>`).join('')}</div></div>`;
+    <div class="tlist">${dayBlocks}</div></div>`;
   }
 
   document.getElementById('home-content').innerHTML=html;
