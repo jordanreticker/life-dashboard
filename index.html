@@ -341,6 +341,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 <!-- Modals -->
 <div class="mback hide" id="chore-modal"><div class="modal"><h3 id="cm-title"></h3><div class="modal-sub" id="cm-sub"></div><button class="mbtn" id="cm-confirm">✓ Just did this</button><button class="mbtn mcancel" onclick="closeModal('chore-modal')">Cancel</button></div></div>
+<div class="mback hide" id="rel-modal"><div class="modal"><h3 id="rm-title"></h3><div class="modal-sub" id="rm-sub"></div><button class="mbtn" id="rm-confirm" style="background:var(--cpaige);color:#fff;border:none">💕 Just did this</button><button class="mbtn mcancel" onclick="closeModal('rel-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-edit-modal"><div class="modal"><h3>Edit relationship act</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="re-name" placeholder="Act name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="re-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label></div></div><button class="mbtn" id="re-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('rel-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
@@ -383,6 +384,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="mbtn" data-qasec="health" style="text-align:center;padding:10px 4px;font-size:12px">🏃 Health</button>
     <button class="mbtn" data-qasec="personal" style="text-align:center;padding:10px 4px;font-size:12px">✦ Personal</button>
   </div>
+  <select class="sel" id="qa-person" style="width:100%;margin-bottom:10px;display:none"><option value="">no person tag</option></select>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <select class="sel" id="qa-pri" style="flex:1"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
     <input class="dtp" type="date" id="qa-due" style="flex:1"/>
@@ -763,12 +765,24 @@ function openEditTask(id){
 
 // ── Quick add ─────────────────────────────────────────────────────────────────
 let _qaSection='work';
+function updateQAPersonDropdown(){
+  const sel=document.getElementById('qa-person');
+  if(!sel)return;
+  const isFamily=_qaSection==='community_family';
+  const isFriends=_qaSection==='community_friends';
+  if(!isFamily&&!isFriends){sel.style.display='none';sel.value='';return;}
+  const ppl=isFamily?(D.people.social_family||[]):(D.people.social_friends||[]);
+  sel.innerHTML='<option value="">no person tag</option>'+ppl.map(p=>`<option value="${p.id}">${escH(p.name)}</option>`).join('');
+  sel.style.display='block';
+  sel.value='';
+}
 function openQuickAdd(){
   _qaSection='work';
   document.getElementById('qa-text').value='';
   document.getElementById('qa-pri').value='';
   document.getElementById('qa-due').value='';
   document.getElementById('qa-recur').value='';
+  updateQAPersonDropdown();
   document.querySelectorAll('[data-qasec]').forEach(b=>{
     b.style.background=b.dataset.qasec===_qaSection?'var(--text)':'var(--bg)';
     b.style.color=b.dataset.qasec===_qaSection?'#fff':'var(--text)';
@@ -778,6 +792,7 @@ function openQuickAdd(){
         x.style.background=x.dataset.qasec===_qaSection?'var(--text)':'var(--bg)';
         x.style.color=x.dataset.qasec===_qaSection?'#fff':'var(--text)';
       });
+      updateQAPersonDropdown();
     };
   });
   document.getElementById('qa-confirm').onclick=()=>{
@@ -786,7 +801,8 @@ function openQuickAdd(){
     const pri=document.getElementById('qa-pri').value;
     const due=document.getElementById('qa-due').value;
     const rec=document.getElementById('qa-recur').value;
-    addTask(_qaSection,text,pri,due,'',[],rec,'');
+    const personId=document.getElementById('qa-person').value||'';
+    addTask(_qaSection,text,pri,due,personId,[],rec,'');
     closeModal('quick-add-modal');
     toast('+ Task added');
   };
@@ -942,16 +958,28 @@ function openRelEdit(id){
   };
   document.getElementById('rel-edit-modal').classList.remove('hide');
 }
-function markRelAct(id){
+function openRelActModal(id){
   const r=D.relActs.find(r=>r.id==id);if(!r)return;
-  if(!confirm('Mark "'+r.name+'" as done?'))return;
+  D.pendingRelId=id;
+  document.getElementById('rm-title').textContent=r.name;
+  const f=freshObj(r);
+  document.getElementById('rm-sub').textContent='last: '+f.label+' · every '+r.intervalDays+'d · 150 XP';
+  document.getElementById('rm-confirm').onclick=confirmRelAct;
+  document.getElementById('rel-modal').classList.remove('hide');
+}
+function confirmRelAct(){
+  const r=D.relActs.find(r=>r.id==D.pendingRelId);if(!r)return;
   const pp=freshObj(r).pct>=50?50:0;
+  const totalXP=150+pp;
   r.lastDone=TODAY_ISO;
-  addXP(150+pp);markActive();
-  D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=12+pp;
+  addXP(totalXP);markActive();
+  D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=totalXP;
   if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
+  D.dirty.add('relActs');D.dirty.add('gamification');D.dirty.add('weekSummary');
   checkWeekBadges();
-  renderAll();sched();toast('💕 Nice! +'+( 12+pp)+'XP');fireConfetti();
+  renderAll();sched();
+  toast('💕 Nice! +'+totalXP+' XP'+(pp>0?' +'+pp+' PP ⚡':''));fireConfetti();
+  closeModal('rel-modal');
 }
 
 // ── Health goals ──────────────────────────────────────────────────────────────
@@ -1038,7 +1066,7 @@ function switchTab(tab){
   else if(tab==='home')     rHome();
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal'].forEach(id=>{
+['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});
 });
 
@@ -1132,6 +1160,11 @@ function rHome(){
   // Group by dueDate
   const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
   scheduledTasks.forEach(t=>{if(byDay[t.dueDate]!==undefined)byDay[t.dueDate].push(t);});
+  // Sort each day by priority: urgent → high → medium → low → none
+  const _PRI={urgent:0,high:1,medium:2,low:3,'':4};
+  Object.keys(byDay).forEach(k=>{
+    byDay[k].sort((a,b)=>(_PRI[a.priority||'']||4)-(_PRI[b.priority||'']||4));
+  });
   const hasAny=scheduledTasks.length>0;
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📆</span><div class="sec-name">This week by day</div><span class="sbadge sn">${scheduledTasks.length} scheduled</span></div>
     <div style="padding:6px 8px 10px">
@@ -1655,7 +1688,7 @@ document.getElementById('main').addEventListener('click', function(e){
   if(cedit){ openChoreEdit(cedit.dataset.cedit); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
-  if(rel && !e.target.closest('[data-reledit],[data-reldel]')){ markRelAct(rel.dataset.rel); return; }
+  if(rel && !e.target.closest('[data-reledit],[data-reldel]')){ openRelActModal(rel.dataset.rel); return; }
   const reledit = e.target.closest('[data-reledit]');
   if(reledit){ openRelEdit(reledit.dataset.reledit); return; }
   const reldel = e.target.closest('[data-reldel]');
