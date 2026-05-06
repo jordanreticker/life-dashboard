@@ -1377,7 +1377,7 @@ function rHome(){
   const secStat=(sec)=>{const t=active.filter(t=>t.section===sec);return{all:t.length,done:doneTasks.filter(t=>t.section===sec).length,over:t.filter(t=>isOverdue(t.dueDate)).length};};
 
   let html=`<div class="xp-card">
-    <div class="xp-top"><span class="xp-lbl">${lvl.emoji} ${lvl.label}</span><div class="xp-right"><div class="xp-pts">${g.xp.toLocaleString()} XP · Lv${lvlIdx}</div><div class="xp-pp">⚡ ${g.proactivePoints} PP all-time</div></div></div>
+    <div class="xp-top"><span class="xp-lbl">${lvl.emoji} ${lvl.label}</span><div class="xp-right"><div class="xp-pts">${g.xp.toLocaleString()} XP · Lv${lvlIdx+1}</div><div class="xp-pp">⚡ ${g.proactivePoints} PP all-time</div></div></div>
     <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
   </div>`;
 
@@ -1422,7 +1422,7 @@ function rHome(){
       <div class="ws"><div class="ws-n">${w.choresDone}</div><div class="ws-l">chores</div></div>
       <div class="ws"><div class="ws-n">${w.choreXP||0}</div><div class="ws-l">chore XP</div></div>
       <div class="ws"><div class="ws-n">${D.activities.filter(a=>a.date>=WEEK_START).length}</div><div class="ws-l">sessions</div></div>
-      <div class="ws"><div class="ws-n pp">${w.proactivePoints}</div><div class="ws-l">PP ⚡</div></div>
+      <div class="ws"><div class="ws-n pp">${(D.tasks.filter(t=>t.done&&t.completedAt&&t.completedAt>=WEEK_START).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0)+(D.choreLog||[]).filter(l=>l.date>=WEEK_START).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0))}</div><div class="ws-l">PP ⚡</div></div>
     </div>
   </div>`;
 
@@ -1455,7 +1455,7 @@ function rHome(){
   html+=`<div class="sum-grid">
     ${scCard('💕','Paige','var(--cpaige)','paige',{all:D.relActs.filter(r=>freshObj(r).overdue).length,done:D.relActs.filter(r=>!freshObj(r).overdue).length,over:0},'')}
     ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'')}
-    ${scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_family,...D.people.social_friends].length,done:w.communityTasks,over:0},'contacts')}
+    ${(()=>{const wkContacts=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length;return scCard('👥','Community','var(--ccommunity)','community',{all:[...D.people.social_family,...D.people.social_friends].length,done:wkContacts,over:0},wkContacts+' circle connects');})()}
     <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
     ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions')}
     ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved')}
