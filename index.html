@@ -296,6 +296,31 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .overdue-row:first-child{border-top:none;}
 .overdue-text{flex:1;font-size:12px;color:#7F1D1D;}
 .overdue-section{font-size:9px;font-family:'DM Mono',monospace;color:#991B1B;padding:1px 5px;border-radius:4px;background:#FEE2E2;}
+.series-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.series-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.series-title{font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;}
+.series-record{font-size:14px;font-family:'DM Mono',monospace;font-weight:500;}
+.series-record.winning{color:var(--chealth);}
+.series-record.losing{color:#DC2626;}
+.series-record.tied{color:var(--t2);}
+.series-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:10px;}
+.series-day{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:0.5px solid var(--border);background:var(--bg);transition:all 0.15s;}
+.series-day.win{background:var(--chealth);color:#fff;border-color:var(--chealth);}
+.series-day.loss{background:#DC2626;color:#fff;border-color:#DC2626;}
+.series-day.future{opacity:0.35;cursor:default;}
+.series-day.today{outline:2px solid var(--text);outline-offset:1px;}
+.series-day-name{font-size:9px;font-family:'DM Mono',monospace;line-height:1;margin-bottom:2px;}
+.series-day-result{font-size:14px;font-weight:600;line-height:1;}
+.series-status{font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);text-align:center;}
+.series-status.swept{color:var(--xp);font-weight:500;}
+.dates-list{padding:6px 8px 4px;}
+.date-row{display:flex;align-items:center;gap:8px;padding:7px 5px;border-radius:var(--r2);margin-bottom:2px;}
+.date-info{flex:1;}
+.date-name{font-size:13px;}
+.date-meta{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:1px;}
+.date-countdown{font-size:11px;font-family:'DM Mono',monospace;font-weight:500;}
+.date-countdown.soon{color:#D97706;}
+.date-countdown.urgent{color:#DC2626;}
 .inbox-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
 .inbox-count-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .inbox-big{font-size:42px;font-weight:300;letter-spacing:-2px;line-height:1;}
@@ -344,6 +369,34 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 <div class="mback hide" id="rel-modal"><div class="modal"><h3 id="rm-title"></h3><div class="modal-sub" id="rm-sub"></div><button class="mbtn" id="rm-confirm" style="background:var(--cpaige);color:#fff;border:none">💕 Just did this</button><button class="mbtn mcancel" onclick="closeModal('rel-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-edit-modal"><div class="modal"><h3>Edit relationship act</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="re-name" placeholder="Act name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="re-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label></div></div><button class="mbtn" id="re-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('rel-edit-modal')">Cancel</button></div></div>
+
+<div class="mback hide" id="day-result-modal"><div class="modal">
+  <h3 id="dr-title">How did today go?</h3>
+  <div class="modal-sub" id="dr-sub">Mark today as a win or a loss</div>
+  <div style="display:flex;gap:8px;margin:14px 0">
+    <button class="mbtn" data-drtype="win" style="flex:1;text-align:center;padding:14px 6px;font-size:16px;font-weight:500">✓ Win</button>
+    <button class="mbtn" data-drtype="loss" style="flex:1;text-align:center;padding:14px 6px;font-size:16px;font-weight:500">✗ Loss</button>
+  </div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:8px">3 reasons (required):</div>
+  <input class="inp f1" id="dr-stat1" placeholder="Reason 1..." style="width:100%;margin-bottom:6px"/>
+  <input class="inp f1" id="dr-stat2" placeholder="Reason 2..." style="width:100%;margin-bottom:6px"/>
+  <input class="inp f1" id="dr-stat3" placeholder="Reason 3..." style="width:100%;margin-bottom:10px"/>
+  <textarea class="inp f1" id="dr-notes" placeholder="Notes (optional)" style="width:100%;min-height:60px;margin-bottom:10px;resize:vertical"></textarea>
+  <button class="mbtn" id="dr-confirm" style="background:var(--text);color:#fff;border:none">Save day result</button>
+  <button class="mbtn mcancel" onclick="closeModal('day-result-modal')">Cancel</button>
+</div></div>
+
+<div class="mback hide" id="paige-date-modal"><div class="modal">
+  <h3 id="pd-title">Add important date</h3>
+  <div class="edit-form" style="margin-top:12px">
+    <input class="inp f1" id="pd-name" placeholder="What is this date? (e.g. Anniversary)"/>
+    <input class="dtp" type="date" id="pd-date"/>
+    <select class="sel" id="pd-recur" style="width:100%"><option value="annual">repeats annually</option><option value="">one-time</option></select>
+    <input class="inp f1" id="pd-notes" placeholder="Notes / gift ideas (optional)"/>
+  </div>
+  <button class="mbtn" id="pd-confirm">Save</button>
+  <button class="mbtn mcancel" onclick="closeModal('paige-date-modal')">Cancel</button>
+</div></div>
 <div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
 <div class="mback hide" id="edit-modal"><div class="modal">
   <h3>Edit task</h3>
@@ -395,6 +448,10 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 </div></div>
 <div class="mback hide" id="reset-modal"><div class="modal"><h3>Reset week?</h3><div class="modal-sub">This will clear all completed tasks from view and reset weekly stats. Open tasks stay. This cannot be undone.</div><button class="mbtn" id="reset-confirm" style="background:#DC2626;color:#fff;border:none">Yes, reset the week</button><button class="mbtn mcancel" onclick="closeModal('reset-modal')">Cancel</button></div></div>
 
+<div class="mback hide" id="weekly-review-modal"><div class="modal" style="max-height:85vh;overflow-y:auto">
+  <div id="wr-content"></div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 <script>
 const API='https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERXN5__wVsbaA_MEY_dm8Fqw-r_lc3ihIHa3EDmDr9w/exec';
@@ -403,6 +460,26 @@ const API='https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERX
 const TODAY=new Date();
 function localIso(d){const dd=d||new Date();return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');}
 function fmtDate(s){if(!s)return'';const ds=toDateStr(s)||s;const d=new Date(ds+'T12:00:00');return isNaN(d)?'':d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function fmtDateSmart(s){
+  // If date falls within current week, show day name; else show month/day
+  if(!s)return'';
+  const ds=toDateStr(s)||s;
+  if(ds===TODAY_ISO) return 'today';
+  // Calculate this week's Sun-Sat boundaries
+  const t=new Date();
+  const sun=new Date(t);sun.setDate(t.getDate()-t.getDay());
+  const sat=new Date(sun);sat.setDate(sun.getDate()+6);
+  const sunIso=localIso(sun),satIso=localIso(sat);
+  if(ds>=sunIso&&ds<=satIso){
+    const d=new Date(ds+'T12:00:00');
+    if(isNaN(d))return'';
+    // Tomorrow special case
+    const tomorrow=new Date(t);tomorrow.setDate(t.getDate()+1);
+    if(ds===localIso(tomorrow))return 'tomorrow';
+    return d.toLocaleDateString('en-US',{weekday:'long'});
+  }
+  return fmtDate(s);
+}
 function toDateStr(v){
   if(!v)return null;
   if(v instanceof Date)return localIso(v);
@@ -502,7 +579,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),
@@ -567,6 +644,8 @@ async function loadData(){
     D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
     if(data.contactLog) D.contactLog=data.contactLog;
     if(data.inboxLog) D.inboxLog=data.inboxLog;
+    if(data.dayResults) D.dayResults=data.dayResults;
+    if(data.paigeDates) D.paigeDates=data.paigeDates;
     if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({
       ...g,
       target:Number(g.target)||7,
@@ -595,6 +674,8 @@ async function saveAll(){
   if(D.dirty.has('healthGoals')) payload.healthGoals = D.healthGoals;
   if(D.dirty.has('contactLog'))  payload.contactLog  = D.contactLog;
   if(D.dirty.has('inboxLog'))    payload.inboxLog    = D.inboxLog;
+  if(D.dirty.has('dayResults'))  payload.dayResults  = D.dayResults;
+  if(D.dirty.has('paigeDates'))  payload.paigeDates  = D.paigeDates;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -684,21 +765,71 @@ function freshObj(item){
 function freshBarPct(pct){return Math.max(0,Math.min(100,pct));}
 
 // ── Week reset ────────────────────────────────────────────────────────────────
-function openResetModal(){document.getElementById('reset-modal').classList.remove('hide');document.getElementById('reset-confirm').onclick=confirmReset;}
+function openResetModal(){openWeeklyReview();}
+function openWeeklyReview(){
+  const wkRec=getWeekRecord();
+  const seasonRec=getSeasonRecord();
+  const w=D.weekSummary;
+  const doneTasks=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
+  const choreCount=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).length;
+  const actCount=(D.activities||[]).filter(a=>a.date>=WEEK_START).length;
+  const journalCount=(D.journal||[]).filter(j=>j.date>=WEEK_START).length;
+  const contactsThisWeek=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length;
+  const weekBadges=WEEK_BADGES.filter(b=>D.weeklyBadges.includes(b.id));
+  const seriesResult=wkRec.wins>=7?{label:'SWEEP',color:'var(--xp)',msg:'Perfect week — every day a win'}
+    :wkRec.wins>=4?{label:'SERIES WON',color:'var(--chealth)',msg:'4+ wins, you took the week'}
+    :wkRec.losses>=4?{label:'SERIES LOST',color:'#DC2626',msg:'4+ losses — bounce back next week'}
+    :{label:'INCOMPLETE',color:'var(--t2)',msg:'Did not log enough days'};
+  const xpEarned=w.xpEarned||0;
+  
+  const html=`
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Round Complete</div>
+      <h3 style="font-size:22px;font-weight:300;letter-spacing:-0.5px">Week of ${fmtDate(WEEK_START)}</h3>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--r);padding:14px;margin-bottom:12px;text-align:center">
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Series Result</div>
+      <div style="font-size:32px;font-weight:500;margin-bottom:4px;color:${seriesResult.color}">${wkRec.wins}–${wkRec.losses}</div>
+      <div style="font-size:13px;font-weight:500;letter-spacing:0.5px;color:${seriesResult.color}">${seriesResult.label}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px">${seriesResult.msg}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px">${doneTasks.length}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">Tasks</div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px">${choreCount}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">Chores</div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px">${actCount}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">Workouts</div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px">${contactsThisWeek}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">Contacts</div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px">${journalCount}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">Journals</div></div>
+      <div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:300;letter-spacing:-0.5px;color:var(--xp)">${xpEarned}</div><div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase">XP</div></div>
+    </div>
+    ${weekBadges.length?`
+    <div style="background:#EDE9F8;border:0.5px solid #C4B5FD;border-radius:var(--r);padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:#5B21B6;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Badges this week</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${weekBadges.map(b=>`<div style="background:#fff;border-radius:var(--r2);padding:8px 10px;display:flex;align-items:center;gap:6px"><span style="font-size:18px">${b.emoji}</span><span style="font-size:11px;color:#5B21B6">${b.label}</span></div>`).join('')}
+      </div>
+    </div>`:''}
+    <div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-bottom:12px;text-align:center">
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em">Season record</div>
+      <div style="font-size:18px;font-weight:500;margin-top:4px">${seasonRec.wins}–${seasonRec.losses}</div>
+    </div>
+    <button class="mbtn" id="wr-confirm" style="background:#DC2626;color:#fff;border:none;margin-top:8px">Start fresh week</button>
+    <button class="mbtn mcancel" onclick="closeModal('weekly-review-modal')">Not yet — keep this week going</button>
+  `;
+  document.getElementById('wr-content').innerHTML=html;
+  document.getElementById('wr-confirm').onclick=confirmReset;
+  document.getElementById('weekly-review-modal').classList.remove('hide');
+}
 function confirmReset(){
-  // archive completed tasks stats
   const week=D.weekSummary;
   const existing=D.weeklyStats.findIndex(w=>w.weekStart===WEEK_START);
   const record={weekStart:WEEK_START,...week};
   if(existing>=0)D.weeklyStats[existing]=record;else D.weeklyStats.push(record);
-  // remove done tasks
   D.tasks=D.tasks.filter(t=>!t.done);
-  // reset weekly summary
   D.weekSummary={weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0};
-  // Reset health goal logs for new week
   D.healthGoals=D.healthGoals.map(g=>({...g,logs:[]}));
   D.weeklyBadges=[];
-  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('weeklyStats');closeModal('reset-modal');renderAll();sched();toast('Week reset ✓');
+  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('weeklyStats');D.dirty.add('healthGoals');
+  closeModal('weekly-review-modal');renderAll();sched();toast('Week reset ✓');
 }
 
 // ── Task actions ──────────────────────────────────────────────────────────────
@@ -1047,6 +1178,138 @@ async function submitJournal(){
   addXP(100);D.dirty.add('gamification');renderAll();sched();toast('📓 Saved +100 XP');
 }
 
+// ── Day result (7-game series) ────────────────────────────────────────────────
+let _drType=null;
+function openDayResult(date){
+  const targetDate=date||TODAY_ISO;
+  // Don't allow future dates
+  if(targetDate>TODAY_ISO){toast('Wait until that day to log it');return;}
+  D.pendingDayDate=targetDate;
+  _drType=null;
+  const existing=D.dayResults.find(r=>r.date===targetDate);
+  if(existing){
+    _drType=existing.result;
+    document.getElementById('dr-stat1').value=existing.stat1||'';
+    document.getElementById('dr-stat2').value=existing.stat2||'';
+    document.getElementById('dr-stat3').value=existing.stat3||'';
+    document.getElementById('dr-notes').value=existing.notes||'';
+  } else {
+    document.getElementById('dr-stat1').value='';
+    document.getElementById('dr-stat2').value='';
+    document.getElementById('dr-stat3').value='';
+    document.getElementById('dr-notes').value='';
+  }
+  const dateLabel=targetDate===TODAY_ISO?'today':fmtDateSmart(targetDate);
+  document.getElementById('dr-title').textContent='How did '+dateLabel+' go?';
+  document.getElementById('dr-sub').textContent=existing?'Update your result':'Mark this day as a win or a loss';
+  document.querySelectorAll('[data-drtype]').forEach(b=>{
+    const sel=b.dataset.drtype===_drType;
+    b.style.background=sel?(b.dataset.drtype==='win'?'var(--chealth)':'#DC2626'):'var(--bg)';
+    b.style.color=sel?'#fff':'var(--text)';
+    b.onclick=()=>{
+      _drType=b.dataset.drtype;
+      document.querySelectorAll('[data-drtype]').forEach(x=>{
+        const s=x.dataset.drtype===_drType;
+        x.style.background=s?(x.dataset.drtype==='win'?'var(--chealth)':'#DC2626'):'var(--bg)';
+        x.style.color=s?'#fff':'var(--text)';
+      });
+    };
+  });
+  document.getElementById('dr-confirm').onclick=confirmDayResult;
+  document.getElementById('day-result-modal').classList.remove('hide');
+}
+function confirmDayResult(){
+  if(!_drType){toast('Pick win or loss first');return;}
+  const s1=document.getElementById('dr-stat1').value.trim();
+  const s2=document.getElementById('dr-stat2').value.trim();
+  const s3=document.getElementById('dr-stat3').value.trim();
+  if(!s1||!s2||!s3){toast('All 3 reasons required');return;}
+  const notes=document.getElementById('dr-notes').value.trim();
+  const date=D.pendingDayDate;
+  const existingIdx=D.dayResults.findIndex(r=>r.date===date);
+  const isNew=existingIdx<0;
+  const record={date,result:_drType,stat1:s1,stat2:s2,stat3:s3,notes};
+  if(existingIdx>=0) D.dayResults[existingIdx]=record;
+  else D.dayResults.push(record);
+  D.dirty.add('dayResults');
+  if(isNew){
+    addXP(_drType==='win'?75:25);
+    markActive();
+    D.dirty.add('gamification');
+    // Check if week was won (4+ wins)
+    const weekWins=D.dayResults.filter(r=>r.date>=WEEK_START&&r.date<=localIso(new Date(new Date(WEEK_START+'T12:00:00').getTime()+6*86400000))&&r.result==='win').length;
+    if(weekWins===4){
+      addXP(500);
+      toast('🏆 Series won! 4-day victory! +500 XP',4000);
+      fireConfetti();
+    } else if(weekWins===7){
+      addXP(1000);
+      toast('🌟 SWEEP! Perfect week! +1000 XP',5000);
+      fireConfetti();
+    }
+  }
+  closeModal('day-result-modal');renderAll();sched();
+  toast(_drType==='win'?'✓ Win logged':'✗ Loss logged');
+}
+function getWeekRecord(){
+  const wkEnd=localIso(new Date(new Date(WEEK_START+'T12:00:00').getTime()+6*86400000));
+  const results=D.dayResults.filter(r=>r.date>=WEEK_START&&r.date<=wkEnd);
+  return{
+    wins:results.filter(r=>r.result==='win').length,
+    losses:results.filter(r=>r.result==='loss').length,
+    logged:results.length,
+  };
+}
+function getSeasonRecord(){
+  return{
+    wins:D.dayResults.filter(r=>r.result==='win').length,
+    losses:D.dayResults.filter(r=>r.result==='loss').length,
+  };
+}
+
+// ── Paige important dates ─────────────────────────────────────────────────────
+function openPaigeDateModal(id){
+  D.editingPaigeDateId=id||null;
+  const d=id?D.paigeDates.find(d=>d.id==id):null;
+  document.getElementById('pd-title').textContent=d?'Edit date':'Add important date';
+  document.getElementById('pd-name').value=d?d.name:'';
+  document.getElementById('pd-date').value=d?d.date:'';
+  document.getElementById('pd-recur').value=d?(d.recur||''):'annual';
+  document.getElementById('pd-notes').value=d?(d.notes||''):'';
+  document.getElementById('pd-confirm').onclick=()=>{
+    const name=document.getElementById('pd-name').value.trim();
+    const date=document.getElementById('pd-date').value;
+    const recur=document.getElementById('pd-recur').value;
+    const notes=document.getElementById('pd-notes').value;
+    if(!name||!date)return;
+    if(D.editingPaigeDateId){
+      const d2=D.paigeDates.find(d=>d.id==D.editingPaigeDateId);
+      if(d2){d2.name=name;d2.date=date;d2.recur=recur;d2.notes=notes;}
+    } else {
+      D.paigeDates.push({id:'pd'+D.nextId++,name,date,recur,notes});
+    }
+    D.dirty.add('paigeDates');closeModal('paige-date-modal');renderAll();sched();
+  };
+  document.getElementById('paige-date-modal').classList.remove('hide');
+}
+function deletePaigeDate(id){D.paigeDates=D.paigeDates.filter(d=>d.id!=id);D.dirty.add('paigeDates');renderAll();sched();}
+function getNextOccurrence(d){
+  // Returns next occurrence date - if annual and date already passed this year, advance to next year
+  const dateIso=d.date;
+  if(d.recur!=='annual') return dateIso;
+  const today=new Date(TODAY_ISO+'T12:00:00');
+  const dt=new Date(dateIso+'T12:00:00');
+  // Set to current year
+  dt.setFullYear(today.getFullYear());
+  if(dt<today) dt.setFullYear(today.getFullYear()+1);
+  return localIso(dt);
+}
+function daysUntil(iso){
+  const dt=new Date(iso+'T12:00:00');
+  const today=new Date(TODAY_ISO+'T12:00:00');
+  return Math.round((dt-today)/86400000);
+}
+
 function closeModal(id){document.getElementById(id).classList.add('hide');}
 
 // ── Tab switch ────────────────────────────────────────────────────────────────
@@ -1066,8 +1329,9 @@ function switchTab(tab){
   else if(tab==='home')     rHome();
 }
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
-['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});
+['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal','day-result-modal','paige-date-modal','weekly-review-modal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('click',e=>{if(e.target===el)closeModal(id);});
 });
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -1104,6 +1368,39 @@ function rHome(){
 
   if(g.streakDays>=2){html+=`<div class="streak-card"><div class="streak-ic">${g.streakDays>=30?'💫':g.streakDays>=7?'🔥':'⚡'}</div><div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>don't break the chain</p><span class="streak-best">best: ${g.bestStreak} days</span></div></div>`;}
 
+  // 7-game series card
+  const wkRec=getWeekRecord();
+  const seasonRec=getSeasonRecord();
+  const recordCls=wkRec.wins>=4?'winning':wkRec.losses>=4?'losing':wkRec.wins>wkRec.losses?'winning':wkRec.losses>wkRec.wins?'losing':'tied';
+  const seriesStatus=wkRec.wins>=7?'🌟 SWEEP!':wkRec.wins>=4?'🏆 Series won!':wkRec.losses>=4?'💀 Series lost':wkRec.wins+wkRec.losses>=7?'series complete':`first to 4 wins`;
+  const SDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const wkStartD=new Date(WEEK_START+'T12:00:00');
+  const wkDayList=[];for(let i=0;i<7;i++){const d=new Date(wkStartD);d.setDate(wkStartD.getDate()+i);wkDayList.push(d);}
+  html+=`<div class="series-card">
+    <div class="series-hd">
+      <div>
+        <div class="series-title">7-game series</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">season: ${seasonRec.wins}–${seasonRec.losses}</div>
+      </div>
+      <div class="series-record ${recordCls}">${wkRec.wins}–${wkRec.losses}</div>
+    </div>
+    <div class="series-grid">
+      ${wkDayList.map(d=>{
+        const iso=localIso(d);
+        const r=D.dayResults.find(x=>x.date===iso);
+        const isFuture=iso>TODAY_ISO;
+        const isToday=iso===TODAY_ISO;
+        const cls=r?(r.result==='win'?'win':'loss'):isFuture?'future':'';
+        const symbol=r?(r.result==='win'?'W':'L'):isFuture?'·':isToday?'?':'·';
+        return`<div class="series-day ${cls} ${isToday?'today':''}" data-drday="${iso}">
+          <div class="series-day-name">${SDAYS[d.getDay()].slice(0,1)}</div>
+          <div class="series-day-result">${symbol}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="series-status ${wkRec.wins>=7?'swept':''}">${seriesStatus}</div>
+  </div>`;
+
   html+=`<div class="week-card"><div class="week-hd"><span class="week-title">this week</span><button class="reset-btn" onclick="openResetModal()">↺ Reset week</button></div>
     <div class="week-stats" style="grid-template-columns:repeat(5,1fr)">
       <div class="ws"><div class="ws-n">${doneTasks.length}</div><div class="ws-l">tasks</div></div>
@@ -1118,7 +1415,7 @@ function rHome(){
   if(overdue.length){
     const PRI={urgent:0,high:1,medium:2,low:3,'':4};
     const sortedOverdue=[...overdue].sort((a,b)=>{
-      const pd=(PRI[a.priority||'']||4)-(PRI[b.priority||'']||4);
+      const pd=((PRI[a.priority||'']??4)-(PRI[b.priority||'']??4));
       if(pd!==0)return pd;
       return (a.dueDate||'').localeCompare(b.dueDate||'');
     });
@@ -1160,10 +1457,10 @@ function rHome(){
   // Group by dueDate
   const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
   scheduledTasks.forEach(t=>{if(byDay[t.dueDate]!==undefined)byDay[t.dueDate].push(t);});
-  // Sort each day by priority: urgent → high → medium → low → none
-  const _PRI={urgent:0,high:1,medium:2,low:3,'':4};
+  // Sort each day by priority: urgent (top) → high → medium → low → none (bottom)
+  const _PRI_RANK={urgent:1,high:2,medium:3,low:4,'':5};
   Object.keys(byDay).forEach(k=>{
-    byDay[k].sort((a,b)=>(_PRI[a.priority||'']||4)-(_PRI[b.priority||'']||4));
+    byDay[k].sort((a,b)=>(_PRI_RANK[a.priority||'']||5)-(_PRI_RANK[b.priority||'']||5));
   });
   const hasAny=scheduledTasks.length>0;
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📆</span><div class="sec-name">This week by day</div><span class="sbadge sn">${scheduledTasks.length} scheduled</span></div>
@@ -1251,6 +1548,28 @@ function rPaige(){
     <div class="add-extras"><select class="sel" id="pr-paige"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-paige"/></div></div>
   </div>`;
 
+  // Important dates
+  const sortedDates=[...D.paigeDates].map(d=>({...d,_next:getNextOccurrence(d),_days:daysUntil(getNextOccurrence(d))})).sort((a,b)=>a._days-b._days);
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📅</span><div class="sec-name">Important dates</div><span class="sbadge sn">${sortedDates.length}</span></div>
+    <div class="dates-list">
+      ${!sortedDates.length?'<div class="emsg">add anniversaries, birthdays, milestones...</div>':''}
+      ${sortedDates.map(d=>{
+        const cls=d._days<=7?'urgent':d._days<=30?'soon':'';
+        const dayLabel=d._days===0?'today!':d._days===1?'tomorrow':d._days<0?Math.abs(d._days)+'d ago':'in '+d._days+'d';
+        return`<div class="date-row">
+          <div class="date-info">
+            <div class="date-name">${escH(d.name)}</div>
+            <div class="date-meta">${fmtDate(d._next)}${d.recur==='annual'?' · annual':''}${d.notes?' · '+escH(d.notes):''}</div>
+          </div>
+          <span class="date-countdown ${cls}">${dayLabel}</span>
+          <button class="abtn" style="opacity:1;font-size:11px" data-pdedit="${d.id}">✏️</button>
+          <button class="abtn del" style="opacity:1" data-pddel="${d.id}">✕</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="add-wrap"><button class="bsm" style="width:100%" id="pd-add-btn">+ Add date</button></div>
+  </div>`;
+
   // Paigecyclopedia
   html+=`<div class="sec"><div class="sec-hd" id="encyc-hd" style="cursor:pointer"><span class="sec-ic">📖</span><div class="sec-name">Paigecyclopedia</div><span class="sbadge sn">${notes.length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.encycOpen?'▲':'▼'}</span></div>
   ${D.encycOpen?`<div class="encyc-list">${!notes.length?'<div class="emsg">add gift ideas, things she loves...</div>':''}${notes.map((n,i)=>`<div class="encyc-item"><div class="encyc-body"><div class="encyc-txt">${escH(n.text)}</div>${n.cat?`<div class="encyc-cat">${escH(n.cat)}</div>`:''}</div><button class="abtn del" style="opacity:1" data-delnote="${i}">✕</button></div>`).join('')}</div>
@@ -1259,7 +1578,7 @@ function rPaige(){
 
   document.getElementById('paige-content').innerHTML=html;
   document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
-  document.querySelectorAll('[data-rel]').forEach(el=>el.addEventListener('click',()=>markRelAct(el.dataset.rel)));
+  // rel acts handled by delegated listener now
   document.getElementById('encyc-hd')?.addEventListener('click',e=>{if(e.target.closest('[data-delnote],[id="encyc-add"],[id="encyc-inp"],[id="encyc-cat"]'))return;D.encycOpen=!D.encycOpen;rPaige();});
   document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';D.dirty.add('encycNotes');rPaige();sched();});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
@@ -1284,7 +1603,7 @@ function rWork(){
     if(t.dueDate&&t.dueDate>=wStart&&t.dueDate<=wEnd) byDay[t.dueDate].push(t);
     else unscheduled.push(t);
   });
-  const sortP=arr=>[...arr].sort((a,b)=>(PRI[a.priority||'']||4)-(PRI[b.priority||'']||4));
+  const sortP=arr=>[...arr].sort((a,b)=>((PRI[a.priority||'']??4)-(PRI[b.priority||'']??4)));
   Object.keys(byDay).forEach(k=>{byDay[k]=sortP(byDay[k]);});
 
   const taskCard=t=>{
@@ -1627,7 +1946,7 @@ function trow(t){
       <div class="ttxt">${escH(t.text)}</div>
       ${hasMeta?`<div class="tmeta">
         ${t.priority?`<span class="tpri ${priCls}">${t.priority}</span>`:''}
-        ${t.dueDate?`<span class="tdate ${over?'od':''}">${over?'overdue · ':''}${fmtDate(t.dueDate)}</span>`:''}
+        ${t.dueDate?`<span class="tdate ${over?'od':''}">${over?'overdue · ':''}${fmtDateSmart(t.dueDate)}</span>`:''}
         ${t.recurrence?`<span class="recur-badge">🔁 ${t.recurrence}</span>`:''}
         ${tags.map(g=>`<span class="ttag">#${escH(g)}</span>`).join('')}
         ${t.scheduledFor?`<span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3)">→ ${escH(t.scheduledFor)}</span>`:''}
@@ -1686,6 +2005,16 @@ document.getElementById('main').addEventListener('click', function(e){
   if(cd){ deleteChore(cd.dataset.cd); return; }
   const cedit = e.target.closest('[data-cedit]');
   if(cedit){ openChoreEdit(cedit.dataset.cedit); return; }
+  // Paige important dates
+  const pdedit = e.target.closest('[data-pdedit]');
+  if(pdedit){ openPaigeDateModal(pdedit.dataset.pdedit); return; }
+  const pddel = e.target.closest('[data-pddel]');
+  if(pddel){ deletePaigeDate(pddel.dataset.pddel); return; }
+  const pdadd = e.target.closest('#pd-add-btn');
+  if(pdadd){ openPaigeDateModal(null); return; }
+  // Series day click
+  const drday = e.target.closest('[data-drday]');
+  if(drday){ openDayResult(drday.dataset.drday); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
   if(rel && !e.target.closest('[data-reledit],[data-reldel]')){ openRelActModal(rel.dataset.rel); return; }
