@@ -333,6 +333,22 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 .focus-empty-row{font-size:12px;color:#9F1239;opacity:0.6;font-style:italic;background:rgba(255,255,255,0.4);border-radius:var(--r2);padding:9px 11px;}
 .focus-edit-btn{font-size:11px;font-family:'DM Mono',monospace;color:#9F1239;background:transparent;border:0.5px solid #FBCFE8;border-radius:20px;padding:4px 11px;cursor:pointer;}
 .focus-edit-btn:hover{background:#fff;}
+.list-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
+.list-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;}
+.list-hd-l{display:flex;align-items:center;gap:8px;}
+.list-icon{font-size:16px;}
+.list-name{font-size:13px;font-weight:500;}
+.list-count{font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);background:var(--bg);padding:2px 8px;border-radius:10px;}
+.list-toggle{font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;}
+.list-items{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;}
+.list-item{display:flex;align-items:center;gap:8px;padding:5px 6px;background:var(--bg);border-radius:var(--r2);}
+.list-item.done{opacity:0.5;}
+.list-item.done .list-text{text-decoration:line-through;color:var(--t3);}
+.list-text{flex:1;font-size:12px;}
+.list-add{display:flex;gap:6px;}
+.list-add input{flex:1;font-size:12px;padding:6px 10px;}
+.list-add button{font-size:12px;padding:6px 14px;}
+
 
 .inbox-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;}
 .inbox-count-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
@@ -609,14 +625,14 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -662,6 +678,29 @@ function fireConfetti(){
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 function applyData(data){
+  // Don't overwrite unsaved local changes
+  const skipKeys=new Set();
+  if(D.dirty&&D.dirty.size>0){
+    if(D.dirty.has('tasks')) skipKeys.add('tasks');
+    if(D.dirty.has('shoppingList')) skipKeys.add('shoppingList');
+    if(D.dirty.has('groceryList')) skipKeys.add('groceryList');
+    if(D.dirty.has('contactLog')) skipKeys.add('contactLog');
+    if(D.dirty.has('paigeFocuses')) skipKeys.add('paigeFocuses');
+    if(D.dirty.has('paigeDates')) skipKeys.add('paigeDates');
+    if(D.dirty.has('dayResults')) skipKeys.add('dayResults');
+    if(D.dirty.has('relActs')) skipKeys.add('relActs');
+    if(D.dirty.has('healthGoals')) skipKeys.add('healthGoals');
+  }
+  if(skipKeys.has('tasks')) delete data.tasks;
+  if(skipKeys.has('shoppingList')) delete data.shoppingList;
+  if(skipKeys.has('groceryList')) delete data.groceryList;
+  if(skipKeys.has('contactLog')) delete data.contactLog;
+  if(skipKeys.has('paigeFocuses')) delete data.paigeFocuses;
+  if(skipKeys.has('paigeDates')) delete data.paigeDates;
+  if(skipKeys.has('dayResults')) delete data.dayResults;
+  if(skipKeys.has('relActs')) delete data.relActs;
+  if(skipKeys.has('healthGoals')) delete data.healthGoals;
+
   const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
   if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
   if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||0,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7}));
@@ -693,6 +732,8 @@ function applyData(data){
   if(data.dayResults) D.dayResults=data.dayResults;
   if(data.paigeDates) D.paigeDates=data.paigeDates;
   if(data.paigeFocuses) D.paigeFocuses=data.paigeFocuses;
+  if(data.shoppingList) D.shoppingList=data.shoppingList;
+  if(data.groceryList) D.groceryList=data.groceryList;
   if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:(g.logs||[]).filter(d=>d>=WEEK_START)}));
   if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
   updateStreak();checkPermBadges();checkWeekBadges();
@@ -751,6 +792,8 @@ async function saveAll(retryCount){
   if(D.dirty.has('dayResults'))  payload.dayResults  = D.dayResults;
   if(D.dirty.has('paigeDates'))  payload.paigeDates  = D.paigeDates;
   if(D.dirty.has('paigeFocuses'))payload.paigeFocuses= D.paigeFocuses;
+  if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
+  if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -767,6 +810,11 @@ async function saveAll(retryCount){
       } else {
         D.dirty.clear();
         D.lastSavedAt=Date.now();
+        // Refresh cache so reload shows correct state
+        try{
+          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+          localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
+        }catch(e){}
         setSync('synced','saved');
       }
     }
@@ -1443,6 +1491,36 @@ function daysUntil(iso){
 function closeModal(id){document.getElementById(id).classList.add('hide');}
 
 
+
+// ── Shopping & grocery lists ──────────────────────────────────────────────────
+function toggleListSection(name){
+  if(name==='shopping') D.shoppingOpen=!D.shoppingOpen;
+  else if(name==='grocery') D.groceryOpen=!D.groceryOpen;
+  rHome();
+}
+function addListItem(name,text){
+  if(!text.trim())return;
+  const list=name==='shopping'?'shoppingList':'groceryList';
+  if(!D[list])D[list]=[];
+  D[list].push({id:'li'+D.nextId++,text:text.trim(),done:false,addedAt:TODAY_ISO});
+  D.dirty.add(list);rHome();sched();
+  haptic('light');
+}
+function toggleListItem(name,id){
+  const list=name==='shopping'?'shoppingList':'groceryList';
+  const item=D[list].find(i=>i.id==id);
+  if(!item)return;
+  item.done=!item.done;
+  if(item.done){haptic('success');addXP(10);D.dirty.add('gamification');}
+  else haptic('light');
+  D.dirty.add(list);rHome();sched();
+}
+function deleteListItem(name,id){
+  const list=name==='shopping'?'shoppingList':'groceryList';
+  D[list]=D[list].filter(i=>i.id!=id);
+  D.dirty.add(list);rHome();sched();
+}
+
 // ── Search ────────────────────────────────────────────────────────────────────
 function toggleSearch(){
   const overlay=document.getElementById('search-overlay');
@@ -1757,16 +1835,19 @@ function rPaige(){
     </div>
   </div>`;
   
-  if(q){html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(q)}</div><button class="qbtn" id="nxtq-paige">Next question ↻</button><div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div></div>`;}
 
   const staleRel=sorted.filter(r=>freshObj(r).overdue).length;
+  const relShown=D.relExpanded?sorted:sorted.slice(0,7);
+  const relHidden=sorted.length-relShown.length;
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">💝</span><div class="sec-name">Relationship acts</div><span class="sbadge ${staleRel?'sw':'sok'}">${staleRel?staleRel+' overdue':'all good'}</span></div>
-    <div class="tlist">${sorted.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);return`<div class="crow" data-rel="${r.id}">
+    <div class="tlist">${relShown.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);return`<div class="crow" data-rel="${r.id}">
       <div class="cinfo"><div class="cname">${escH(r.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${r.intervalDays}d</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
       <button class="abtn" style="opacity:1;font-size:12px" data-reledit="${r.id}">✏️</button>
       <button class="cdelbtn" data-reldel="${r.id}">✕</button>
     </div>`;}).join('')}</div>
+    ${relHidden>0?`<button class="expand-btn" data-relexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${relHidden} more</button>`:''}
+    ${D.relExpanded&&sorted.length>7?`<button class="expand-btn" data-relexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
     <div class="hint">tap to mark done · ✏️ to edit</div>
     <div class="add-wrap"><div class="add-main"><input class="inp f1" id="rel-inp" placeholder="New rel act..."/><button class="badd" id="rel-add">Add</button></div>
     <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="rel-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div></div></div>
@@ -1809,13 +1890,15 @@ function rPaige(){
   <div class="add-wrap"><div class="add-main"><input class="inp f1" id="encyc-inp" placeholder="Add a note..."/><button class="badd" id="encyc-add">Add</button></div><div class="add-extras"><input class="inp" id="encyc-cat" placeholder="category" style="width:110px;flex:none"/></div></div>`:``}
   </div>`;
 
+  // Daily question (under Paigecyclopedia)
+  if(q){html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(q)}</div><button class="qbtn" id="nxtq-paige">Next question ↻</button><div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div></div>`;}
+
   document.getElementById('paige-content').innerHTML=html;
   document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
   // rel acts handled by delegated listener now
-  document.getElementById('encyc-hd')?.addEventListener('click',e=>{if(e.target.closest('[data-delnote],[id="encyc-add"],[id="encyc-inp"],[id="encyc-cat"]'))return;D.encycOpen=!D.encycOpen;rPaige();});
+  // encyc-hd click handled by delegated listener
   document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';D.dirty.add('encycNotes');rPaige();sched();});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
-  document.querySelectorAll('[data-delnote]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();D.encycNotes.splice(parseInt(el.dataset.delnote),1);rPaige();sched();}));
 }
 
 // ── WORK ──────────────────────────────────────────────────────────────────────
@@ -1934,17 +2017,22 @@ function rCommunity(){
   const todayCount=getTodayInbox();
   const streak=getInboxStreak();
   const last7=getLast7Inbox();
+  // Get most recent count (regardless of date)
+  const sortedLogs=[...(D.inboxLog||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const lastLogged=sortedLogs[0];
+  const displayCount=todayCount!==null?todayCount:(lastLogged?lastLogged.count:null);
+  const isStale=todayCount===null&&lastLogged;
   const maxCount=Math.max(...last7.map(d=>d.count??0),1);
   const DAYS7=['S','M','T','W','T','F','S'];
-  const countClass=todayCount===null?'':todayCount===0?'zero':todayCount<50?'warn':'danger';
+  const countClass=displayCount===null?'':displayCount===0?'zero':displayCount<50?'warn':'danger';
   const alreadyZeroToday=todayCount===0;
 
   let html=`<div class="inbox-card">
     <div class="inbox-label">📬 Text inbox</div>
     <div class="inbox-count-row">
-      <div class="inbox-big ${countClass}">${todayCount===null?'—':todayCount}</div>
+      <div class="inbox-big ${countClass}" style="${isStale?'opacity:0.55':''}">${displayCount===null?'—':displayCount}</div>
       <div class="inbox-meta">
-        <div style="font-size:12px;color:var(--t2)">${todayCount===null?'not logged today':todayCount===0?'inbox zero!':todayCount+' unread'}</div>
+        <div style="font-size:12px;color:var(--t2)">${todayCount===null?(lastLogged?'last logged '+fmtDate(lastLogged.date):'not logged yet'):todayCount===0?'inbox zero!':todayCount+' unread'}</div>
         ${streak>0?`<div class="inbox-streak">🔥 ${streak}-day inbox zero streak</div>`:''}
       </div>
     </div>
@@ -2030,6 +2118,8 @@ function rCommunity(){
 // ── CHORES ────────────────────────────────────────────────────────────────────
 function rChores(){
   const sorted=[...D.chores].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
+  const choresShown=D.choresExpanded?sorted:sorted.slice(0,7);
+  const choresHidden=sorted.length-choresShown.length;
   const overdue=sorted.filter(c=>freshObj(c).overdue).length;
   let html=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
     <div class="tlist">${!sorted.length?'<div class="emsg">no chores</div>':''}${sorted.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
@@ -2219,6 +2309,20 @@ document.getElementById('main').addEventListener('click', function(e){
   // Edit task
   const edit = e.target.closest('[data-edit]');
   if(edit){ openEditTask(edit.dataset.edit); return; }
+  // Shopping/grocery list toggle
+  const listTog = e.target.closest('[data-listtoggle]');
+  if(listTog){ toggleListSection(listTog.dataset.listtoggle); return; }
+  const listChk = e.target.closest('[data-listchk]');
+  if(listChk){ const [n,id]=listChk.dataset.listchk.split(':'); toggleListItem(n,id); return; }
+  const listDel = e.target.closest('[data-listdel]');
+  if(listDel){ const [n,id]=listDel.dataset.listdel.split(':'); deleteListItem(n,id); return; }
+  const listAdd = e.target.closest('[data-listadd]');
+  if(listAdd){
+    const n=listAdd.dataset.listadd;
+    const inp=document.getElementById(n==='shopping'?'shop-inp':'gro-inp');
+    if(inp?.value.trim()){addListItem(n,inp.value);inp.value='';}
+    return;
+  }
   // Add task button
   const ab = e.target.closest('[data-ab]');
   if(ab){
@@ -2256,6 +2360,11 @@ document.getElementById('main').addEventListener('click', function(e){
   // Series day click
   const drday = e.target.closest('[data-drday]');
   if(drday){ openDayResult(drday.dataset.drday); return; }
+  // Expand toggles for rel acts and chores
+  const relExp = e.target.closest('[data-relexpand]');
+  if(relExp){ D.relExpanded=relExp.dataset.relexpand==='1'; rPaige(); return; }
+  const choresExp = e.target.closest('[data-choresexpand]');
+  if(choresExp){ D.choresExpanded=choresExp.dataset.choresexpand==='1'; rChores(); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
   if(rel && !e.target.closest('[data-reledit],[data-reldel]')){ openRelActModal(rel.dataset.rel); return; }
@@ -2279,7 +2388,7 @@ document.getElementById('main').addEventListener('click', function(e){
   if(goaldel){ deleteHealthGoal(goaldel.dataset.goaldel); return; }
   // Delete note (encyclopedia)
   const delnote = e.target.closest('[data-delnote]');
-  if(delnote){ D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
+  if(delnote){ e.stopPropagation(); D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
   // Contact log
   const contact = e.target.closest('[data-contact]');
   if(contact && !e.target.closest('[data-dp]')){ openContactModal(contact.dataset.contact, contact.dataset.ctier); return; }
@@ -2316,7 +2425,8 @@ document.getElementById('main').addEventListener('click', function(e){
   }
   // Encyc toggle
   const encychd = e.target.closest('#encyc-hd');
-  if(encychd){ D.encycOpen=!D.encycOpen; rPaige(); return; }
+  if(encychd && !e.target.closest('[data-delnote],[id="encyc-add"],[id="encyc-inp"],[id="encyc-cat"]')){ D.encycOpen=!D.encycOpen; rPaige(); return; }
+  // delete encyc note handled above
 });
 
 // Enter key on all add-task inputs (delegated)
