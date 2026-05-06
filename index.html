@@ -485,8 +485,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn mcancel" onclick="closeModal('contact-modal')">Cancel</button>
 </div></div>
 <div class="mback hide" id="quick-add-modal"><div class="modal">
-  <h3>Quick add task</h3>
-  <div class="modal-sub">Where should this go?</div>
+  <h3 id="qa-title">Quick add task</h3>
+  <div class="modal-sub" id="qa-sub">Where should this go?</div>
   <input class="inp f1" id="qa-text" placeholder="What needs to get done?" style="width:100%;margin-bottom:10px"/>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px" id="qa-section-btns">
     <button class="mbtn" data-qasec="paige" style="text-align:center;padding:10px 4px;font-size:12px">💕 Paige</button>
@@ -495,7 +495,9 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="mbtn" data-qasec="community_friends" style="text-align:center;padding:10px 4px;font-size:12px">👥 Friends</button>
     <button class="mbtn" data-qasec="health" style="text-align:center;padding:10px 4px;font-size:12px">🏃 Health</button>
     <button class="mbtn" data-qasec="personal" style="text-align:center;padding:10px 4px;font-size:12px">✦ Personal</button>
+    <button class="mbtn" data-qasec="chore" style="text-align:center;padding:10px 4px;font-size:12px;grid-column:span 3">🧹 Mark a chore done</button>
   </div>
+  <select class="sel" id="qa-chore" style="width:100%;margin-bottom:10px;display:none"><option value="">pick a chore...</option></select>
   <select class="sel" id="qa-person" style="width:100%;margin-bottom:10px;display:none"><option value="">no person tag</option></select>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <select class="sel" id="qa-pri" style="flex:1"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
@@ -631,6 +633,26 @@ const WEEK_BADGES=[
   {id:'wk_perfect',    emoji:'🌟', label:'Perfect week',    desc:'Tasks done in every section',      check:(w,t)=>w.workTasks>0&&w.communityTasks>0&&w.activitiesLogged>0&&w.choresDone>0&&w.paigeActs>0},
 ];
 
+// Default XP values (fallback if XPValues sheet is empty)
+const DEFAULT_XP={
+  task_low:75, task_medium:125, task_high:200, task_urgent:300, task_default:75,
+  proactive_3day:50, proactive_5day:100, proactive_7day:150,
+  chore_proactive_min:10, chore_proactive_mid:25, chore_proactive_max:50,
+  activity_workout:200, activity_lowimpact:150,
+  relact_base:150, relact_proactive:50,
+  contact_text:75, contact_call:150, contact_hangout:300, contact_family_mult:1.5,
+  health_goal_daily:100, health_goal_full_week:500,
+  journal_entry:100, savings_log:50, inbox_zero:200,
+  day_win:75, day_loss:25, series_win:500, series_sweep:1000,
+  list_item_done:10, encyc_complete:50,
+};
+function xp(key){
+  // Lookup in D.xpValues first, fall back to DEFAULT_XP
+  const v=D.xpValues&&D.xpValues[key];
+  if(v!==undefined&&v!==null&&v!==''){const n=Number(v);if(!isNaN(n))return n;}
+  return DEFAULT_XP[key]||0;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let D={
   tasks:[],chores:[],people:{social_family:[],social_friends:[],work:[]},
@@ -638,7 +660,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
@@ -747,6 +769,7 @@ function applyData(data){
   if(data.paigeFocuses) D.paigeFocuses=data.paigeFocuses;
   if(data.shoppingList) D.shoppingList=data.shoppingList;
   if(data.groceryList) D.groceryList=data.groceryList;
+  if(data.xpValues) D.xpValues=data.xpValues;
   if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:(g.logs||[]).filter(d=>d>=WEEK_START)}));
   if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
   updateStreak();checkPermBadges();checkWeekBadges();
@@ -807,6 +830,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('paigeFocuses'))payload.paigeFocuses= D.paigeFocuses;
   if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
   if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
+  if(D.dirty.has('xpValues'))   payload.xpValues    = D.xpValues;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
     const text=await res.text();
@@ -876,9 +900,9 @@ function calcProactivePoints(dueDate){
   const due=new Date(dueDate+'T12:00:00');
   const daysLeft=Math.floor((due-new Date())/86400000);
   if(daysLeft<=0) return 0;
-  if(daysLeft>=7) return 150;
-  if(daysLeft>=3) return 100;
-  return 50;
+  if(daysLeft>=7) return xp('proactive_7day');
+  if(daysLeft>=3) return xp('proactive_5day');
+  return xp('proactive_3day');
 }
 function calcChoreProactivePoints(chore){
   // Only award PP if: chore has been done before AND is being done while still fresh (not overdue)
@@ -887,9 +911,9 @@ function calcChoreProactivePoints(chore){
   // If already overdue, no proactive points
   if(f.overdue) return 0;
   // Award based on how early they are (pct of interval remaining)
-  if(f.pct>=80) return 50;
-  if(f.pct>=60) return 25;
-  if(f.pct>=40) return 10;
+  if(f.pct>=80) return xp('chore_proactive_max');
+  if(f.pct>=60) return xp('chore_proactive_mid');
+  if(f.pct>=40) return xp('chore_proactive_min');
   return 0;
 }
 
@@ -1006,7 +1030,7 @@ function toggleTask(id){
   haptic(t.done?'light':'success');
   t.done=!t.done;
   if(t.done){
-    const baseXP=t.priority==='urgent'?300:t.priority==='high'?200:t.priority==='medium'?125:t.priority==='low'?75:t.xpValue||75;
+    const baseXP=t.priority==='urgent'?xp('task_urgent'):t.priority==='high'?xp('task_high'):t.priority==='medium'?xp('task_medium'):t.priority==='low'?xp('task_low'):t.xpValue||xp('task_default');
     const pp=calcProactivePoints(t.dueDate);
     t.proactivePoints=pp;t.completedAt=TODAY_ISO;
     addXP(baseXP+pp);markActive();
@@ -1082,7 +1106,8 @@ function openQuickAdd(){
   document.getElementById('qa-pri').value='';
   document.getElementById('qa-due').value='';
   document.getElementById('qa-recur').value='';
-  updateQAPersonDropdown();
+  document.getElementById('qa-chore').value='';
+  updateQAFields();
   document.querySelectorAll('[data-qasec]').forEach(b=>{
     b.style.background=b.dataset.qasec===_qaSection?'var(--text)':'var(--bg)';
     b.style.color=b.dataset.qasec===_qaSection?'#fff':'var(--text)';
@@ -1092,10 +1117,17 @@ function openQuickAdd(){
         x.style.background=x.dataset.qasec===_qaSection?'var(--text)':'var(--bg)';
         x.style.color=x.dataset.qasec===_qaSection?'#fff':'var(--text)';
       });
-      updateQAPersonDropdown();
+      updateQAFields();
     };
   });
   document.getElementById('qa-confirm').onclick=()=>{
+    if(_qaSection==='chore'){
+      const cid=document.getElementById('qa-chore').value;
+      if(!cid){toast('Pick a chore first');return;}
+      closeModal('quick-add-modal');
+      openChoreModal(cid);
+      return;
+    }
     const text=document.getElementById('qa-text').value;
     if(!text.trim())return;
     const pri=document.getElementById('qa-pri').value;
@@ -1109,9 +1141,49 @@ function openQuickAdd(){
   document.getElementById('quick-add-modal').classList.remove('hide');
   setTimeout(()=>document.getElementById('qa-text')?.focus(),100);
 }
+function updateQAFields(){
+  const isChore=_qaSection==='chore';
+  const isFamily=_qaSection==='community_family';
+  const isFriends=_qaSection==='community_friends';
+  const choreSel=document.getElementById('qa-chore');
+  const txtInp=document.getElementById('qa-text');
+  const personSel=document.getElementById('qa-person');
+  const priSel=document.getElementById('qa-pri');
+  const titleEl=document.getElementById('qa-title');
+  const subEl=document.getElementById('qa-sub');
+  const confirmBtn=document.getElementById('qa-confirm');
+  if(isChore){
+    titleEl.textContent='Quick log chore';
+    subEl.textContent='Mark a recurring chore done';
+    txtInp.style.display='none';
+    if(priSel) priSel.parentElement.style.display='none';
+    if(personSel){personSel.style.display='none';personSel.value='';}
+    const sortedChores=[...D.chores].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
+    choreSel.innerHTML='<option value="">pick a chore...</option>'+sortedChores.map(c=>{const f=freshObj(c);return `<option value="${c.id}">${escH(c.name)} ${f.overdue?'⚠️':''} (${f.pct}%)</option>`;}).join('');
+    choreSel.style.display='block';
+    confirmBtn.textContent='Mark chore done';
+  } else {
+    titleEl.textContent='Quick add task';
+    subEl.textContent='Where should this go?';
+    txtInp.style.display='block';
+    if(priSel) priSel.parentElement.style.display='flex';
+    choreSel.style.display='none';
+    confirmBtn.textContent='Add task';
+    if(personSel){
+      if(!isFamily&&!isFriends){personSel.style.display='none';personSel.value='';}
+      else {
+        const ppl=isFamily?(D.people.social_family||[]):(D.people.social_friends||[]);
+        personSel.innerHTML='<option value="">no person tag</option>'+ppl.map(p=>`<option value="${p.id}">${escH(p.name)}</option>`).join('');
+        personSel.style.display='block';
+        personSel.value='';
+      }
+    }
+  }
+}
+function updateQAPersonDropdown(){updateQAFields();}
 function addTask(section,text,priority,dueDate,personId,tags,recurrence,notes){
   if(!text.trim())return;
-  const xpValue=priority==='urgent'?300:priority==='high'?200:priority==='medium'?125:priority==='low'?75:75;
+  const xpValue=priority==='urgent'?xp('task_urgent'):priority==='high'?xp('task_high'):priority==='medium'?xp('task_medium'):priority==='low'?xp('task_low'):xp('task_default');
   D.tasks.push({id:D.nextId++,section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue,recurrence:recurrence||'',notes:notes||''});
   markActive();D.dirty.add('tasks');renderAll();sched();
 }
@@ -1215,13 +1287,13 @@ function confirmContact(){
   const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
   if(!p)return;
   const isFamily=D.pendingContactTier==='social_family';
-  const baseXP={text:75,call:150,hangout:300}[_contactType]||75;
-  const xp=isFamily?Math.round(baseXP*1.5):baseXP;
+  const baseXP={text:xp('contact_text'),call:xp('contact_call'),hangout:xp('contact_hangout')}[_contactType]||xp('contact_text');
+  const totalXP=isFamily?Math.round(baseXP*xp('contact_family_mult')):baseXP;
   const note=document.getElementById('contact-note')?.value.trim()||'';
   p.lastContact=TODAY_ISO;
   if(!D.contactLog)D.contactLog=[];
-  D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp});
-  addXP(xp);markActive();D.weekSummary.communityTasks++;
+  D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp:totalXP});
+  addXP(totalXP);markActive();D.weekSummary.communityTasks++;
   D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
   checkWeekBadges();renderAll();sched();
   const em={text:'💬',call:'📞',hangout:'🤝'};
@@ -1244,7 +1316,7 @@ function openActModal(type){
     const notes=document.getElementById('act-notes').value;
     const dur=document.getElementById('act-dur').value;
     const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur};
-    const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?150:200;
+    const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');
     D.activities.push(entry);
     addXP(actXP);markActive();
     D.gamification.allTimeActivities++;
@@ -1291,8 +1363,8 @@ function openRelActModal(id){
 }
 function confirmRelAct(){
   const r=D.relActs.find(r=>r.id==D.pendingRelId);if(!r)return;
-  const pp=freshObj(r).pct>=50?50:0;
-  const totalXP=150+pp;
+  const pp=freshObj(r).pct>=50?xp('relact_proactive'):0;
+  const totalXP=xp('relact_base')+pp;
   r.lastDone=TODAY_ISO;
   addXP(totalXP);markActive();
   D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=totalXP;
@@ -1325,9 +1397,9 @@ function logHealthGoal(id){
       toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
       haptic('heavy');fireBigConfetti();
     }
-    addXP(500);
+    addXP(xp('health_goal_full_week'));
   } else {
-    addXP(100);
+    addXP(xp('health_goal_daily'));
     toast('✓ '+hit+'/'+g.target+' +8XP');
   }
   markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
@@ -1352,7 +1424,7 @@ function openFinModal(id){
     if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.updatedAt=TODAY_ISO;}}
     else D.finances.push({id:D.nextId++,category,label,amount,type,updatedAt:TODAY_ISO});
     D.dirty.add('finances');
-    if(type==='savings'&&amount>0){addXP(50);D.dirty.add('gamification');toast('💰 Savings logged +50 XP');}
+    if(type==='savings'&&amount>0){addXP(xp('savings_log'));D.dirty.add('gamification');toast('💰 Savings logged +'+xp('savings_log')+' XP');}
     closeModal('fin-modal');renderAll();sched();
   };
   document.getElementById('fin-modal').classList.remove('hide');
@@ -1366,7 +1438,7 @@ async function submitJournal(){
   D.journal.unshift(entry);
   try{await fetch(API,{method:'POST',body:JSON.stringify({action:'addJournal',...entry})});}catch(e){}
   document.getElementById('jtext').value='';D.selectedMood='';
-  addXP(100);D.dirty.add('gamification');renderAll();sched();toast('📓 Saved +100 XP');
+  addXP(xp('journal_entry'));D.dirty.add('gamification');renderAll();sched();toast('📓 Saved +'+xp('journal_entry')+' XP');
 }
 
 // ── Day result (7-game series) ────────────────────────────────────────────────
@@ -1437,18 +1509,18 @@ function confirmDayResult(){
   else D.dayResults.push(record);
   D.dirty.add('dayResults');
   if(isNew){
-    addXP(_drType==='win'?75:25);
+    addXP(_drType==='win'?xp('day_win'):xp('day_loss'));
     markActive();
     D.dirty.add('gamification');
     // Check if week was won (4+ wins)
     const weekWins=D.dayResults.filter(r=>r.date>=WEEK_START&&r.date<=localIso(new Date(new Date(WEEK_START+'T12:00:00').getTime()+6*86400000))&&r.result==='win').length;
     if(weekWins===4){
-      addXP(500);
-      toast('🏆 Series won! 4-day victory! +500 XP',4000);
+      addXP(xp('series_win'));
+      toast('🏆 Series won! 4-day victory! +'+xp('series_win')+' XP',4000);
       haptic('heavy');fireBigConfetti();
     } else if(weekWins===7){
-      addXP(1000);
-      toast('🌟 SWEEP! Perfect week! +1000 XP',5000);
+      addXP(xp('series_sweep'));
+      toast('🌟 SWEEP! Perfect week! +'+xp('series_sweep')+' XP',5000);
       haptic('heavy');fireBigConfetti();
     }
   }
@@ -1465,10 +1537,24 @@ function getWeekRecord(){
   };
 }
 function getSeasonRecord(){
-  return{
-    wins:D.dayResults.filter(r=>r.result==='win').length,
-    losses:D.dayResults.filter(r=>r.result==='loss').length,
-  };
+  // Group dayResults by week and tally wins/losses per week, then count weeks won/lost as series
+  const byWeek={};
+  D.dayResults.forEach(r=>{
+    if(!r.result)return;
+    const wkStart=getWeekStart(new Date(r.date+'T12:00:00'));
+    if(!byWeek[wkStart])byWeek[wkStart]={wins:0,losses:0};
+    if(r.result==='win') byWeek[wkStart].wins++;
+    else if(r.result==='loss') byWeek[wkStart].losses++;
+  });
+  // Don't count current week (in progress)
+  delete byWeek[WEEK_START];
+  let seriesWon=0,seriesLost=0;
+  Object.values(byWeek).forEach(w=>{
+    if(w.wins>=4) seriesWon++;
+    else if(w.losses>=4) seriesLost++;
+    // Weeks that don't reach 4 of either are incomplete and don't count
+  });
+  return{wins:seriesWon,losses:seriesLost};
 }
 
 // ── Paige important dates ─────────────────────────────────────────────────────
@@ -1537,7 +1623,7 @@ function toggleListItem(name,id){
   const item=D[list].find(i=>i.id==id);
   if(!item)return;
   item.done=!item.done;
-  if(item.done){haptic('success');addXP(10);D.dirty.add('gamification');}
+  if(item.done){haptic('success');addXP(xp('list_item_done'));D.dirty.add('gamification');}
   else haptic('light');
   D.dirty.add(list);rHome();sched();
 }
@@ -2078,9 +2164,9 @@ function setInboxCount(){
   else D.inboxLog.push({date:TODAY_ISO,count:val});
   // Award XP if hitting 0
   if(val===0&&!wasZero){
-    addXP(200);markActive();
+    addXP(xp('inbox_zero'));markActive();
     D.dirty.add('gamification');
-    toast('📬 Inbox zero! +200 XP');
+    toast('📬 Inbox zero! +'+xp('inbox_zero')+' XP');
     haptic('success');fireBigConfetti();
   }
   D.dirty.add('inboxLog');
@@ -2557,7 +2643,7 @@ document.getElementById('main').addEventListener('click', function(e){
         n.completedNote='';
       }
       D.dirty.add('encycNotes');rPaige();sched();
-      if(n.done){addXP(50);D.dirty.add('gamification');toast('💕 Marked complete +50 XP');haptic('success');}
+      if(n.done){addXP(xp('encyc_complete'));D.dirty.add('gamification');toast('💕 Marked complete +'+xp('encyc_complete')+' XP');haptic('success');}
     }
     return;
   }
