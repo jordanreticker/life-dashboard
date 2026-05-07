@@ -749,7 +749,13 @@ function applyData(data){
   if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
   D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
   if(data.activities) D.activities=data.activities;
-  if(data.questions&&data.questions.length) D.questions=data.questions.map(q=>typeof q==='object'?(q.question||''):q).filter(Boolean);
+  if(data.questions&&data.questions.length){
+    // Normalize to {id, question} objects
+    D.questions=data.questions.map((q,i)=>{
+      if(typeof q==='string') return {id:String(i+1),question:q};
+      return {id:String(q.id||(i+1)),question:String(q.question||'')};
+    }).filter(q=>q.question);
+  }
   if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
   if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
   if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
@@ -799,6 +805,12 @@ function applyData(data){
 }
 
 async function loadData(){
+  // Randomize starting question on each app load (so it changes each session)
+  if(typeof window!=='undefined' && !window._paigeQRandomized){
+    window._paigeQRandomized=true;
+    // Defer until after data loads
+    setTimeout(()=>{if(D.questions.length){D.paigeQIdx=Math.floor(Math.random()*D.questions.length);}}, 100);
+  }
   // ── Stage 1: Load from localStorage cache for instant render ──
   let cacheUsed=false;
   try{
@@ -2098,8 +2110,9 @@ function scCard(icon,name,color,tab,stat,extra){
 
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
 // ── Paige answer logging ──────────────────────────────────────────────────────
-function openLogAnswerModal(question){
+function openLogAnswerModal(question, questionId){
   D._loggingAnswerForQ=question;
+  D._loggingAnswerForQId=questionId||'';
   document.getElementById('logqa-question').textContent='"'+question+'"';
   document.getElementById('logqa-text').value='';
   document.getElementById('logqa-confirm').onclick=()=>{
@@ -2108,6 +2121,7 @@ function openLogAnswerModal(question){
     if(!D.paigeAnswers)D.paigeAnswers=[];
     D.paigeAnswers.push({
       id:'pa'+Date.now(),
+      questionId:D._loggingAnswerForQId,
       question:D._loggingAnswerForQ,
       answer:text,
       date:TODAY_ISO,
@@ -2115,7 +2129,7 @@ function openLogAnswerModal(question){
     D.dirty.add('paigeAnswers');
     closeModal('logqa-modal');
     rPaige();sched();
-    toast('💕 Answer logged');
+    toast('Answer logged');
     haptic('success');
   };
   document.getElementById('logqa-modal').classList.remove('hide');
@@ -2192,7 +2206,9 @@ function rPaige(){
   const tasks=D.tasks.filter(t=>t.section==='paige'&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
   const donePaige=tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
   const activePaige=tasks.filter(t=>!t.done);
-  const qs=D.questions;const q=qs.length?qs[D.paigeQIdx%qs.length]:null;
+  const qs=D.questions;
+  const _qObj=qs.length?qs[D.paigeQIdx%qs.length]:null;
+  const q=_qObj?(typeof _qObj==='string'?_qObj:_qObj.question):null;
   const sorted=[...D.relActs].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
   const notes=D.encycNotes||[];
 
@@ -2311,14 +2327,19 @@ function rPaige(){
   // Daily question (under Paigecyclopedia)
   // Always render question card (even if questions array empty, show prompt to add)
   if(qs.length>0){
-    const currentQ=q||qs[0];
-    const pastAnswersForQ=(D.paigeAnswers||[]).filter(a=>a.question===currentQ);
-    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(currentQ)}</div>
+    // Pick current question by random index (D.paigeQIdx is now used as the chosen position in the random sequence)
+    const currentIdx=D.paigeQIdx%qs.length;
+    const currentQObj=qs[currentIdx];
+    const currentQText=typeof currentQObj==='string'?currentQObj:currentQObj.question;
+    const currentQId=typeof currentQObj==='string'?String(currentIdx+1):String(currentQObj.id);
+    // Match past answers by ID first, fall back to question text for legacy answers
+    const pastAnswersForQ=(D.paigeAnswers||[]).filter(a=>String(a.questionId||'')===currentQId||a.question===currentQText);
+    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(currentQText)}</div>
       <div style="display:flex;gap:6px;margin-top:8px;justify-content:center">
         <button class="qbtn" id="nxtq-paige">Next ↻</button>
         <button class="qbtn" id="logqa-paige" style="background:var(--cpaige);color:#fff;border-color:var(--cpaige)">+ Log her answer</button>
       </div>
-      <div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}${pastAnswersForQ.length?' · '+pastAnswersForQ.length+' answer'+(pastAnswersForQ.length>1?'s':'')+' logged':''}</div>
+      <div class="qcount">Q${currentQId} of ${qs.length}${pastAnswersForQ.length?' · '+pastAnswersForQ.length+' answer'+(pastAnswersForQ.length>1?'s':'')+' logged':''}</div>
       ${pastAnswersForQ.length?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(219,39,119,0.2)"><div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--cpaige);margin-bottom:6px;text-align:left">past answers</div>${pastAnswersForQ.slice().reverse().slice(0,5).map(a=>`<div style="text-align:left;margin-bottom:8px;font-size:12px;color:var(--text);line-height:1.4"><div style="font-style:italic;color:var(--t2)">"${escH(a.answer)}"</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;margin-top:2px">${fmtDate(a.date)} · <button class="abtn" data-qadel="${a.id}" style="opacity:0.6;font-size:9px">delete</button></div></div>`).join('')}</div>`:''}
     </div>`;
   } else {
@@ -2326,10 +2347,21 @@ function rPaige(){
   }
 
   document.getElementById('paige-content').innerHTML=html;
-  document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
+  document.getElementById('nxtq-paige')?.addEventListener('click',()=>{
+    // Pick a random different question
+    if(D.questions.length<=1){D.paigeQIdx++;rPaige();return;}
+    const cur=D.paigeQIdx%D.questions.length;
+    let next=cur;
+    while(next===cur) next=Math.floor(Math.random()*D.questions.length);
+    D.paigeQIdx=next;
+    rPaige();
+  });
   document.getElementById('logqa-paige')?.addEventListener('click',()=>{
-    const currentQ=D.questions[D.paigeQIdx%D.questions.length];
-    openLogAnswerModal(currentQ);
+    const qObj=D.questions[D.paigeQIdx%D.questions.length];
+    if(!qObj)return;
+    const qText=typeof qObj==='string'?qObj:qObj.question;
+    const qId=typeof qObj==='string'?String((D.paigeQIdx%D.questions.length)+1):String(qObj.id);
+    openLogAnswerModal(qText, qId);
   });
   // rel acts handled by delegated listener now
   // encyc-hd click handled by delegated listener
