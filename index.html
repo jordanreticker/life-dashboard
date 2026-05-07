@@ -445,6 +445,13 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn mcancel" onclick="closeModal('paige-date-modal')">Cancel</button>
 </div></div>
 
+<div class="mback hide" id="logqa-modal"><div class="modal">
+  <h3>Log Paige's answer</h3>
+  <div class="modal-sub" id="logqa-question" style="font-style:italic;color:var(--cpaige)"></div>
+  <textarea class="inp f1" id="logqa-text" placeholder="What did she say?" style="width:100%;min-height:90px;resize:vertical;margin:14px 0"></textarea>
+  <button class="mbtn" id="logqa-confirm" style="background:var(--cpaige);color:#fff;border:none">Save answer</button>
+  <button class="mbtn mcancel" onclick="closeModal('logqa-modal')">Cancel</button>
+</div></div>
 <div class="mback hide" id="focus-modal"><div class="modal">
   <h3 id="focus-modal-title">Edit focus</h3>
   <div class="modal-sub">A focus is something you want to actively work on. Add notes anytime.</div>
@@ -659,7 +666,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
@@ -847,6 +854,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
   if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
   if(D.dirty.has('xpValues'))   payload.xpValues    = D.xpValues;
+  if(D.dirty.has('paigeAnswers'))payload.paigeAnswers= D.paigeAnswers;
   if(D.dirty.has('journalLock'))payload.journalLockHash = D.journalLockHash;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
@@ -866,7 +874,7 @@ async function saveAll(retryCount){
         D.lastSavedAt=Date.now();
         // Refresh cache so reload shows correct state
         try{
-          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
           localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
         }catch(e){}
         setSync('synced','saved');
@@ -2089,7 +2097,38 @@ function scCard(icon,name,color,tab,stat,extra){
 }
 
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
-// ── Paige focuses ─────────────────────────────────────────────────────────────
+// ── Paige answer logging ──────────────────────────────────────────────────────
+function openLogAnswerModal(question){
+  D._loggingAnswerForQ=question;
+  document.getElementById('logqa-question').textContent='"'+question+'"';
+  document.getElementById('logqa-text').value='';
+  document.getElementById('logqa-confirm').onclick=()=>{
+    const text=document.getElementById('logqa-text').value.trim();
+    if(!text){toast('Add an answer first');return;}
+    if(!D.paigeAnswers)D.paigeAnswers=[];
+    D.paigeAnswers.push({
+      id:'pa'+Date.now(),
+      question:D._loggingAnswerForQ,
+      answer:text,
+      date:TODAY_ISO,
+    });
+    D.dirty.add('paigeAnswers');
+    closeModal('logqa-modal');
+    rPaige();sched();
+    toast('💕 Answer logged');
+    haptic('success');
+  };
+  document.getElementById('logqa-modal').classList.remove('hide');
+  setTimeout(()=>document.getElementById('logqa-text')?.focus(),100);
+}
+function deletePaigeAnswer(id){
+  if(!confirm('Delete this answer?'))return;
+  D.paigeAnswers=D.paigeAnswers.filter(a=>a.id!=id);
+  D.dirty.add('paigeAnswers');
+  rPaige();sched();
+}
+
+// ── Paige focuses ───────────────────────────────────────────────────────────────
 function openFocusModal(focusId){
   D.editingFocusId=focusId||null;
   const focus=focusId?(D.paigeFocuses||[]).find(f=>f.id==focusId):null;
@@ -2272,13 +2311,26 @@ function rPaige(){
   // Daily question (under Paigecyclopedia)
   // Always render question card (even if questions array empty, show prompt to add)
   if(qs.length>0){
-    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(q||qs[0])}</div><button class="qbtn" id="nxtq-paige">Next question ↻</button><div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}</div></div>`;
+    const currentQ=q||qs[0];
+    const pastAnswersForQ=(D.paigeAnswers||[]).filter(a=>a.question===currentQ);
+    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">${escH(currentQ)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px;justify-content:center">
+        <button class="qbtn" id="nxtq-paige">Next ↻</button>
+        <button class="qbtn" id="logqa-paige" style="background:var(--cpaige);color:#fff;border-color:var(--cpaige)">+ Log her answer</button>
+      </div>
+      <div class="qcount">${D.paigeQIdx%qs.length+1} of ${qs.length}${pastAnswersForQ.length?' · '+pastAnswersForQ.length+' answer'+(pastAnswersForQ.length>1?'s':'')+' logged':''}</div>
+      ${pastAnswersForQ.length?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(219,39,119,0.2)"><div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--cpaige);margin-bottom:6px;text-align:left">past answers</div>${pastAnswersForQ.slice().reverse().slice(0,5).map(a=>`<div style="text-align:left;margin-bottom:8px;font-size:12px;color:var(--text);line-height:1.4"><div style="font-style:italic;color:var(--t2)">"${escH(a.answer)}"</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;margin-top:2px">${fmtDate(a.date)} · <button class="abtn" data-qadel="${a.id}" style="opacity:0.6;font-size:9px">delete</button></div></div>`).join('')}</div>`:''}
+    </div>`;
   } else {
-    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">Loading questions... (run setupAllSheets in Apps Script if missing)</div></div>`;
+    html+=`<div class="qcard"><div class="qlbl">💬 ask paige</div><div class="qtxt">No questions loaded yet — run reseedQuestions() in Apps Script then refresh.</div></div>`;
   }
 
   document.getElementById('paige-content').innerHTML=html;
   document.getElementById('nxtq-paige')?.addEventListener('click',()=>{D.paigeQIdx++;rPaige();});
+  document.getElementById('logqa-paige')?.addEventListener('click',()=>{
+    const currentQ=D.questions[D.paigeQIdx%D.questions.length];
+    openLogAnswerModal(currentQ);
+  });
   // rel acts handled by delegated listener now
   // encyc-hd click handled by delegated listener
   document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';D.dirty.add('encycNotes');rPaige();sched();});
@@ -2839,6 +2891,9 @@ document.getElementById('main').addEventListener('click', function(e){
   if(e.target.closest('#journal-set-lock')){ setJournalLock(); return; }
   if(e.target.closest('#journal-relock')){ relockJournal(); return; }
   if(e.target.closest('#journal-clear-lock')){ clearJournalLock(); return; }
+  // Paige answer delete
+  const qaDel = e.target.closest('[data-qadel]');
+  if(qaDel){ deletePaigeAnswer(qaDel.dataset.qadel); return; }
   // Paige focuses
   const focusAdd = e.target.closest('[data-focusadd]');
   if(focusAdd){ openFocusModal(); return; }
