@@ -417,18 +417,18 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 <div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-edit-modal"><div class="modal"><h3>Edit relationship act</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="re-name" placeholder="Act name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="re-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label></div></div><button class="mbtn" id="re-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('rel-edit-modal')">Cancel</button></div></div>
 
-<div class="mback hide" id="day-result-modal"><div class="modal">
+<div class="mback hide" id="day-result-modal"><div class="modal" style="max-width:520px;width:94%">
   <h3 id="dr-title">How did today go?</h3>
   <div class="modal-sub" id="dr-sub">Mark today as a win or a loss</div>
   <div style="display:flex;gap:8px;margin:14px 0">
     <button class="mbtn" data-drtype="win" style="flex:1;text-align:center;padding:14px 6px;font-size:16px;font-weight:500">✓ Win</button>
     <button class="mbtn" data-drtype="loss" style="flex:1;text-align:center;padding:14px 6px;font-size:16px;font-weight:500">✗ Loss</button>
   </div>
-  <div style="font-size:12px;color:var(--t2);margin-bottom:8px">3 reasons (required):</div>
-  <input class="inp f1" id="dr-stat1" placeholder="Reason 1..." style="width:100%;margin-bottom:6px"/>
-  <input class="inp f1" id="dr-stat2" placeholder="Reason 2..." style="width:100%;margin-bottom:6px"/>
-  <input class="inp f1" id="dr-stat3" placeholder="Reason 3..." style="width:100%;margin-bottom:10px"/>
-  <textarea class="inp f1" id="dr-notes" placeholder="Notes (optional)" style="width:100%;min-height:60px;margin-bottom:10px;resize:vertical"></textarea>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:8px">3 reasons (required for W/L):</div>
+  <textarea class="inp f1" id="dr-stat1" placeholder="Reason 1..." style="width:100%;margin-bottom:8px;min-height:64px;resize:vertical"></textarea>
+  <textarea class="inp f1" id="dr-stat2" placeholder="Reason 2..." style="width:100%;margin-bottom:8px;min-height:64px;resize:vertical"></textarea>
+  <textarea class="inp f1" id="dr-stat3" placeholder="Reason 3..." style="width:100%;margin-bottom:10px;min-height:64px;resize:vertical"></textarea>
+  <textarea class="inp f1" id="dr-notes" placeholder="Notes (optional)" style="width:100%;min-height:80px;margin-bottom:10px;resize:vertical"></textarea>
   <div style="font-size:10px;color:var(--t3);margin:6px 0 10px;font-family:'DM Mono',monospace;text-align:center">Skip W/L to save stats only · come back later to commit</div><button class="mbtn" id="dr-confirm" style="background:var(--text);color:#fff;border:none">Save</button>
   <button class="mbtn mcancel" onclick="closeModal('day-result-modal')">Cancel</button>
 </div></div>
@@ -477,7 +477,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn" id="edit-confirm">Save</button>
   <button class="mbtn mcancel" onclick="closeModal('edit-modal')">Cancel</button>
 </div></div>
-<div class="mback hide" id="fin-modal"><div class="modal"><h3 id="fin-modal-title">Add entry</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="fin-label" placeholder="Label (e.g. Rent)"/><input class="inp f1" id="fin-amount" type="number" placeholder="Amount ($)"/><select class="sel" id="fin-type" style="width:100%"><option value="expense">Expense</option><option value="income">Income</option><option value="savings">Savings</option></select><select class="sel" id="fin-cat" style="width:100%"><option value="housing">Housing</option><option value="food">Food</option><option value="transport">Transport</option><option value="health">Health</option><option value="subscriptions">Subscriptions</option><option value="savings">Savings</option><option value="income">Income</option><option value="other">Other</option></select></div><button class="mbtn" id="fin-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('fin-modal')">Cancel</button></div></div>
+<div class="mback hide" id="fin-modal"><div class="modal"><h3 id="fin-modal-title">Add entry</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="fin-label" placeholder="Label (e.g. Rent)"/><input class="inp f1" id="fin-amount" type="number" placeholder="Amount ($)"/><select class="sel" id="fin-type" style="width:100%"><option value="expense">Expense</option><option value="income">Income</option><option value="savings">Savings</option></select><select class="sel" id="fin-cat" style="width:100%"><option value="housing">Housing</option><option value="food">Food</option><option value="transport">Transport</option><option value="health">Health</option><option value="subscriptions">Subscriptions</option><option value="savings">Savings</option><option value="income">Income</option><option value="other">Other</option></select><textarea class="inp f1" id="fin-notes" placeholder="Notes (optional context)" style="width:100%;min-height:50px;resize:vertical"></textarea></div><button class="mbtn" id="fin-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('fin-modal')">Cancel</button></div></div>
 <div class="mback hide" id="contact-modal"><div class="modal">
   <h3 id="contact-title">Log contact</h3>
   <div class="modal-sub" id="contact-sub"></div>
@@ -534,7 +534,9 @@ function fmtDateSmart(s){
   if(ds===TODAY_ISO) return 'today';
   // Calculate this week's Sun-Sat boundaries
   const t=new Date();
-  const sun=new Date(t);sun.setDate(t.getDate()-t.getDay());
+  const day=t.getDay();
+  const monDiff=day===0?-6:1-day;
+  const sun=new Date(t);sun.setDate(t.getDate()+monDiff); // sun is actually Monday now (renamed mentally)
   const sat=new Date(sun);sat.setDate(sun.getDate()+6);
   const sunIso=localIso(sun),satIso=localIso(sat);
   if(ds>=sunIso&&ds<=satIso){
@@ -560,7 +562,7 @@ function toDateStr(v){
 function isOverdue(s){if(!s)return false;const d=toDateStr(s);return d&&d<TODAY_ISO;}
 const TODAY_ISO=localIso();
 const TODAY_STR=TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-function getWeekStart(d){const dd=d instanceof Date?new Date(d):(d?new Date(toDateStr(d)+'T12:00:00'):new Date(TODAY));dd.setDate(dd.getDate()-dd.getDay());return localIso(dd);}
+function getWeekStart(d){const dd=d instanceof Date?new Date(d):(d?new Date(toDateStr(d)+'T12:00:00'):new Date(TODAY));const day=dd.getDay();const diff=day===0?-6:1-day;dd.setDate(dd.getDate()+diff);return localIso(dd);}
 const WEEK_START=getWeekStart();
 
 document.getElementById('top-date').innerHTML=TODAY.toLocaleDateString('en-US',{weekday:'long'})+'<br>'+TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -611,8 +613,21 @@ const LEVELS=[
   {n:200000,label:'Legend',             emoji:'💫'},
   {n:275000,label:'GOAT',              emoji:'🐐'},
 ];
+// Weekly levels (smaller scale — resets each week, tracks within-week progression)
+const WEEK_LEVELS=[
+  {n:0,    label:'Slow start',    emoji:'😴'},
+  {n:300,  label:'Warming up',    emoji:'🌱'},
+  {n:800,  label:'In motion',     emoji:'⚡'},
+  {n:1500, label:'On fire',       emoji:'🔥'},
+  {n:2500, label:'Crushing it',   emoji:'💪'},
+  {n:4000, label:'Locked in',     emoji:'🎯'},
+  {n:6000, label:'Beast mode',    emoji:'🦁'},
+  {n:9000, label:'Legendary week',emoji:'👑'},
+];
 function getLevelIdx(xp){let i=0;for(let j=0;j<LEVELS.length;j++){if(xp>=LEVELS[j].n)i=j;}return i;}
 function xpPct(xp){const i=getLevelIdx(xp);const base=LEVELS[i].n;const next=LEVELS[i+1]?LEVELS[i+1].n:base+5000;return Math.min(100,Math.round((xp-base)/(next-base)*100));}
+function getWkLevelIdx(xp){let i=0;for(let j=0;j<WEEK_LEVELS.length;j++){if(xp>=WEEK_LEVELS[j].n)i=j;}return i;}
+function wkXpPct(xp){const i=getWkLevelIdx(xp);const base=WEEK_LEVELS[i].n;const next=WEEK_LEVELS[i+1]?WEEK_LEVELS[i+1].n:base+1000;return Math.min(100,Math.round((xp-base)/(next-base)*100));}
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 // Permanent badges
@@ -627,6 +642,10 @@ const PERM_BADGES=[
   {id:'chore20',     emoji:'✨', label:'Chore champ',     desc:'20 chores ever',                   check:(g)=>g.allTimeChoresDone>=20},
   {id:'act10',       emoji:'🏆', label:'Health hero',     desc:'10 activities logged',             check:(g,t,a)=>a.length>=10},
   {id:'proactive50', emoji:'⚡', label:'Proactive',       desc:'50 total proactive points',        check:(g)=>g.proactivePoints>=50},
+  {id:'connect25',   emoji:'🤝', label:'Connector',       desc:'25 contact logs all-time',         check:(g,t,a,d)=>(d.contactLog||[]).length>=25},
+  {id:'connect100',  emoji:'🌐', label:'Web weaver',      desc:'100 contact logs all-time',        check:(g,t,a,d)=>(d.contactLog||[]).length>=100},
+  {id:'family_loyal',emoji:'❤️', label:'Family first',    desc:'50 family contacts all-time',      check:(g,t,a,d)=>(d.contactLog||[]).filter(l=>(d.people.social_family||[]).some(p=>p.id==l.personId)).length>=50},
+  {id:'big_circle',  emoji:'🎉', label:'Big circle',      desc:'15+ distinct people contacted',     check:(g,t,a,d)=>new Set((d.contactLog||[]).map(l=>l.personId)).size>=15},
 ];
 // Weekly badges (reset each week, tracked separately)
 const WEEK_BADGES=[
@@ -637,6 +656,9 @@ const WEEK_BADGES=[
   {id:'wk_homebody',   emoji:'🏠', label:'Homebody',        desc:'5+ chores done this week',         check:(w,t)=>w.choresDone>=5},
   {id:'wk_proactive',  emoji:'⚡', label:'Ahead of schedule',desc:'10+ proactive points this week',  check:(w,t)=>w.proactivePoints>=10},
   {id:'wk_perfect',    emoji:'🌟', label:'Perfect week',    desc:'Tasks done in every section',      check:(w,t)=>w.workTasks>0&&w.communityTasks>0&&w.activitiesLogged>0&&w.choresDone>0&&w.paigeActs>0},
+  {id:'wk_outreach',   emoji:'📞', label:'Reaching out',    desc:'5+ contacts logged this week',    check:(w,t,a,d)=>(w.contactsLogged||0)>=5},
+  {id:'wk_calls',      emoji:'☎️', label:'Phone hugger',    desc:'3+ calls/hangouts this week',     check:(w,t,a,d)=>((d&&d.contactLog)||[]).filter(l=>l.date>=WEEK_START&&(l.type==='call'||l.type==='hangout')).length>=3},
+  {id:'wk_diversity',  emoji:'🌐', label:'Wide net',         desc:'5+ different people contacted',   check:(w,t,a,d)=>new Set(((d&&d.contactLog)||[]).filter(l=>l.date>=WEEK_START).map(l=>l.personId)).size>=5},
 ];
 
 // Default XP values (fallback if XPValues sheet is empty)
@@ -673,7 +695,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -742,7 +764,7 @@ function applyData(data){
   if(skipKeys.has('relActs')) delete data.relActs;
   if(skipKeys.has('healthGoals')) delete data.healthGoals;
 
-  const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
+  const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
   if(data.chores&&data.chores.length) D.chores=data.chores.map(c=>({...c,xpValue:Number(c.xpValue)||0,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7}));
   else if(!D.chores.length) D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
@@ -756,7 +778,18 @@ function applyData(data){
       return {id:String(q.id||(i+1)),question:String(q.question||'')};
     }).filter(q=>q.question);
   }
-  if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[])};}
+  if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[]),weeklyBadgeHistory:typeof g.weeklyBadgeHistory==='object'?g.weeklyBadgeHistory:(typeof g.weeklyBadgeHistory==='string'?(()=>{try{return JSON.parse(g.weeklyBadgeHistory)}catch(e){return{}}})():{})};}
+  // Auto-correct all-time PP if stored value is less than what source data says (handles drift)
+  setTimeout(()=>{
+    const taskPPSum=(D.tasks||[]).filter(t=>t.done).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0);
+    const chorePPSum=(D.choreLog||[]).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
+    const derivedPP=taskPPSum+chorePPSum;
+    if(derivedPP>D.gamification.proactivePoints){
+      D.gamification.proactivePoints=derivedPP;
+      D.dirty.add('gamification');
+      console.log('[debug] auto-corrected all-time PP to',derivedPP);
+    }
+  },200);
   if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
   if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
   if(data.journal) D.journal=data.journal;
@@ -799,7 +832,7 @@ function applyData(data){
   if(data.groceryList) D.groceryList=data.groceryList;
   if(data.xpValues) D.xpValues=data.xpValues;
   if(data.journalLockHash!==undefined&&data.journalLockHash!==null) D.journalLockHash=String(data.journalLockHash||'');
-  if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:(g.logs||[]).filter(d=>d>=WEEK_START)}));
+  if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:Array.isArray(g.logs)?g.logs:(g.logs?String(g.logs).split(',').filter(Boolean):[])}));
   if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
   updateStreak();checkPermBadges();checkWeekBadges();
 }
@@ -918,7 +951,7 @@ function addXP(amt){D.gamification.xp+=amt;D.dirty.add('gamification');const new
 
 function checkPermBadges(){
   PERM_BADGES.forEach(b=>{
-    if(!D.gamification.badges.includes(b.id)&&b.check(D.gamification,D.tasks,D.activities)){
+    if(!D.gamification.badges.includes(b.id)&&b.check(D.gamification,D.tasks,D.activities,D)){
       D.gamification.badges.push(b.id);toast(b.emoji+' Badge: '+b.label,3500);
     }
   });
@@ -926,8 +959,12 @@ function checkPermBadges(){
 function checkWeekBadges(){
   const w=D.weekSummary;
   WEEK_BADGES.forEach(b=>{
-    if(!D.weeklyBadges.includes(b.id)&&b.check(w,D.tasks)){
-      D.weeklyBadges.push(b.id);toast(b.emoji+' Weekly badge: '+b.label,3500);fireConfetti();
+    if(!D.weeklyBadges.includes(b.id)&&b.check(w,D.tasks,D.activities,D)){
+      D.weeklyBadges.push(b.id);
+      // Increment all-time count for this weekly badge
+      if(!D.gamification.weeklyBadgeHistory)D.gamification.weeklyBadgeHistory={};
+      D.gamification.weeklyBadgeHistory[b.id]=(D.gamification.weeklyBadgeHistory[b.id]||0)+1;
+      toast(b.emoji+' Weekly badge: '+b.label,3500);fireConfetti();
     }
   });
 }
@@ -1521,24 +1558,38 @@ function addHealthGoal(name, target){
   D.dirty.add('healthGoals');renderAll();sched();
 }
 function logHealthGoal(id){
+  // Backwards-compat: log today (called from quick action). Use toggleHealthGoalDay otherwise.
+  toggleHealthGoalDay(id, TODAY_ISO);
+}
+function toggleHealthGoalDay(id, dateIso){
   const g=D.healthGoals.find(g=>g.id==id);if(!g)return;
-  // Prevent double-fire: check if already logged today
-  if(g.logs.filter(d=>d===TODAY_ISO).length>0)return;
-  if(g.logs.length>=g.target)return; // already maxed
-  g.logs.push(TODAY_ISO);
-  const hit=g.logs.length;const full=hit>=g.target;
-  if(full){
-    // Award super badge
-    const badgeId='goal_'+id;
-    if(!D.gamification.badges.includes(badgeId)){
-      D.gamification.badges.push(badgeId);
-      toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
-      haptic('heavy');fireBigConfetti();
-    }
-    const hgwXP=xp('health_goal_full_week');addXP(hgwXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgwXP;D.dirty.add('weekSummary');
+  if(!g.logs)g.logs=[];
+  // Don't allow future dates
+  if(dateIso>TODAY_ISO){toast("Can't log future days");return;}
+  const wasHit=g.logs.includes(dateIso);
+  if(wasHit){
+    // Toggle off
+    g.logs=g.logs.filter(d=>d!==dateIso);
+    haptic('light');
+    toast('Removed');
   } else {
-    const hgdXP=xp('health_goal_daily');addXP(hgdXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgdXP;D.dirty.add('weekSummary');
-    toast('✓ '+hit+'/'+g.target+' +8XP');
+    g.logs.push(dateIso);
+    const thisWeekHits=g.logs.filter(d=>d>=WEEK_START).length;
+    const target=Number(g.target)||7;
+    const full=thisWeekHits>=target;
+    if(full){
+      const badgeId='goal_'+id;
+      if(!D.gamification.badges.includes(badgeId)){
+        D.gamification.badges.push(badgeId);
+        toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
+        haptic('heavy');fireBigConfetti();
+      }
+      const hgwXP=xp('health_goal_full_week');addXP(hgwXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgwXP;D.dirty.add('weekSummary');
+    } else {
+      const hgdXP=xp('health_goal_daily');addXP(hgdXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgdXP;D.dirty.add('weekSummary');
+      toast('✓ '+thisWeekHits+'/'+target+' +'+hgdXP+'XP');
+      haptic('success');
+    }
   }
   markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
 }
@@ -1553,14 +1604,16 @@ function openFinModal(id){
   document.getElementById('fin-amount').value=f?f.amount:'';
   document.getElementById('fin-type').value=f?f.type:'expense';
   document.getElementById('fin-cat').value=f?f.category:'other';
+  document.getElementById('fin-notes').value=f?(f.notes||''):'';
   document.getElementById('fin-confirm').onclick=()=>{
     const label=document.getElementById('fin-label').value.trim();
     const amount=parseFloat(document.getElementById('fin-amount').value)||0;
     const type=document.getElementById('fin-type').value;
     const category=document.getElementById('fin-cat').value;
+    const notes=document.getElementById('fin-notes').value.trim();
     if(!label)return;
-    if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.updatedAt=TODAY_ISO;}}
-    else D.finances.push({id:D.nextId++,category,label,amount,type,updatedAt:TODAY_ISO});
+    if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.notes=notes;f2.updatedAt=TODAY_ISO;}}
+    else D.finances.push({id:D.nextId++,category,label,amount,type,notes,updatedAt:TODAY_ISO});
     D.dirty.add('finances');
     if(type==='savings'&&amount>0){const svXP=xp('savings_log');addXP(svXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+svXP;D.dirty.add('gamification');D.dirty.add('weekSummary');toast('Savings logged +'+svXP+' XP');}
     closeModal('fin-modal');renderAll();sched();
@@ -1875,6 +1928,13 @@ function renderAllTabs(){
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function rHome(){
+  // Derive PP from sources — single source of truth
+  const _wkTaskPP=D.tasks.filter(t=>t.done&&t.completedAt>=WEEK_START).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0);
+  const _wkChorePP=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
+  const _wkPP=_wkTaskPP+_wkChorePP;
+  D.weekSummary.proactivePoints=_wkPP;
+  D.weekSummary.chorePP=_wkChorePP;
+  
   const g=D.gamification;const lvlIdx=getLevelIdx(g.xp);const lvl=LEVELS[lvlIdx];
   const pct=xpPct(g.xp);const w=D.weekSummary;
   const active=D.tasks.filter(t=>!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
@@ -1887,6 +1947,12 @@ function rHome(){
   let html=`<div class="xp-card">
     <div class="xp-top"><span class="xp-lbl">${lvl.emoji} ${lvl.label}</span><div class="xp-right"><div class="xp-pts">${g.xp.toLocaleString()} XP · Lv${lvlIdx+1}</div><div class="xp-pp">⚡ ${g.proactivePoints} PP all-time</div></div></div>
     <div class="xp-track"><div class="xp-fill" style="width:${pct}%"></div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t2)">${WEEK_LEVELS[getWkLevelIdx(w.xpEarned||0)].emoji} ${WEEK_LEVELS[getWkLevelIdx(w.xpEarned||0)].label}</span>
+      <div class="xp-track" style="flex:1"><div class="xp-fill" style="width:${wkXpPct(w.xpEarned||0)}%;background:var(--xp)"></div></div>
+      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);font-weight:500">${(w.xpEarned||0).toLocaleString()} XP</span>
+    </div>
+    <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:3px;text-align:right">this week · ⚡ ${w.proactivePoints||0} PP</div>
   </div>`;
 
   if(g.streakDays>=2){html+=`<div class="streak-card"><div class="streak-ic">${g.streakDays>=30?'💫':g.streakDays>=7?'🔥':'⚡'}</div><div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>don't break the chain</p><span class="streak-best">best: ${g.bestStreak} days</span></div></div>`;}
@@ -2008,7 +2074,7 @@ function rHome(){
   const earnedWeek=WEEK_BADGES.filter(b=>D.weeklyBadges.includes(b.id));
   // Weekly day planner
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
+  const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   const weekStartIso=localIso(weekDays[0]);const weekEndIso=localIso(weekDays[6]);
   const scheduledTasks=D.tasks.filter(t=>!t.done&&t.dueDate&&t.dueDate>=weekStartIso&&t.dueDate<=weekEndIso);
   // Group by dueDate
@@ -2020,17 +2086,34 @@ function rHome(){
     byDay[k].sort((a,b)=>(_PRI_RANK[a.priority||'']||5)-(_PRI_RANK[b.priority||'']||5));
   });
   const hasAny=scheduledTasks.length>0;
+  const _bdf=D.byDayFilter instanceof Set?D.byDayFilter:new Set(D.byDayFilter||[]);
+  D.byDayFilter=_bdf;
+  const FILTER_CHIPS=[
+    {key:'paige',emoji:'💕',color:'var(--cpaige)'},
+    {key:'work',emoji:'💼',color:'var(--cwork)'},
+    {key:'community_family',emoji:'👨‍👩‍👧',color:'var(--ccommunity)'},
+    {key:'community_friends',emoji:'👥',color:'var(--ccommunity)'},
+    {key:'health',emoji:'🏃',color:'var(--chealth)'},
+    {key:'personal',emoji:'✦',color:'var(--cpersonal)'},
+  ];
+  const filterMatch=(t)=>_bdf.size===0||_bdf.has(t.section);
+  
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📆</span><div class="sec-name">This week by day</div><span class="sbadge sn">${scheduledTasks.length} scheduled</span></div>
+    <div style="display:flex;gap:4px;padding:6px 8px 0;flex-wrap:wrap;align-items:center">
+      ${FILTER_CHIPS.map(c=>`<button data-bdfilter="${c.key}" style="padding:4px 9px;border-radius:12px;border:1px solid ${_bdf.has(c.key)?c.color:'var(--border)'};background:${_bdf.has(c.key)?c.color:'var(--bg)'};color:${_bdf.has(c.key)?'#fff':'var(--t2)'};font-size:13px;cursor:pointer;line-height:1">${c.emoji}</button>`).join('')}
+      ${_bdf.size?'<button data-bdfilter="__clear" style="padding:4px 9px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--t2);font-size:10px;font-family:\'DM Mono\',monospace;cursor:pointer">clear</button>':''}
+    </div>
     <div style="padding:6px 8px 10px">
       ${weekDays.map(d=>{
-        const iso=localIso(d);const dayTasks=byDay[iso]||[];const isToday=iso===TODAY_ISO;const isPast=new Date(iso+'T12:00:00')<new Date(TODAY_ISO+'T12:00:00');
+        const iso=localIso(d);const allDayTasks=byDay[iso]||[];const dayTasks=allDayTasks.filter(filterMatch);const isToday=iso===TODAY_ISO;const isPast=new Date(iso+'T12:00:00')<new Date(TODAY_ISO+'T12:00:00');
         return`<div style="margin-bottom:${dayTasks.length?10:4}px;opacity:${isPast&&!isToday?0.5:1}">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
             <span style="font-size:11px;font-family:'DM Mono',monospace;font-weight:500;color:${isToday?'var(--text)':'var(--t2)'}">${DAYS[d.getDay()]} ${d.getDate()}</span>
             ${isToday?`<span style="font-size:9px;font-family:'DM Mono',monospace;background:var(--text);color:#fff;padding:1px 6px;border-radius:10px">today</span>`:''}
-            ${!dayTasks.length?'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">nothing scheduled</span>':''}
+            <span style="flex:1"></span>
+            ${dayTasks.length?`<span style="font-size:11px;font-family:'DM Mono',monospace;font-weight:600;color:${isToday?'var(--text)':'var(--t2)'}">${dayTasks.length}</span>`:'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">—</span>'}
           </div>
-          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);const isOver=isOverdue(t.dueDate);return`<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:${isOver?'#FEF2F2':'var(--bg)'};border-radius:var(--r2);margin-bottom:3px">
+          ${dayTasks.map(t=>{const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';const pName=getPersonName(t.personId);const isOver=isOverdue(t.dueDate);return`<div data-bdedit="${t.id}" style="display:flex;align-items:center;gap:6px;padding:5px 6px;background:${isOver?'#FEF2F2':'var(--bg)'};border-radius:var(--r2);margin-bottom:3px;cursor:pointer">
             <div style="width:3px;height:100%;min-height:14px;border-radius:2px;background:${t.section==='paige'?'var(--cpaige)':t.section==='work'?'var(--cwork)':t.section.startsWith('community')?'var(--ccommunity)':t.section==='health'?'var(--chealth)':'var(--cpersonal)'};flex-shrink:0"></div>
             <div class="chk ${t.done?'ck':''}" data-chk="${t.id}" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div>
             <span style="font-size:12px;flex:1;${t.done?'text-decoration:line-through;color:var(--t3)':isOver?'font-weight:600;color:#DC2626':''}">${escH(t.text)}</span>
@@ -2042,16 +2125,16 @@ function rHome(){
     </div>
   </div>`;
 
-  html+=`<div class="badges-section"><div class="badges-hd">Badges earned this week</div>
+  let _badgesAndAlltime='';
+  _badgesAndAlltime+=`<div class="badges-section"><div class="badges-hd">Badges earned this week</div>
     <div class="badges-grid">
-      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}
+      ${WEEK_BADGES.map(b=>{const earned=D.weeklyBadges.includes(b.id);const earnedCount=(D.gamification.weeklyBadgeHistory||{})[b.id]||0;return`<div class="badge-card ${earned?'weekly':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}${earnedCount>0?' \xd7'+earnedCount:''}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}
     </div>
     <div class="badges-hd" style="margin-top:12px">All-time badges</div>
     <div class="badges-grid">${PERM_BADGES.map(b=>{const earned=D.gamification.badges.includes(b.id);return`<div class="badge-card ${earned?'earned':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}</div>
   </div>`;
 
-  // All-time stats
-  html+=`<div class="alltime-card"><div class="week-title" style="margin-bottom:10px">All-time stats</div>
+  _badgesAndAlltime+=`<div class="alltime-card"><div class="week-title" style="margin-bottom:10px">All-time stats</div>
     <div class="alltime-grid">
       <div class="at-stat"><div class="at-n">${g.allTimeTasksDone}</div><div class="at-l">tasks done</div></div>
       <div class="at-stat"><div class="at-n">${g.allTimeChoresDone}</div><div class="at-l">chores done</div></div>
@@ -2059,47 +2142,125 @@ function rHome(){
     </div>
   </div>`;
 
-  // This week completed tasks - grouped by date, newest first
-  if(doneTasks.length){
-    const groupedByDate={};
-    doneTasks.forEach(t=>{
-      const d=t.completedAt||TODAY_ISO;
-      if(!groupedByDate[d])groupedByDate[d]=[];
-      groupedByDate[d].push(t);
-    });
-    const sortedDates=Object.keys(groupedByDate).sort().reverse();
+  // This week completed - tabbed (Tasks / Chores / Contacts)
+  const wkChores=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const wkContacts=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const completedAny=doneTasks.length||wkChores.length||wkContacts.length;
+  if(completedAny){
+    const tab=D.completedTab||'tasks';
     const sectionEmoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',community:'👥'};
-    let dayBlocks='';
-    sortedDates.forEach(d=>{
-      const items=groupedByDate[d];
+    
+    // Group helper for tasks/chores/contacts by date
+    const groupByDate=(items,dateKey)=>{
+      const g={};
+      items.forEach(it=>{const d=it[dateKey]||TODAY_ISO;if(!g[d])g[d]=[];g[d].push(it);});
+      return Object.keys(g).sort().reverse().map(d=>({date:d,items:g[d]}));
+    };
+    
+    const dayHeader=(d,n)=>{
       const dt=new Date(d+'T12:00:00');
       const isToday=d===TODAY_ISO;
       const yest=new Date();yest.setDate(yest.getDate()-1);
       const isYest=d===localIso(yest);
       const dayLabel=isToday?'Today':isYest?'Yesterday':dt.toLocaleDateString('en-US',{weekday:'long'});
       const dateLabel=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      dayBlocks+=`<div style="margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 4px 4px;font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em">
-          <span style="color:${isToday?'var(--text)':'var(--t3)'};font-weight:${isToday?'500':'400'}">${dayLabel}</span>
-          <span style="color:var(--t3)">${dateLabel}</span>
-          <span style="flex:1;height:0.5px;background:var(--border)"></span>
-          <span style="color:var(--t3)">${items.length}</span>
-        </div>
-        ${items.map(t=>`<div class="trow done-r" style="margin-bottom:2px">
-          <div class="chk ck"></div>
-          <div class="tbody">
-            <div class="ttxt">${escH(t.text)}</div>
-            <div class="tmeta">
-              <span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${sectionEmoji[t.section]||'·'} ${t.section.replace('community_','')}</span>
-              ${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints}PP ⚡</span>`:''}
-            </div>
-          </div>
-        </div>`).join('')}
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 4px 4px;font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em">
+        <span style="color:${isToday?'var(--text)':'var(--t3)'};font-weight:${isToday?'500':'400'}">${dayLabel}</span>
+        <span>${dateLabel}</span>
+        <span style="flex:1;height:0.5px;background:var(--border)"></span>
+        <span>${n}</span>
       </div>`;
-    });
-    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length}</span></div>
-    <div class="tlist">${dayBlocks}</div></div>`;
+    };
+    
+    let body='';
+    if(tab==='tasks'){
+      if(!doneTasks.length){
+        body='<div class="emsg" style="padding:14px;text-align:center">No completed tasks this week</div>';
+      } else {
+        groupByDate(doneTasks,'completedAt').forEach(grp=>{
+          body+='<div style="margin-bottom:6px">'+dayHeader(grp.date,grp.items.length);
+          grp.items.forEach(t=>{
+            const taskXP=Number(t.xpValue)||0;
+            const totalEarned=taskXP+(Number(t.proactivePoints)||0);
+            body+=`<div class="trow done-r" style="margin-bottom:2px;cursor:pointer" data-completed-edit="${t.id}">
+              <div class="chk ck" data-chk="${t.id}"></div>
+              <div class="tbody">
+                <div class="ttxt">${escH(t.text)}</div>
+                <div class="tmeta">
+                  <span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${sectionEmoji[t.section]||'·'} ${t.section.replace('community_','')}</span>
+                  ${totalEarned>0?`<span class="tpp" style="color:var(--xp)">+${totalEarned} XP</span>`:''}
+                  ${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints} PP ⚡</span>`:''}
+                  ${t.notes?`<span style="font-size:9px;color:var(--t3);font-style:italic">📝</span>`:''}
+                </div>
+              </div>
+            </div>`;
+          });
+          body+='</div>';
+        });
+      }
+    } else if(tab==='chores'){
+      if(!wkChores.length){
+        body='<div class="emsg" style="padding:14px;text-align:center">No chores logged this week</div>';
+      } else {
+        groupByDate(wkChores,'date').forEach(grp=>{
+          body+='<div style="margin-bottom:6px">'+dayHeader(grp.date,grp.items.length);
+          grp.items.forEach(l=>{
+            const xpE=Number(l.xpEarned)||0;
+            const ppE=Number(l.proactivePoints)||0;
+            body+=`<div class="trow done-r" style="margin-bottom:2px">
+              <div class="chk ck"></div>
+              <div class="tbody">
+                <div class="ttxt">🧹 ${escH(l.choreName||'chore')}</div>
+                <div class="tmeta">
+                  ${xpE>0?`<span class="tpp" style="color:var(--xp)">+${xpE} XP</span>`:''}
+                  ${ppE>0?`<span class="tpp">+${ppE} PP ⚡</span>`:''}
+                </div>
+              </div>
+            </div>`;
+          });
+          body+='</div>';
+        });
+      }
+    } else if(tab==='contacts'){
+      if(!wkContacts.length){
+        body='<div class="emsg" style="padding:14px;text-align:center">No contacts logged this week</div>';
+      } else {
+        const cEmoji={text:'💬',call:'📞',hangout:'👋'};
+        groupByDate(wkContacts,'date').forEach(grp=>{
+          body+='<div style="margin-bottom:6px">'+dayHeader(grp.date,grp.items.length);
+          grp.items.forEach(l=>{
+            const xpE=Number(l.xp)||0;
+            body+=`<div class="trow done-r" style="margin-bottom:2px">
+              <div class="chk ck"></div>
+              <div class="tbody">
+                <div class="ttxt">${cEmoji[l.type]||'·'} ${escH(l.personName||'')}</div>
+                <div class="tmeta">
+                  <span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${l.type||''}</span>
+                  ${xpE>0?`<span class="tpp" style="color:var(--xp)">+${xpE} XP</span>`:''}
+                  ${l.note?`<span style="font-size:10px;color:var(--t3);font-style:italic">"${escH(l.note)}"</span>`:''}
+                </div>
+              </div>
+            </div>`;
+          });
+          body+='</div>';
+        });
+      }
+    }
+    
+    const tabBtn=(key,label,count)=>`<button data-completed-tab="${key}" style="flex:1;padding:8px 4px;border:none;border-bottom:${tab===key?'2px solid var(--text)':'2px solid transparent'};background:transparent;color:${tab===key?'var(--text)':'var(--t3)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${tab===key?'500':'400'};cursor:pointer">${label} <span style="opacity:0.6">(${count})</span></button>`;
+    
+    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">✓</span><div class="sec-name">Completed this week</div><span class="sbadge sok">${doneTasks.length+wkChores.length+wkContacts.length}</span></div>
+      <div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px">
+        ${tabBtn('tasks','Tasks',doneTasks.length)}
+        ${tabBtn('chores','Chores',wkChores.length)}
+        ${tabBtn('contacts','Contacts',wkContacts.length)}
+      </div>
+      <div class="tlist">${body}</div>
+    </div>`;
   }
+
+  // Badges + alltime appended AFTER completed-this-week (per user pref)
+  html += _badgesAndAlltime;
 
   document.getElementById('home-content').innerHTML=html;
 }
@@ -2252,28 +2413,39 @@ function rPaige(){
   const staleRel=sorted.filter(r=>freshObj(r).overdue).length;
   const relShown=D.relExpanded?sorted:sorted.slice(0,7);
   const relHidden=sorted.length-relShown.length;
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">💝</span><div class="sec-name">Relationship acts</div><span class="sbadge ${staleRel?'sw':'sok'}">${staleRel?staleRel+' overdue':'all good'}</span></div>
-    <div class="tlist">${relShown.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);return`<div class="crow" data-rel="${r.id}">
-      <div class="cinfo"><div class="cname">${escH(r.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${r.intervalDays}d</div></div>
-      <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
-      <button class="abtn" style="opacity:1;font-size:12px" data-reledit="${r.id}">✏️</button>
-      <button class="cdelbtn" data-reldel="${r.id}">✕</button>
-    </div>`;}).join('')}</div>
-    ${relHidden>0?`<button class="expand-btn" data-relexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${relHidden} more</button>`:''}
-    ${D.relExpanded&&sorted.length>7?`<button class="expand-btn" data-relexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
-    <div class="hint">tap to mark done · ✏️ to edit</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="rel-inp" placeholder="New rel act..."/><button class="badd" id="rel-add">Add</button></div>
-    <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="rel-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div></div></div>
-  </div>`;
-
   const pend=activePaige.length;const pct=tasks.length?Math.round((tasks.length-pend)/tasks.length*100):0;
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">💕</span><div class="sec-name">Tasks</div><span class="sbadge ${pend?'sw':'sok'}">${pend} left</span></div>
-    <div class="prog"><div class="prog-f" style="width:${pct}%;background:var(--cpaige)"></div></div>
-    <div class="tlist">${!activePaige.length?'<div class="emsg" style="text-align:center;padding:14px 8px"><div style="font-size:18px;margin-bottom:4px">✓</div><div>all clear here</div></div>':''}${activePaige.map(t=>trow(t)).join('')}
-    ${donePaige.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${donePaige.map(t=>trow(t)).join('')}`:''}</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-paige" placeholder="Add a task..."/><button class="badd" data-ab="paige">Add</button></div>
-    <div class="add-extras"><select class="sel" id="pr-paige"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-paige"/></div></div>
-  </div>`;
+  
+  // Paige tasks ⇄ rel acts tabbed view (default tasks)
+  const paigeTab=D.paigeListTab||'tasks';
+  const paigeTabBtn=(key,label,count,emoji)=>`<button data-paigetab="${key}" style="flex:1;padding:8px 4px;border:none;border-bottom:${paigeTab===key?'2px solid var(--cpaige)':'2px solid transparent'};background:transparent;color:${paigeTab===key?'var(--cpaige)':'var(--t3)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${paigeTab===key?'500':'400'};cursor:pointer">${emoji} ${label} <span style="opacity:0.6">(${count})</span></button>`;
+  
+  html+=`<div class="sec">
+    <div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px">
+      ${paigeTabBtn('tasks','Tasks',pend,'💕')}
+      ${paigeTabBtn('relacts','Rel acts',sorted.length,'💝')}
+    </div>`;
+  
+  if(paigeTab==='tasks'){
+    html+=`<div class="prog"><div class="prog-f" style="width:${pct}%;background:var(--cpaige)"></div></div>
+      <div class="tlist">${!activePaige.length?'<div class="emsg" style="text-align:center;padding:14px 8px"><div style="font-size:18px;margin-bottom:4px">✓</div><div>all clear here</div></div>':''}${activePaige.map(t=>trow(t)).join('')}
+      ${donePaige.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${donePaige.map(t=>trow(t)).join('')}`:''}</div>
+      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-paige" placeholder="Add a task..."/><button class="badd" data-ab="paige">Add</button></div>
+      <div class="add-extras"><select class="sel" id="pr-paige"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-paige"/></div></div>`;
+  } else {
+    html+=`${staleRel?`<div style="font-size:10px;color:#DC2626;padding:4px 6px;font-family:'DM Mono',monospace">${staleRel} overdue</div>`:''}
+      <div class="tlist">${relShown.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);return`<div class="crow" data-rel="${r.id}">
+        <div class="cinfo"><div class="cname">${escH(r.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${r.intervalDays}d</div></div>
+        <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
+        <button class="abtn" style="opacity:1;font-size:12px" data-reledit="${r.id}">✏️</button>
+        <button class="cdelbtn" data-reldel="${r.id}">✕</button>
+      </div>`;}).join('')}</div>
+      ${relHidden>0?`<button class="expand-btn" data-relexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${relHidden} more</button>`:''}
+      ${D.relExpanded&&sorted.length>7?`<button class="expand-btn" data-relexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
+      <div class="hint">tap to mark done · ✏️ to edit</div>
+      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="rel-inp" placeholder="New rel act..."/><button class="badd" id="rel-add">Add</button></div>
+      <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="rel-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div></div></div>`;
+  }
+  html+='</div>';
 
   // Important dates
   const sortedDates=[...D.paigeDates].map(d=>({...d,_next:getNextOccurrence(d),_days:daysUntil(getNextOccurrence(d))})).sort((a,b)=>a._days-b._days);
@@ -2379,7 +2551,7 @@ function rWork(){
   const pct=pend+done.length?Math.round(done.length/(pend+done.length)*100):0;
   const allTags=[...new Set(active.flatMap(t=>t.tags||[]))].sort();
   const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const weekDays=[];for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-d.getDay()+i);weekDays.push(d);}
+  const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   const wStart=localIso(weekDays[0]);const wEnd=localIso(weekDays[6]);
   const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
   const unscheduled=[];
@@ -2630,16 +2802,32 @@ function rChores(){
   };
   
   let html='';
-  // Shopping list - matches Paigecyclopedia pattern
-  html+=`<div class="sec"><div class="sec-hd" id="shop-hd" style="cursor:pointer"><span class="sec-ic">🛍️</span><div class="sec-name">Misc shopping</div><span class="sbadge sn">${shopList.filter(i=>!i.done).length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.shoppingOpen?'▲':'▼'}</span></div>
-  ${D.shoppingOpen?`<div class="list-items" style="padding:6px 8px 4px">${renderListItems(shopList,'shopping')}</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="shop-inp" placeholder="Add item..."/><button class="badd" id="shop-add">Add</button></div></div>`:''}
-  </div>`;
-  // Grocery list - matches Paigecyclopedia pattern
-  html+=`<div class="sec"><div class="sec-hd" id="gro-hd" style="cursor:pointer"><span class="sec-ic">🛒</span><div class="sec-name">Grocery list</div><span class="sbadge sn">${groList.filter(i=>!i.done).length}</span><span style="font-size:10px;color:var(--t3);margin-left:4px">${D.groceryOpen?'▲':'▼'}</span></div>
-  ${D.groceryOpen?`<div class="list-items" style="padding:6px 8px 4px">${renderListItems(groList,'grocery')}</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="gro-inp" placeholder="Add item..."/><button class="badd" id="gro-add">Add</button></div></div>`:''}
-  </div>`;
+  // Lists section: tabbed grocery / shopping (grocery default)
+  const listsTab=D.choresListTab||'grocery';
+  const groCount=groList.filter(i=>!i.done).length;
+  const shopCount=shopList.filter(i=>!i.done).length;
+  const listsBadgeCount=listsTab==='grocery'?groCount:shopCount;
+  const listsTabBtn=(key,label,count,emoji)=>`<button data-listtab="${key}" style="flex:1;padding:8px 4px;border:none;border-bottom:${listsTab===key?'2px solid var(--text)':'2px solid transparent'};background:transparent;color:${listsTab===key?'var(--text)':'var(--t3)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${listsTab===key?'500':'400'};cursor:pointer">${emoji} ${label} <span style="opacity:0.6">(${count})</span></button>`;
+  
+  if(listsTab==='grocery'){
+    html+=`<div class="sec">
+      <div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px">
+        ${listsTabBtn('grocery','Grocery',groCount,'🛒')}
+        ${listsTabBtn('shopping','Shopping',shopCount,'🛍️')}
+      </div>
+      <div class="list-items" style="padding:6px 8px 4px">${renderListItems(groList,'grocery')}</div>
+      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="gro-inp" placeholder="Add grocery item..."/><button class="badd" id="gro-add">Add</button></div></div>
+    </div>`;
+  } else {
+    html+=`<div class="sec">
+      <div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px">
+        ${listsTabBtn('grocery','Grocery',groCount,'🛒')}
+        ${listsTabBtn('shopping','Shopping',shopCount,'🛍️')}
+      </div>
+      <div class="list-items" style="padding:6px 8px 4px">${renderListItems(shopList,'shopping')}</div>
+      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="shop-inp" placeholder="Add shopping item..."/><button class="badd" id="shop-add">Add</button></div></div>
+    </div>`;
+  }
   
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
     <div class="tlist">${!choresShown.length?'<div class="emsg">no chores</div>':''}${choresShown.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
@@ -2664,7 +2852,9 @@ function rChores(){
     const interval=parseInt(document.getElementById('chore-interval')?.value)||7;
     const xp=parseInt(document.getElementById('chore-xp')?.value)||8;
     D.chores.push({id:'c'+D.nextId++,name:ai.value.trim(),intervalDays:interval,lastDone:null,xpValue:xp});
+    D.dirty.add('chores');
     ai.value='';renderAll();sched();
+    toast('🧹 Chore added');
   });
   ai?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('chore-add')?.click();});
   ai?.addEventListener('click',e=>e.stopPropagation());
@@ -2679,7 +2869,12 @@ function rChores(){
 function rLife(){
   const hTasks=D.tasks.filter(t=>t.section==='health'&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
   const hDone=D.tasks.filter(t=>t.section==='health'&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
-  const pTasks=D.tasks.filter(t=>t.section==='personal'&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
+  const pTasks=D.tasks.filter(t=>t.section==='personal'&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR)).sort((a,b)=>{
+    if(!a.dueDate&&!b.dueDate)return 0;
+    if(!a.dueDate)return 1;
+    if(!b.dueDate)return -1;
+    return a.dueDate.localeCompare(b.dueDate);
+  });
   const pDone=D.tasks.filter(t=>t.section==='personal'&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
   const weekDays=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);weekDays.push(d);}
   const byDate={};D.activities.forEach(a=>{if(!byDate[a.date])byDate[a.date]=0;byDate[a.date]++;});
@@ -2709,19 +2904,28 @@ function rLife(){
     <div id="goals-list">
       ${!D.healthGoals.length?'<div class="emsg" style="padding:10px 8px">no goals yet — add one below</div>':''}
       ${D.healthGoals.map(g=>{
-        const hit=g.logs.filter(d=>d>=WEEK_START).length;
-        const pct=Math.round(hit/g.target*100);
-        const full=hit>=g.target;
-        const color=full?'#F59E0B':hit>0?'var(--chealth)':'var(--border2)';
+        // Build Mon-Sun day list for current week
+        const wkStartD=new Date(WEEK_START+'T12:00:00');
+        const days=[];for(let i=0;i<7;i++){const d=new Date(wkStartD);d.setDate(wkStartD.getDate()+i);days.push(d);}
+        const dayLetters=['M','T','W','T','F','S','S'];
+        const hitSet=new Set((g.logs||[]).filter(d=>d>=WEEK_START));
+        const hit=hitSet.size;
+        const target=Number(g.target)||7;
+        const full=hit>=target;
         return`<div class="goal-row">
-          <div class="goal-top">
-            <span class="goal-name">${escH(g.name)}</span>
-            ${full?`<span class="goal-super">🌟 complete!</span>`:`<button class="goal-log-btn ${full?'maxed':''}" data-goallog="${g.id}">+ Log it</button>`}
+          <div class="goal-top" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="goal-name" style="flex:1">${escH(g.name)}</span>
+            <span class="goal-count" style="font-size:11px;font-family:'DM Mono',monospace;color:${full?'#F59E0B':'var(--t2)'}">${hit}/${target}${full?' 🌟':''}</span>
             <button class="abtn del" style="opacity:1;font-size:11px" data-goaldel="${g.id}">✕</button>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="goal-prog-track" style="flex:1"><div class="goal-prog-fill" style="width:${pct}%;background:${color}"></div></div>
-            <span class="goal-count">${hit}/${g.target}</span>
+          <div style="display:flex;gap:4px">
+            ${days.map((d,i)=>{
+              const iso=localIso(d);
+              const isHit=hitSet.has(iso);
+              const isToday=iso===TODAY_ISO;
+              const isFuture=iso>TODAY_ISO;
+              return`<button data-goalday="${g.id}:${iso}" style="flex:1;padding:8px 0;border-radius:6px;border:${isToday?'1.5px solid var(--text)':'0.5px solid var(--border)'};background:${isHit?'var(--chealth)':'var(--bg)'};color:${isHit?'#fff':'var(--t2)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${isHit?'600':'400'};cursor:pointer;${isFuture&&!isHit?'opacity:0.4':''}">${dayLetters[i]}</button>`;
+            }).join('')}
           </div>
         </div>`;
       }).join('')}
@@ -2733,7 +2937,7 @@ function rLife(){
     <div class="add-extras" style="align-items:center;gap:6px">
       <label style="font-size:11px;color:var(--t2);white-space:nowrap">Target:</label>
       <input class="inp" id="goal-target" type="number" min="1" max="7" value="7" style="width:55px"/>
-      <label style="font-size:11px;color:var(--t2)">times/week</label>
+      <label style="font-size:11px;color:var(--t2)">days/week</label>
     </div></div>
   </div>`;
 
@@ -2745,7 +2949,7 @@ function rLife(){
   html+=`<div class="sec-divider">💰 Finances</div>
   <div class="sec"><div class="sec-hd"><span class="sec-ic">📊</span><div class="sec-name">Overview</div><button class="bsm" onclick="openFinModal(null)" style="font-size:11px;padding:5px 9px">+ Add</button></div>
     <div class="fin-summary"><div class="fin-sum-item"><div class="fin-sum-n" style="color:#DC2626">$${expenses.toLocaleString()}</div><div class="fin-sum-l">expenses</div></div><div class="fin-sum-item"><div class="fin-sum-n" style="color:#16A34A">$${income.toLocaleString()}</div><div class="fin-sum-l">income</div></div><div class="fin-sum-item"><div class="fin-sum-n" style="color:#1D4ED8">$${savings.toLocaleString()}</div><div class="fin-sum-l">savings</div></div></div>
-    <div class="fin-grid">${!D.finances.length?'<div class="emsg" style="padding:8px;grid-column:span 2">no entries yet</div>':''}${D.finances.map(f=>`<div class="fcard"><div class="fcard-lbl">${escH(f.category)}</div><div class="fcard-amt">$${Number(f.amount).toLocaleString()}</div><span class="fcard-type ftype-${f.type}">${escH(f.label)}</span><button class="fedit" onclick="openFinModal('${f.id}')">edit</button></div>`).join('')}</div>
+    <div class="fin-grid">${!D.finances.length?'<div class="emsg" style="padding:8px;grid-column:span 2">no entries yet</div>':''}${D.finances.map(f=>`<div class="fcard"><div class="fcard-lbl">${escH(f.category)}</div><div class="fcard-amt">$${Number(f.amount).toLocaleString()}</div><span class="fcard-type ftype-${f.type}">${escH(f.label)}</span>${f.notes?`<div style="font-size:10px;color:var(--t3);font-style:italic;margin-top:4px;line-height:1.3">${escH(f.notes)}</div>`:''}<button class="fedit" onclick="openFinModal('${f.id}')">edit</button></div>`).join('')}</div>
     <div style="padding:0 8px 10px"><button class="bsm" style="width:100%" onclick="openFinModal(null)">+ Add entry</button></div>
   </div>`;
 
@@ -2857,15 +3061,12 @@ document.getElementById('main').addEventListener('click', function(e){
   // Edit task
   const edit = e.target.closest('[data-edit]');
   if(edit){ openEditTask(edit.dataset.edit); return; }
-  // Shopping/grocery list toggle (matches Paigecyclopedia pattern)
-  const shopHd = e.target.closest('#shop-hd');
-  if(shopHd && !e.target.closest('#shop-inp,#shop-add,[data-listchk],[data-listdel]')){
-    D.shoppingOpen=!D.shoppingOpen; rChores(); return;
-  }
-  const groHd = e.target.closest('#gro-hd');
-  if(groHd && !e.target.closest('#gro-inp,#gro-add,[data-listchk],[data-listdel]')){
-    D.groceryOpen=!D.groceryOpen; rChores(); return;
-  }
+  // Paige tab switching (tasks/relacts)
+  const paigeTab = e.target.closest('[data-paigetab]');
+  if(paigeTab){ D.paigeListTab=paigeTab.dataset.paigetab; rPaige(); return; }
+  // Lists tab switching (grocery/shopping)
+  const listTab = e.target.closest('[data-listtab]');
+  if(listTab){ D.choresListTab=listTab.dataset.listtab; rChores(); return; }
   // Shopping/grocery add buttons
   const shopAdd = e.target.closest('#shop-add');
   if(shopAdd){
@@ -2926,6 +3127,25 @@ document.getElementById('main').addEventListener('click', function(e){
   // Paige answer delete
   const qaDel = e.target.closest('[data-qadel]');
   if(qaDel){ deletePaigeAnswer(qaDel.dataset.qadel); return; }
+  // By-day filter chips
+  const bdFilter = e.target.closest('[data-bdfilter]');
+  if(bdFilter){
+    const key=bdFilter.dataset.bdfilter;
+    if(!(D.byDayFilter instanceof Set)) D.byDayFilter=new Set();
+    if(key==='__clear') D.byDayFilter=new Set();
+    else if(D.byDayFilter.has(key)) D.byDayFilter.delete(key);
+    else D.byDayFilter.add(key);
+    rHome();return;
+  }
+  // Tap row in by-day view → edit
+  const bdEdit = e.target.closest('[data-bdedit]');
+  if(bdEdit && !e.target.closest('[data-chk]')){ openEditTask(bdEdit.dataset.bdedit); return; }
+  // Completed-this-week tab switching
+  const completedTab = e.target.closest('[data-completed-tab]');
+  if(completedTab){ D.completedTab=completedTab.dataset.completedTab; rHome(); return; }
+  // Completed task edit
+  const completedEdit = e.target.closest('[data-completed-edit]');
+  if(completedEdit && !e.target.closest('[data-chk]')){ openEditTask(completedEdit.dataset.completedEdit); return; }
   // Paige focuses
   const focusAdd = e.target.closest('[data-focusadd]');
   if(focusAdd){ openFocusModal(); return; }
@@ -2974,6 +3194,8 @@ document.getElementById('main').addEventListener('click', function(e){
   // Goal log
   const goallog = e.target.closest('[data-goallog]');
   if(goallog){ logHealthGoal(goallog.dataset.goallog); return; }
+  const goalday = e.target.closest('[data-goalday]');
+  if(goalday){ const [gid,iso]=goalday.dataset.goalday.split(':'); toggleHealthGoalDay(gid, iso); return; }
   // Goal delete
   const goaldel = e.target.closest('[data-goaldel]');
   if(goaldel){ deleteHealthGoal(goaldel.dataset.goaldel); return; }
