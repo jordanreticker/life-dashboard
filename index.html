@@ -179,6 +179,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 /* chores */
 .crow{display:flex;align-items:center;gap:8px;padding:9px 6px;border-radius:var(--r2);margin-bottom:3px;cursor:pointer;transition:background 0.15s;}
 .crow:hover{background:var(--bg);}
+.crow-selected{background:#FEF3C7 !important;outline:1.5px solid #F59E0B;outline-offset:-1px;}
 .cinfo{flex:1;min-width:0;}
 .cname{font-size:13px;}
 .cmeta{font-size:10px;font-family:'DM Mono',monospace;margin-top:1px;}
@@ -501,6 +502,8 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="mbtn" style="flex:1;text-align:center;padding:10px 6px" data-ctype="call">📞 Call</button>
     <button class="mbtn" style="flex:1;text-align:center;padding:10px 6px" data-ctype="hangout">🤝 Hangout</button>
   </div>
+  <div id="contact-extra-people" style="margin-bottom:8px"></div>
+  <button class="abtn" id="contact-add-person-btn" style="opacity:1;font-size:11px;color:var(--t2);margin-bottom:10px;display:none">+ Tag another person (group)</button>
   <input class="inp f1" id="contact-note" placeholder="Notes (optional)" style="width:100%;margin-bottom:10px"/>
   <button class="mbtn" id="contact-confirm" style="background:var(--text);color:#fff;border:none">Log it</button>
   <button class="mbtn mcancel" onclick="closeModal('contact-modal')">Cancel</button>
@@ -517,8 +520,10 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
     <button class="mbtn" data-qasec="health" style="text-align:center;padding:10px 4px;font-size:12px">🏃 Health</button>
     <button class="mbtn" data-qasec="personal" style="text-align:center;padding:10px 4px;font-size:12px">✦ Personal</button>
     <button class="mbtn" data-qasec="chore" style="text-align:center;padding:10px 4px;font-size:12px;grid-column:span 3">🧹 Mark a chore done</button>
+    <button class="mbtn" data-qasec="activity" style="text-align:center;padding:10px 4px;font-size:12px;grid-column:span 3">🏃 Log an activity</button>
   </div>
   <select class="sel" id="qa-chore" style="width:100%;margin-bottom:10px;display:none"><option value="">pick a chore...</option></select>
+  <select class="sel" id="qa-activity" style="width:100%;margin-bottom:10px;display:none"><option value="">pick activity type...</option></select>
   <select class="sel" id="qa-person" style="width:100%;margin-bottom:10px;display:none"><option value="">no person tag</option></select>
   <div style="display:flex;gap:6px;margin-bottom:10px">
     <select class="sel" id="qa-pri" style="flex:1"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select>
@@ -710,7 +715,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -756,39 +761,27 @@ function fireConfetti(){
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 function applyData(data){
-  // Don't overwrite unsaved local changes
-  const skipKeys=new Set();
+  // Don't overwrite unsaved local changes — universal: skip ANY key in D.dirty
   if(D.dirty&&D.dirty.size>0){
-    if(D.dirty.has('tasks')) skipKeys.add('tasks');
-    if(D.dirty.has('shoppingList')) skipKeys.add('shoppingList');
-    if(D.dirty.has('groceryList')) skipKeys.add('groceryList');
-    if(D.dirty.has('contactLog')) skipKeys.add('contactLog');
-    if(D.dirty.has('paigeFocuses')) skipKeys.add('paigeFocuses');
-    if(D.dirty.has('paigeDates')) skipKeys.add('paigeDates');
-    if(D.dirty.has('dayResults')) skipKeys.add('dayResults');
-    if(D.dirty.has('relActs')) skipKeys.add('relActs');
-    if(D.dirty.has('healthGoals')) skipKeys.add('healthGoals');
+    D.dirty.forEach(key=>{
+      if(data && key in data) delete data[key];
+    });
+    // Special: weekSummary lives inside weeklySummary.data
+    if(D.dirty.has('weekSummary') && data.weeklySummary) delete data.weeklySummary;
+    // Special: gamification has multiple fields
+    if(D.dirty.has('gamification') && data.gamification) delete data.gamification;
+    if(D.dirty.has('journalLock')){
+      if('journalLockHash' in (data||{})) delete data.journalLockHash;
+    }
   }
-  if(skipKeys.has('tasks')) delete data.tasks;
-  if(skipKeys.has('shoppingList')) delete data.shoppingList;
-  if(skipKeys.has('groceryList')) delete data.groceryList;
-  if(skipKeys.has('contactLog')) delete data.contactLog;
-  if(skipKeys.has('paigeFocuses')) delete data.paigeFocuses;
-  if(skipKeys.has('paigeDates')) delete data.paigeDates;
-  if(skipKeys.has('dayResults')) delete data.dayResults;
-  if(skipKeys.has('relActs')) delete data.relActs;
-  if(skipKeys.has('healthGoals')) delete data.healthGoals;
 
   const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
   if(data.chores&&data.chores.length){
-    let backfilled=false;
     D.chores=data.chores.map(c=>{
       const xpVal=Number(c.xpValue);
-      if(isNaN(xpVal)||xpVal===0){backfilled=true;return{...c,xpValue:8,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7};}
-      return{...c,xpValue:xpVal,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7};
+      return{...c,xpValue:isNaN(xpVal)?0:xpVal,lastDone:toDateStr(c.lastDone)||null,intervalDays:Number(c.intervalDays)||7};
     });
-    if(backfilled){D.dirty.add('chores');console.log('[debug] backfilled chore xpValue=0 with default 8');}
   }
   else if(!D.chores.length) D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
   if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
@@ -801,9 +794,30 @@ function applyData(data){
       return {id:String(q.id||(i+1)),question:String(q.question||'')};
     }).filter(q=>q.question);
   }
-  if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[]),weeklyBadgeHistory:typeof g.weeklyBadgeHistory==='object'?g.weeklyBadgeHistory:(typeof g.weeklyBadgeHistory==='string'?(()=>{try{return JSON.parse(g.weeklyBadgeHistory)}catch(e){return{}}})():{})};}
-  // Auto-correct all-time PP if stored value is less than what source data says (handles drift)
+  if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[]),weeklyBadgeHistory:typeof g.weeklyBadgeHistory==='object'&&g.weeklyBadgeHistory!==null?g.weeklyBadgeHistory:(typeof g.weeklyBadgeHistory==='string'&&g.weeklyBadgeHistory?(()=>{try{return JSON.parse(g.weeklyBadgeHistory)}catch(e){return{}}})():{}),weeklyBadgeLastEarned:typeof g.weeklyBadgeLastEarned==='object'&&g.weeklyBadgeLastEarned!==null?g.weeklyBadgeLastEarned:(typeof g.weeklyBadgeLastEarned==='string'&&g.weeklyBadgeLastEarned?(()=>{try{return JSON.parse(g.weeklyBadgeLastEarned)}catch(e){return{}}})():{})};}
+  // ONE-TIME CLEANUP: if any weekly badge has count > 1 but was earned this week, normalize to 1
+  // This fixes badges that got inflated by repeated check fires before the per-week guard was added
   setTimeout(()=>{
+    if(!D.gamification.weeklyBadgeHistory) return;
+    if(!D.gamification.weeklyBadgeLastEarned) D.gamification.weeklyBadgeLastEarned={};
+    let cleaned=false;
+    Object.keys(D.gamification.weeklyBadgeHistory).forEach(badgeId=>{
+      const count=Number(D.gamification.weeklyBadgeHistory[badgeId])||0;
+      // If count is suspiciously high (>1 and we're seeing it currently active this week)
+      if(count>1 && D.weeklyBadges.includes(badgeId)){
+        // Cap at 1 — assume this is the first time
+        D.gamification.weeklyBadgeHistory[badgeId]=1;
+        D.gamification.weeklyBadgeLastEarned[badgeId]=WEEK_START;
+        cleaned=true;
+      }
+    });
+    if(cleaned){
+      D.dirty.add('gamification');
+      console.log('[debug] cleaned inflated badge counts');
+      sched();
+      renderAll();
+    }
+    // Auto-correct all-time PP if stored value is less than derived
     const taskPPSum=(D.tasks||[]).filter(t=>t.done).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0);
     const chorePPSum=(D.choreLog||[]).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
     const derivedPP=taskPPSum+chorePPSum;
@@ -812,7 +826,7 @@ function applyData(data){
       D.dirty.add('gamification');
       console.log('[debug] auto-corrected all-time PP to',derivedPP);
     }
-  },200);
+  },300);
   if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
   if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
   if(data.journal) D.journal=data.journal;
@@ -993,13 +1007,20 @@ function checkPermBadges(){
 }
 function checkWeekBadges(){
   const w=D.weekSummary;
+  // Track which week this badge was last earned in, so we only increment history once per week
+  if(!D.gamification.weeklyBadgeLastEarned) D.gamification.weeklyBadgeLastEarned={};
   WEEK_BADGES.forEach(b=>{
     if(!D.weeklyBadges.includes(b.id)&&b.check(w,D.tasks,D.activities,D)){
       D.weeklyBadges.push(b.id);
-      // Increment all-time count for this weekly badge
-      if(!D.gamification.weeklyBadgeHistory)D.gamification.weeklyBadgeHistory={};
-      D.gamification.weeklyBadgeHistory[b.id]=(D.gamification.weeklyBadgeHistory[b.id]||0)+1;
-      toast(b.emoji+' Weekly badge: '+b.label,3500);fireConfetti();
+      // Only increment history if NOT already credited for this week
+      const lastEarned=D.gamification.weeklyBadgeLastEarned[b.id];
+      if(lastEarned!==WEEK_START){
+        if(!D.gamification.weeklyBadgeHistory)D.gamification.weeklyBadgeHistory={};
+        D.gamification.weeklyBadgeHistory[b.id]=(D.gamification.weeklyBadgeHistory[b.id]||0)+1;
+        D.gamification.weeklyBadgeLastEarned[b.id]=WEEK_START;
+        D.dirty.add('gamification');
+        toast(b.emoji+' Weekly badge: '+b.label,3500);fireConfetti();
+      }
     }
   });
 }
@@ -1245,6 +1266,13 @@ function openQuickAdd(){
       openChoreModal(cid);
       return;
     }
+    if(_qaSection==='activity'){
+      const atype=document.getElementById('qa-activity').value;
+      if(!atype){toast('Pick an activity type first');return;}
+      closeModal('quick-add-modal');
+      openActModal(atype);
+      return;
+    }
     const text=document.getElementById('qa-text').value;
     if(!text.trim())return;
     const pri=document.getElementById('qa-pri').value;
@@ -1260,9 +1288,11 @@ function openQuickAdd(){
 }
 function updateQAFields(){
   const isChore=_qaSection==='chore';
+  const isActivity=_qaSection==='activity';
   const isFamily=_qaSection==='community_family';
   const isFriends=_qaSection==='community_friends';
   const choreSel=document.getElementById('qa-chore');
+  const actSel=document.getElementById('qa-activity');
   const txtInp=document.getElementById('qa-text');
   const personSel=document.getElementById('qa-person');
   const priSel=document.getElementById('qa-pri');
@@ -1275,16 +1305,28 @@ function updateQAFields(){
     txtInp.style.display='none';
     if(priSel) priSel.parentElement.style.display='none';
     if(personSel){personSel.style.display='none';personSel.value='';}
+    if(actSel) actSel.style.display='none';
     const sortedChores=[...D.chores].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
     choreSel.innerHTML='<option value="">pick a chore...</option>'+sortedChores.map(c=>{const f=freshObj(c);return `<option value="${c.id}">${escH(c.name)} ${f.overdue?'⚠️':''} (${f.pct}%)</option>`;}).join('');
     choreSel.style.display='block';
     confirmBtn.textContent='Mark chore done';
+  } else if(isActivity){
+    titleEl.textContent='Quick log activity';
+    subEl.textContent='Log a workout / session';
+    txtInp.style.display='none';
+    if(priSel) priSel.parentElement.style.display='none';
+    if(personSel){personSel.style.display='none';personSel.value='';}
+    if(choreSel) choreSel.style.display='none';
+    actSel.innerHTML='<option value="">pick activity type...</option>'+ACT_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+    actSel.style.display='block';
+    confirmBtn.textContent='Log activity';
   } else {
     titleEl.textContent='Quick add task';
     subEl.textContent='Where should this go?';
     txtInp.style.display='block';
     if(priSel) priSel.parentElement.style.display='flex';
     choreSel.style.display='none';
+    if(actSel) actSel.style.display='none';
     confirmBtn.textContent='Add task';
     if(personSel){
       if(!isFamily&&!isFriends){personSel.style.display='none';personSel.value='';}
@@ -1370,12 +1412,15 @@ let _contactType='text';
 function openContactModal(id,tier){
   const p=(D.people[tier]||[]).find(p=>p.id==id);if(!p)return;
   D.pendingContactId=id;D.pendingContactTier=tier;_contactType='text';
+  D._extraContactIds=[]; // additional people for group hangouts
   document.getElementById('contact-title').textContent='Log contact · '+p.name;
   const recentLogs=(D.contactLog||[]).filter(l=>l.personId==id).slice(-3);
   document.getElementById('contact-sub').innerHTML=
     (p.lastContact?'last: '+fmtDate(p.lastContact):'no contact logged')+
     (recentLogs.length?'<br><small style="color:var(--t3)">'+recentLogs.map(l=>l.type+(l.note?' — '+l.note:'')).join(' · ')+'</small>':'');
   document.getElementById('contact-note').value='';
+  renderExtraPeople();
+  document.getElementById('contact-add-person-btn').style.display='none';
   document.querySelectorAll('[data-ctype]').forEach(b=>{
     b.style.background=b.dataset.ctype==='text'?'var(--text)':'var(--bg)';
     b.style.color=b.dataset.ctype==='text'?'#fff':'var(--text)';
@@ -1385,10 +1430,84 @@ function openContactModal(id,tier){
         x.style.background=x.dataset.ctype===_contactType?'var(--text)':'var(--bg)';
         x.style.color=x.dataset.ctype===_contactType?'#fff':'var(--text)';
       });
+      // Show "+ Tag another" only for hangouts (group sessions make sense for hangouts)
+      document.getElementById('contact-add-person-btn').style.display=_contactType==='hangout'?'block':'none';
+      if(_contactType!=='hangout' && D._extraContactIds.length){
+        D._extraContactIds=[];
+        renderExtraPeople();
+      }
     };
   });
+  document.getElementById('contact-add-person-btn').onclick=showAddPersonPicker;
   document.getElementById('contact-confirm').onclick=confirmContact;
   document.getElementById('contact-modal').classList.remove('hide');
+}
+function renderExtraPeople(){
+  const el=document.getElementById('contact-extra-people');
+  if(!el)return;
+  if(!D._extraContactIds||!D._extraContactIds.length){el.innerHTML='';return;}
+  let h='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);margin-bottom:4px">also tagged:</div><div style="display:flex;flex-wrap:wrap;gap:4px">';
+  D._extraContactIds.forEach(({id,tier})=>{
+    const person=(D.people[tier]||[]).find(p=>p.id==id);
+    if(!person)return;
+    h+=`<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;background:var(--bg);font-size:11px"><span>${escH(person.name)}</span><button class="abtn" style="opacity:1;font-size:9px;padding:0 2px" data-extracontactdel="${id}:${tier}">✕</button></span>`;
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+function showAddPersonPicker(){
+  // Build a list of all people not already in the picker
+  const allPpl=[
+    ...(D.people.social_family||[]).map(p=>({...p,tier:'social_family'})),
+    ...(D.people.social_friends||[]).map(p=>({...p,tier:'social_friends'})),
+  ];
+  const taken=new Set();
+  taken.add(D.pendingContactId+':'+D.pendingContactTier);
+  (D._extraContactIds||[]).forEach(({id,tier})=>taken.add(id+':'+tier));
+  const available=allPpl.filter(p=>!taken.has(p.id+':'+p.tier));
+  if(!available.length){toast('No more people to add');return;}
+  // Quick prompt with options
+  const names=available.map((p,i)=>`${i+1}. ${p.name} (${p.tier==='social_family'?'fam':'fri'})`).join('\n');
+  const choice=prompt('Pick someone:\n'+names+'\n\nEnter number:');
+  if(!choice)return;
+  const idx=parseInt(choice)-1;
+  if(idx<0||idx>=available.length){toast('Invalid selection');return;}
+  const picked=available[idx];
+  D._extraContactIds.push({id:picked.id,tier:picked.tier});
+  renderExtraPeople();
+}
+function confirmContact(){
+  const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
+  if(!p)return;
+  const note=document.getElementById('contact-note')?.value.trim()||'';
+  
+  // Build full list of people: primary + extras
+  const allTargets=[{id:p.id,tier:D.pendingContactTier,person:p}];
+  (D._extraContactIds||[]).forEach(({id,tier})=>{
+    const extra=(D.people[tier]||[]).find(pp=>pp.id==id);
+    if(extra) allTargets.push({id,tier,person:extra});
+  });
+  
+  let totalAwarded=0;
+  allTargets.forEach(({tier,person})=>{
+    const isFamily=tier==='social_family';
+    const baseXP={text:xp('contact_text'),call:xp('contact_call'),hangout:xp('contact_hangout')}[_contactType]||xp('contact_text');
+    const personXP=isFamily?Math.round(baseXP*xp('contact_family_mult')):baseXP;
+    person.lastContact=TODAY_ISO;
+    if(!D.contactLog)D.contactLog=[];
+    D.contactLog.push({id:D.nextId++,personId:person.id,personName:person.name,type:_contactType,note,date:TODAY_ISO,xp:personXP});
+    totalAwarded+=personXP;
+  });
+  
+  addXP(totalAwarded);markActive();
+  D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+allTargets.length;
+  D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalAwarded;
+  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
+  checkWeekBadges();renderAll();sched();
+  const em={text:'💬',call:'📞',hangout:'🤝'};
+  const groupSuffix=allTargets.length>1?' ('+allTargets.length+' people)':'';
+  toast((em[_contactType]||'👥')+' Logged'+groupSuffix+' +'+totalAwarded+' XP');
+  closeModal('contact-modal');
 }
 function deleteContactLog(id){
   const log=D.contactLog.find(l=>l.id==id);
@@ -1399,25 +1518,6 @@ function deleteContactLog(id){
   D.gamification.xp=Math.max(0,D.gamification.xp-(log.xp||0));
   D.dirty.add('contactLog');D.dirty.add('gamification');
   renderAll();sched();toast('Removed -'+log.xp+' XP');
-}
-function confirmContact(){
-  const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
-  if(!p)return;
-  const isFamily=D.pendingContactTier==='social_family';
-  const baseXP={text:xp('contact_text'),call:xp('contact_call'),hangout:xp('contact_hangout')}[_contactType]||xp('contact_text');
-  const totalXP=isFamily?Math.round(baseXP*xp('contact_family_mult')):baseXP;
-  const note=document.getElementById('contact-note')?.value.trim()||'';
-  p.lastContact=TODAY_ISO;
-  if(!D.contactLog)D.contactLog=[];
-  D.contactLog.push({id:D.nextId++,personId:p.id,personName:p.name,type:_contactType,note,date:TODAY_ISO,xp:totalXP});
-  addXP(totalXP);markActive();
-  D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+1;
-  D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalXP;
-  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
-  checkWeekBadges();renderAll();sched();
-  const em={text:'💬',call:'📞',hangout:'🤝'};
-  toast((em[_contactType]||'👥')+' Logged! +'+xp+' XP');
-  closeModal('contact-modal');
 }
 
 // ── Activities ────────────────────────────────────────────────────────────────
@@ -2521,11 +2621,11 @@ function rPaige(){
       <div class="add-extras"><select class="sel" id="pr-paige"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-paige"/></div></div>`;
   } else {
     html+=`${staleRel?`<div style="font-size:10px;color:#DC2626;padding:4px 6px;font-family:'DM Mono',monospace">${staleRel} overdue</div>`:''}
-      <div class="tlist">${relShown.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);return`<div class="crow" data-rel="${r.id}">
+      <div class="tlist">${relShown.map(r=>{const f=freshObj(r);const barPct=freshBarPct(f.pct);const selR=D.selectedRelId==r.id;return`<div class="crow${selR?' crow-selected':''}" data-rel="${r.id}">
         <div class="cinfo"><div class="cname">${escH(r.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${r.intervalDays}d</div></div>
         <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
-        <button class="abtn" style="opacity:1;font-size:12px" data-reledit="${r.id}">✏️</button>
-        <button class="cdelbtn" data-reldel="${r.id}">✕</button>
+        ${selR?`<button class="abtn" style="opacity:1;font-size:12px" data-reledit="${r.id}">✏️</button>
+        <button class="cdelbtn" data-reldel="${r.id}">✕</button>`:''}
       </div>`;}).join('')}</div>
       ${relHidden>0?`<button class="expand-btn" data-relexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${relHidden} more</button>`:''}
       ${D.relExpanded&&sorted.length>7?`<button class="expand-btn" data-relexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
@@ -2543,14 +2643,15 @@ function rPaige(){
       ${sortedDates.map(d=>{
         const cls=d._days<=7?'urgent':d._days<=30?'soon':'';
         const dayLabel=d._days===0?'today!':d._days===1?'tomorrow':d._days<0?Math.abs(d._days)+'d ago':'in '+d._days+'d';
-        return`<div class="date-row">
+        const selD=D.selectedPdId==d.id;
+        return`<div class="date-row${selD?' crow-selected':''}" data-pdselect="${d.id}" style="cursor:pointer">
           <div class="date-info">
             <div class="date-name">${escH(d.name)}</div>
             <div class="date-meta">${fmtDate(d._next)}${d.recur==='annual'?' · annual':''}${d.notes?' · '+escH(d.notes):''}</div>
           </div>
           <span class="date-countdown ${cls}">${dayLabel}</span>
-          <button class="abtn" style="opacity:1;font-size:11px" data-pdedit="${d.id}">✏️</button>
-          <button class="abtn del" style="opacity:1" data-pddel="${d.id}">✕</button>
+          ${selD?`<button class="abtn" style="opacity:1;font-size:11px" data-pdedit="${d.id}">✏️</button>
+          <button class="abtn del" style="opacity:1" data-pddel="${d.id}">✕</button>`:''}
         </div>`;
       }).join('')}
     </div>
@@ -2820,6 +2921,25 @@ function getLast7Inbox(){
 
 // ── COMMUNITY ─────────────────────────────────────────────────────────────────
 function rCommunity(){
+  // Derive lastContact from contactLog as source of truth
+  const lastContactMap={};
+  (D.contactLog||[]).forEach(l=>{
+    const d=l.date||'';
+    if(!d||!l.personId)return;
+    if(!lastContactMap[l.personId] || d>lastContactMap[l.personId]) lastContactMap[l.personId]=d;
+  });
+  // Apply to people in memory + flag dirty if any drift
+  let driftFixed=false;
+  ['social_family','social_friends','work'].forEach(t=>{
+    (D.people[t]||[]).forEach(p=>{
+      const fromLog=lastContactMap[p.id];
+      if(fromLog && fromLog!==p.lastContact){
+        p.lastContact=fromLog;
+        driftFixed=true;
+      }
+    });
+  });
+  if(driftFixed){D.dirty.add('people');console.log('[debug] reconciled lastContact from contactLog');}
   const tier=D.communityTier;
   const key='social_'+tier;
   const ppl=D.people[key]||[];
@@ -2879,8 +2999,8 @@ function rCommunity(){
 
   html+=`<div class="tier-tabs"><button class="tier-tab ${tier==='family'?'active':''}" data-tier="family">👨‍👩‍👧 Family</button><button class="tier-tab ${tier==='friends'?'active':''}" data-tier="friends">👥 Friends</button></div>`;
 
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='family'?'👨‍👩‍👧':'👥'}</span><div class="sec-name">${tier==='family'?'Family':'Friends'}</div><span class="sbadge sn">${ppl.length} people</span></div>
-    <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map(p=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='family'?7:14}):null;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}"><div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='family'?'👨‍👩‍👧':'👥'}</span><div class="sec-name">${tier==='family'?'Family':'Friends'}</div><span class="sbadge sn">${ppl.length} people</span>${tier==='friends'?`<button class="abtn" style="opacity:1;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);margin-left:auto;padding:3px 8px;border-radius:6px;background:${D._reorderingFriends?'var(--ccommunity)':'var(--bg)'};color:${D._reorderingFriends?'#fff':'var(--t2)'}" id="reorder-friends">${D._reorderingFriends?'done':'reorder'}</button>`:''}</div>
+    <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map((p,idx)=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='family'?7:14}):null;const showReorder=tier==='friends'&&D._reorderingFriends;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}">${showReorder?`<div style="display:flex;gap:2px;margin-bottom:1px"><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="up:${idx}" ${idx===0?'disabled style="opacity:0.3"':''}>↑</button><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="down:${idx}" ${idx===ppl.length-1?'disabled style="opacity:0.3"':''}>↓</button></div>`:''}<div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
     <div class="apr"><input class="inp f1" id="pi-${key}" placeholder="Add a person..."/><button class="bsm" data-ap="${key}">+ Add</button></div>
     <div class="div"></div>
     <div class="tlist">
@@ -3000,11 +3120,11 @@ function rChores(){
   }
   
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${overdue?'sw':'sok'}">${overdue?overdue+' overdue':'all fresh'}</span></div>
-    <div class="tlist">${!choresShown.length?'<div class="emsg">no chores</div>':''}${choresShown.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);return`<div class="crow" data-chore="${c.id}">
-      <div class="cinfo"><div class="cname">${escH(c.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue}XP${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
+    <div class="tlist">${!choresShown.length?'<div class="emsg">no chores</div>':''}${choresShown.map(c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);const sel=D.selectedChoreId==c.id;return`<div class="crow${sel?' crow-selected':''}" data-chore="${c.id}">
+      <div class="cinfo"><div class="cname">${escH(c.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue>0?c.xpValue+'XP':'set XP →'}${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
-      <button class="abtn" style="opacity:1;font-size:12px" data-cedit="${c.id}">✏️</button>
-      <button class="cdelbtn" data-cd="${c.id}">✕</button>
+      ${sel?`<button class="abtn" style="opacity:1;font-size:12px" data-cedit="${c.id}">✏️</button>
+      <button class="cdelbtn" data-cd="${c.id}">✕</button>`:''}
     </div>`;}).join('')}</div>
     ${choresHidden>0?`<button class="expand-btn" data-choresexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show ${choresHidden} more</button>`:''}
     ${D.choresExpanded&&sorted.length>7?`<button class="expand-btn" data-choresexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">show less</button>`:''}
@@ -3066,11 +3186,18 @@ function rLife(){
   </div>`;
   if(recent.length){html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📋</span><div class="sec-name">Recent sessions</div></div><div class="alog">${recent.map(a=>`<div class="ali"><span class="atbadge">${a.type}</span><span class="alnotes">${a.notes||'—'}</span><span class="aldate">${fmtDate(a.date)}</span></div>`).join('')}</div></div>`;}
 
-  // health tasks
-  html+=miniTaskSec('health','Health tasks','var(--chealth)',hTasks,hDone);
-
-  // Weekly health goals
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🎯</span><div class="sec-name">Weekly goals</div><span class="sbadge sn">${D.healthGoals.length}</span></div>
+  // Tabbed Health tasks / Weekly goals / Personal todos (default: weekly goals)
+  const lifeTab=D.lifeTab||'goals';
+  const lifeTabBtn=(key,label,count,emoji)=>`<button data-lifetab="${key}" style="flex:1;padding:8px 4px;border:none;border-bottom:${lifeTab===key?'2px solid var(--chealth)':'2px solid transparent'};background:transparent;color:${lifeTab===key?'var(--chealth)':'var(--t3)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${lifeTab===key?'500':'400'};cursor:pointer">${emoji} ${label} <span style="opacity:0.6">(${count})</span></button>`;
+  html+=`<div class="sec" style="padding:0">
+    <div style="display:flex;border-bottom:0.5px solid var(--border)">
+      ${lifeTabBtn('goals','Goals',D.healthGoals.length,'🎯')}
+      ${lifeTabBtn('health','Health tasks',hTasks.length,'🏃')}
+      ${lifeTabBtn('personal','Personal',pTasks.length,'✦')}
+    </div>
+    <div style="padding:6px 0">`;
+  if(lifeTab==='goals'){
+    html+=`<div>
     <div id="goals-list">
       ${!D.healthGoals.length?'<div class="emsg" style="padding:10px 8px">no goals yet — add one below</div>':''}
       ${D.healthGoals.map(g=>{
@@ -3111,9 +3238,14 @@ function rLife(){
     </div></div>
   </div>`;
 
-  // Personal
-  html+=`<div class="sec-divider">✦ Personal</div>`;
-  html+=miniTaskSec('personal','Personal todos','var(--cpersonal)',pTasks,pDone);
+  } else if(lifeTab==='health'){
+    html+=miniTaskSec('health','','var(--chealth)',hTasks,hDone);
+  } else if(lifeTab==='personal'){
+    html+=miniTaskSec('personal','','var(--cpersonal)',pTasks,pDone);
+  }
+  html+=`</div></div>`;
+
+  // Finances
 
   // Finances
   html+=`<div class="sec-divider">💰 Finances</div>
@@ -3173,7 +3305,7 @@ function rLife(){
 
 function miniTaskSec(secId,title,color,active,done){
   const pend=active.length;const pct=pend+done.length?Math.round(done.length/(pend+done.length)*100):0;
-  return`<div class="sec"><div class="sec-hd"><div class="sec-name">${title}</div><span class="sbadge ${pend?'sw':'sok'}">${pend} left</span></div>
+  return`<div class="sec" style="${title?'':'border:none;padding:0'}">${title?`<div class="sec-hd"><div class="sec-name">${title}</div><span class="sbadge ${pend?'sw':'sok'}">${pend} left</span></div>`:''}
     <div class="prog"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div>
     <div class="tlist">${!active.length?'<div class="emsg" style="text-align:center;padding:14px 8px"><div style="font-size:18px;margin-bottom:4px">✓</div><div>all clear here</div></div>':''}${active.map(t=>trow(t)).join('')}
     ${done.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${done.map(t=>trow(t)).join('')}`:''}</div>
@@ -3231,6 +3363,45 @@ document.getElementById('main').addEventListener('click', function(e){
   // Edit task
   const edit = e.target.closest('[data-edit]');
   if(edit){ openEditTask(edit.dataset.edit); return; }
+  // Paige date select (tap to reveal edit/del)
+  const pdSelect = e.target.closest('[data-pdselect]');
+  if(pdSelect && !e.target.closest('[data-pdedit],[data-pddel]')){
+    const pid=pdSelect.dataset.pdselect;
+    D.selectedPdId=(D.selectedPdId==pid)?null:pid;
+    D.selectedChoreId=null;D.selectedRelId=null;
+    rPaige();
+    return;
+  }
+  // Life tab switching (goals/health/personal)
+  const lifeTab = e.target.closest('[data-lifetab]');
+  if(lifeTab){ D.lifeTab=lifeTab.dataset.lifetab; rLife(); return; }
+  // Friends reorder mode
+  const reorderBtn = e.target.closest('#reorder-friends');
+  if(reorderBtn){ D._reorderingFriends=!D._reorderingFriends; rCommunity(); return; }
+  const personMove = e.target.closest('[data-personmove]');
+  if(personMove){
+    e.stopPropagation();
+    const [dir,idx]=personMove.dataset.personmove.split(':');
+    const i=parseInt(idx);
+    const arr=D.people.social_friends||[];
+    if(dir==='up'&&i>0){
+      [arr[i-1],arr[i]]=[arr[i],arr[i-1]];
+    } else if(dir==='down'&&i<arr.length-1){
+      [arr[i+1],arr[i]]=[arr[i],arr[i+1]];
+    }
+    D.dirty.add('people');
+    rCommunity();sched();
+    return;
+  }
+  // Extra contact person remove (group hangout)
+  const extraDel = e.target.closest('[data-extracontactdel]');
+  if(extraDel){ 
+    e.stopPropagation();
+    const [id,tier]=extraDel.dataset.extracontactdel.split(':');
+    D._extraContactIds=(D._extraContactIds||[]).filter(x=>!(x.id==id&&x.tier===tier));
+    renderExtraPeople();
+    return;
+  }
   // Date ideas
   const ideasHd = e.target.closest('#dateideas-hd');
   if(ideasHd){ D.dateIdeasOpen=!D.dateIdeasOpen; rPaige(); return; }
@@ -3301,7 +3472,18 @@ document.getElementById('main').addEventListener('click', function(e){
   }
   // Chore tap
   const chore = e.target.closest('[data-chore]');
-  if(chore && !e.target.closest('[data-cd],[data-cedit]')){ openChoreModal(chore.dataset.chore); return; }
+  if(chore && !e.target.closest('[data-cd],[data-cedit]')){
+    const cid=chore.dataset.chore;
+    if(D.selectedChoreId==cid){
+      D.selectedChoreId=null;
+      openChoreModal(cid);
+    } else {
+      D.selectedChoreId=cid;
+      D.selectedRelId=null;D.selectedPdId=null;
+      rChores();
+    }
+    return;
+  }
   const cd = e.target.closest('[data-cd]');
   if(cd){ deleteChore(cd.dataset.cd); return; }
   const cedit = e.target.closest('[data-cedit]');
@@ -3372,7 +3554,18 @@ document.getElementById('main').addEventListener('click', function(e){
   if(choresExp){ D.choresExpanded=choresExp.dataset.choresexpand==='1'; rChores(); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
-  if(rel && !e.target.closest('[data-reledit],[data-reldel]')){ openRelActModal(rel.dataset.rel); return; }
+  if(rel && !e.target.closest('[data-reledit],[data-reldel]')){
+    const rid=rel.dataset.rel;
+    if(D.selectedRelId==rid){
+      D.selectedRelId=null;
+      openRelActModal(rid);
+    } else {
+      D.selectedRelId=rid;
+      D.selectedChoreId=null;D.selectedPdId=null;
+      rPaige();
+    }
+    return;
+  }
   const reledit = e.target.closest('[data-reledit]');
   if(reledit){ openRelEdit(reledit.dataset.reledit); return; }
   const reldel = e.target.closest('[data-reldel]');
