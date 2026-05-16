@@ -446,6 +446,29 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn mcancel" onclick="closeModal('paige-date-modal')">Cancel</button>
 </div></div>
 
+<div class="mback hide" id="person-edit-modal"><div class="modal">
+  <h3>Edit person</h3>
+  <div style="margin-bottom:10px">
+    <label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace">Name</label>
+    <input class="inp f1" id="pe-name" style="width:100%;margin-top:4px"/>
+  </div>
+  <div style="margin-bottom:10px">
+    <label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace">Contact cadence (days)</label>
+    <input class="inp f1" id="pe-cadence" type="number" min="1" max="365" style="width:100%;margin-top:4px"/>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px;font-family:'DM Mono',monospace" id="pe-default-note"></div>
+  </div>
+  <button class="mbtn" id="pe-save" onclick="savePersonEdit()" style="background:var(--text);color:#fff;border:none">Save</button>
+  <button class="mbtn mcancel" onclick="closeModal('person-edit-modal')">Cancel</button>
+</div></div>
+
+<div class="mback hide" id="balance-targets-modal"><div class="modal" style="max-width:440px;width:94%">
+  <h3>Weekly XP targets</h3>
+  <div class="modal-sub" style="margin-bottom:14px;font-size:11px;color:var(--t2);line-height:1.5">Set a target weekly XP per section to compare against. Leave blank or 0 to use your 4-week historical average instead.</div>
+  <div id="balance-targets-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+  <button class="mbtn" id="balance-targets-save" style="background:var(--text);color:#fff;border:none">Save</button>
+  <button class="mbtn mcancel" onclick="closeModal('balance-targets-modal')">Cancel</button>
+</div></div>
+
 <div class="mback hide" id="dateidea-modal"><div class="modal">
   <h3 id="dateidea-modal-title">Mark date done</h3>
   <div class="modal-sub" id="dateidea-modal-name" style="font-style:italic;color:var(--cpaige);margin-bottom:14px"></div>
@@ -504,6 +527,10 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   </div>
   <div id="contact-extra-people" style="margin-bottom:8px"></div>
   <button class="abtn" id="contact-add-person-btn" style="opacity:1;font-size:11px;color:var(--t2);margin-bottom:10px;display:none">+ Tag another person (group)</button>
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+    <label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace">When:</label>
+    <input class="inp" type="date" id="contact-date" style="flex:1"/>
+  </div>
   <input class="inp f1" id="contact-note" placeholder="Notes (optional)" style="width:100%;margin-bottom:10px"/>
   <button class="mbtn" id="contact-confirm" style="background:var(--text);color:#fff;border:none">Log it</button>
   <button class="mbtn mcancel" onclick="closeModal('contact-modal')">Cancel</button>
@@ -715,7 +742,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,selectedPersonId:null,sectionTargets:{},
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -784,7 +811,7 @@ function applyData(data){
     });
   }
   else if(!D.chores.length) D.chores=JSON.parse(JSON.stringify(DEFAULT_CHORES));
-  if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null}));
+  if(data.people){const normPpl=arr=>(arr||[]).map(p=>({...p,lastContact:toDateStr(p.lastContact)||null,cadenceDays:Number(p.cadenceDays)>0?Number(p.cadenceDays):undefined}));
   D.people={social_family:normPpl(data.people.social_family||data.people.social_inner),social_friends:normPpl(data.people.social_friends||data.people.social_next),work:normPpl(data.people.work)};}
   if(data.activities) D.activities=data.activities;
   if(data.questions&&data.questions.length){
@@ -868,6 +895,14 @@ function applyData(data){
   if(data.shoppingList) D.shoppingList=data.shoppingList;
   if(data.groceryList) D.groceryList=data.groceryList;
   if(data.xpValues) D.xpValues=data.xpValues;
+  // Load sectionTargets from xpValues (stored as section_target_{key})
+  D.sectionTargets={};
+  Object.keys(D.xpValues||{}).forEach(k=>{
+    if(k.startsWith('section_target_')){
+      const sec=k.replace('section_target_','');
+      D.sectionTargets[sec]=Number(D.xpValues[k])||0;
+    }
+  });
   if(data.paigeAnswers) D.paigeAnswers=data.paigeAnswers;
   if(data.dateIdeas) D.dateIdeas=data.dateIdeas.map((i,idx)=>({
     id:String(i.id||('di'+(Date.now()+idx))),
@@ -1408,6 +1443,35 @@ function addPerson(tier,name){
   renderAll();sched();
 }
 function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);D.dirty.add('people');D.dirty.add('tasks');renderAll();sched();}
+
+function openPersonEdit(id, tierKey){
+  const p=(D.people[tierKey]||[]).find(p=>p.id==id);
+  if(!p)return;
+  D._editingPersonId=id;
+  D._editingPersonTier=tierKey;
+  const defaultCadence=tierKey==='social_family'?7:14;
+  document.getElementById('pe-name').value=p.name||'';
+  document.getElementById('pe-cadence').value=Number(p.cadenceDays)>0?p.cadenceDays:defaultCadence;
+  document.getElementById('pe-cadence').placeholder=`default ${defaultCadence}`;
+  document.getElementById('pe-default-note').textContent=`Default for ${tierKey==='social_family'?'family':'friends'}: every ${defaultCadence}d`;
+  document.getElementById('person-edit-modal').classList.remove('hide');
+}
+function savePersonEdit(){
+  const pid=D._editingPersonId;
+  const tier=D._editingPersonTier;
+  const p=(D.people[tier]||[]).find(p=>p.id==pid);
+  if(!p){closeModal('person-edit-modal');return;}
+  const newName=document.getElementById('pe-name').value.trim();
+  const cadenceVal=Number(document.getElementById('pe-cadence').value)||0;
+  if(newName) p.name=newName;
+  if(cadenceVal>0) p.cadenceDays=cadenceVal;
+  else delete p.cadenceDays;
+  D.dirty.add('people');
+  closeModal('person-edit-modal');
+  D.selectedPersonId=null;
+  renderAll();sched();
+  toast('Updated');
+}
 let _contactType='text';
 function openContactModal(id,tier){
   const p=(D.people[tier]||[]).find(p=>p.id==id);if(!p)return;
@@ -1419,6 +1483,7 @@ function openContactModal(id,tier){
     (p.lastContact?'last: '+fmtDate(p.lastContact):'no contact logged')+
     (recentLogs.length?'<br><small style="color:var(--t3)">'+recentLogs.map(l=>l.type+(l.note?' — '+l.note:'')).join(' · ')+'</small>':'');
   document.getElementById('contact-note').value='';
+  document.getElementById('contact-date').value=TODAY_ISO;
   renderExtraPeople();
   document.getElementById('contact-add-person-btn').style.display='none';
   document.querySelectorAll('[data-ctype]').forEach(b=>{
@@ -1480,6 +1545,7 @@ function confirmContact(){
   const p=(D.people[D.pendingContactTier]||[]).find(p=>p.id==D.pendingContactId);
   if(!p)return;
   const note=document.getElementById('contact-note')?.value.trim()||'';
+  const contactDate=document.getElementById('contact-date')?.value||TODAY_ISO;
   
   // Build full list of people: primary + extras
   const allTargets=[{id:p.id,tier:D.pendingContactTier,person:p}];
@@ -1493,20 +1559,25 @@ function confirmContact(){
     const isFamily=tier==='social_family';
     const baseXP={text:xp('contact_text'),call:xp('contact_call'),hangout:xp('contact_hangout')}[_contactType]||xp('contact_text');
     const personXP=isFamily?Math.round(baseXP*xp('contact_family_mult')):baseXP;
-    person.lastContact=TODAY_ISO;
+    // Only bump lastContact if contactDate is newer than current
+    if(!person.lastContact||contactDate>person.lastContact) person.lastContact=contactDate;
     if(!D.contactLog)D.contactLog=[];
-    D.contactLog.push({id:D.nextId++,personId:person.id,personName:person.name,type:_contactType,note,date:TODAY_ISO,xp:personXP});
+    D.contactLog.push({id:D.nextId++,personId:person.id,personName:person.name,type:_contactType,note,date:contactDate,xp:personXP});
     totalAwarded+=personXP;
   });
   
   addXP(totalAwarded);markActive();
-  D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+allTargets.length;
-  D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalAwarded;
+  // Only count toward this week if the contact date is in this week
+  if(contactDate>=WEEK_START){
+    D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+allTargets.length;
+    D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalAwarded;
+  }
   D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
   checkWeekBadges();renderAll();sched();
   const em={text:'💬',call:'📞',hangout:'🤝'};
   const groupSuffix=allTargets.length>1?' ('+allTargets.length+' people)':'';
-  toast((em[_contactType]||'👥')+' Logged'+groupSuffix+' +'+totalAwarded+' XP');
+  const dateSuffix=contactDate!==TODAY_ISO?' on '+fmtDate(contactDate):'';
+  toast((em[_contactType]||'👥')+' Logged'+groupSuffix+dateSuffix+' +'+totalAwarded+' XP');
   closeModal('contact-modal');
 }
 function deleteContactLog(id){
@@ -1635,6 +1706,42 @@ function confirmRelAct(){
   renderAll();sched();
   toast('💕 Nice! +'+totalXP+' XP'+(pp>0?' +'+pp+' PP ⚡':''));fireConfetti();
   closeModal('rel-modal');
+}
+
+// ── Balance Targets ───────────────────────────────────────────────────────────
+function openBalanceTargets(){
+  const SECTIONS=[
+    {key:'paige',label:'💕 Paige'},
+    {key:'work',label:'💼 Work'},
+    {key:'community_family',label:'👨‍👩‍👧 Family'},
+    {key:'community_friends',label:'👥 Friends'},
+    {key:'health',label:'🏃 Health'},
+    {key:'chores',label:'🏠 Chores'},
+    {key:'personal',label:'✦ Personal'},
+  ];
+  const body=document.getElementById('balance-targets-body');
+  body.innerHTML=SECTIONS.map(s=>{
+    const v=D.sectionTargets&&D.sectionTargets[s.key]?D.sectionTargets[s.key]:'';
+    return`<div style="display:flex;align-items:center;gap:10px"><label style="flex:1;font-size:13px">${s.label}</label><input class="inp" type="number" min="0" placeholder="auto" data-sectarget="${s.key}" value="${v}" style="width:90px;text-align:right"/><span style="font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;width:24px">XP</span></div>`;
+  }).join('');
+  document.getElementById('balance-targets-save').onclick=saveBalanceTargets;
+  document.getElementById('balance-targets-modal').classList.remove('hide');
+}
+function saveBalanceTargets(){
+  const inputs=document.querySelectorAll('[data-sectarget]');
+  if(!D.sectionTargets)D.sectionTargets={};
+  if(!D.xpValues)D.xpValues={};
+  inputs.forEach(inp=>{
+    const sec=inp.dataset.sectarget;
+    const v=Number(inp.value)||0;
+    D.sectionTargets[sec]=v;
+    if(v>0) D.xpValues['section_target_'+sec]=v;
+    else delete D.xpValues['section_target_'+sec];
+  });
+  D.dirty.add('xpValues');
+  closeModal('balance-targets-modal');
+  renderAll();sched();
+  toast('Targets saved');
 }
 
 // ── Date Ideas ────────────────────────────────────────────────────────────────
@@ -2018,7 +2125,8 @@ function addListItem(name,text){
   const list=name==='shopping'?'shoppingList':'groceryList';
   if(!D[list])D[list]=[];
   D[list].push({id:'li'+D.nextId++,text:text.trim(),done:false,addedAt:TODAY_ISO});
-  D.dirty.add(list);rHome();sched();
+  D.dirty.add(list);
+  renderAll();sched();
   haptic('light');
 }
 function toggleListItem(name,id){
@@ -2028,7 +2136,7 @@ function toggleListItem(name,id){
   item.done=!item.done;
   if(item.done){haptic('success');addXP(xp('list_item_done'));D.dirty.add('gamification');}
   else haptic('light');
-  D.dirty.add(list);rHome();sched();
+  D.dirty.add(list);renderAll();sched();
 }
 function toggleStaple(name,id){
   const list=name==='shopping'?'shoppingList':'groceryList';
@@ -2046,7 +2154,7 @@ function toggleDoneSection(name){
 function deleteListItem(name,id){
   const list=name==='shopping'?'shoppingList':'groceryList';
   D[list]=D[list].filter(i=>i.id!=id);
-  D.dirty.add(list);rHome();sched();
+  D.dirty.add(list);renderAll();sched();
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -2275,10 +2383,133 @@ function rHome(){
     </div>
   </div>`;
 
+  // Balance card — section breakdown of this week's XP + behind-pace callouts
+  const SECTION_DEFS=[
+    {key:'paige',label:'Paige',emoji:'💕',color:'var(--cpaige)'},
+    {key:'work',label:'Work',emoji:'💼',color:'var(--cwork)'},
+    {key:'community_family',label:'Family',emoji:'👨‍👩‍👧',color:'var(--ccommunity)'},
+    {key:'community_friends',label:'Friends',emoji:'👥',color:'var(--ccommunity)'},
+    {key:'health',label:'Health',emoji:'🏃',color:'var(--chealth)'},
+    {key:'chores',label:'Chores',emoji:'🏠',color:'var(--cchores)'},
+    {key:'personal',label:'Personal',emoji:'✦',color:'var(--cpersonal)'},
+  ];
+  
+  // XP earned this week per section (from task xpValue+PP, choreLog xp, contactLog xp filtered by section)
+  const wkXPBySec={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
+  D.tasks.filter(t=>t.done&&t.completedAt>=WEEK_START).forEach(t=>{
+    const sec=t.section||'personal';
+    if(sec in wkXPBySec) wkXPBySec[sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+  });
+  (D.choreLog||[]).filter(l=>l.date>=WEEK_START).forEach(l=>{
+    wkXPBySec.chores+=(Number(l.xpEarned)||0);
+  });
+  (D.contactLog||[]).filter(l=>l.date>=WEEK_START).forEach(l=>{
+    const isFam=(D.people.social_family||[]).some(p=>p.id==l.personId);
+    const k=isFam?'community_family':'community_friends';
+    wkXPBySec[k]+=(Number(l.xp)||0);
+  });
+  (D.activities||[]).filter(a=>a.date>=WEEK_START).forEach(a=>{
+    if(a.xp!==undefined&&a.xp!==null&&a.xp!=='') wkXPBySec.health+=Number(a.xp)||0;
+    else { const t=String(a.type||''); wkXPBySec.health+=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout'); }
+  });
+  const wkXPTotal=Object.values(wkXPBySec).reduce((s,v)=>s+v,0);
+  
+  // Historical baseline: avg XP/week per section over last 4 weeks (from D.weeklyStats if available)
+  // Fallback: derive from sheet data going back
+  const histWeeks={};
+  D.tasks.filter(t=>t.done&&t.completedAt).forEach(t=>{
+    const ws=getWeekStart(new Date(t.completedAt+'T12:00:00'));
+    if(ws===WEEK_START)return; // exclude this week
+    if(!histWeeks[ws])histWeeks[ws]={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
+    const sec=t.section||'personal';
+    if(sec in histWeeks[ws]) histWeeks[ws][sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+  });
+  (D.choreLog||[]).forEach(l=>{
+    if(!l.date)return;
+    const ws=getWeekStart(new Date(l.date+'T12:00:00'));
+    if(ws===WEEK_START)return;
+    if(!histWeeks[ws])histWeeks[ws]={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
+    histWeeks[ws].chores+=(Number(l.xpEarned)||0);
+  });
+  (D.contactLog||[]).forEach(l=>{
+    if(!l.date)return;
+    const ws=getWeekStart(new Date(l.date+'T12:00:00'));
+    if(ws===WEEK_START)return;
+    if(!histWeeks[ws])histWeeks[ws]={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
+    const isFam=(D.people.social_family||[]).some(p=>p.id==l.personId);
+    histWeeks[ws][isFam?'community_family':'community_friends']+=(Number(l.xp)||0);
+  });
+  const recentWeekStarts=Object.keys(histWeeks).sort().reverse().slice(0,4);
+  const baselineBySec={};
+  SECTION_DEFS.forEach(s=>{
+    if(recentWeekStarts.length<2){baselineBySec[s.key]=null;return;}
+    const sum=recentWeekStarts.reduce((a,ws)=>a+(histWeeks[ws][s.key]||0),0);
+    baselineBySec[s.key]=sum/recentWeekStarts.length;
+  });
+  
+  // Days elapsed in this week (1=Monday)
+  const _bal_td=new Date();
+  const _bal_d=_bal_td.getDay();
+  const dayOfWeek=_bal_d===0?7:_bal_d; // Sun=7, Mon=1...
+  const weekProgress=dayOfWeek/7; // fraction of week elapsed
+  
+  // Compute pace status per section
+  const paceBySec={};
+  SECTION_DEFS.forEach(s=>{
+    const target=D.sectionTargets&&Number(D.sectionTargets[s.key])>0?Number(D.sectionTargets[s.key]):null;
+    const baseline=baselineBySec[s.key];
+    const reference=target!==null?target:baseline; // user target overrides baseline
+    if(reference===null||reference<10){paceBySec[s.key]={status:'neutral',expected:null,reference,source:target?'target':'baseline'};return;}
+    const expected=reference*weekProgress;
+    const actual=wkXPBySec[s.key];
+    const ratio=expected>0?actual/expected:1;
+    let status='neutral';
+    if(ratio>=0.95) status='ahead';
+    else if(ratio<0.75) status='behind';
+    paceBySec[s.key]={status,expected:Math.round(expected),actual,ratio,reference:Math.round(reference),source:target?'target':'baseline'};
+  });
+  
+  // Build the balance bar
+  let balanceBar='';
+  if(wkXPTotal>0){
+    SECTION_DEFS.forEach(s=>{
+      const pct=wkXPBySec[s.key]/wkXPTotal*100;
+      if(pct<0.5)return;
+      balanceBar+=`<div title="${s.label}: ${Math.round(pct)}%" style="height:100%;width:${pct}%;background:${s.color}"></div>`;
+    });
+  }
+  
+  // Build behind-pace list
+  const behindList=SECTION_DEFS.filter(s=>paceBySec[s.key].status==='behind').sort((a,b)=>paceBySec[a.key].ratio-paceBySec[b.key].ratio);
+  const ahead=SECTION_DEFS.filter(s=>paceBySec[s.key].status==='ahead');
+  const heavySec=wkXPTotal>0?SECTION_DEFS.find(s=>wkXPBySec[s.key]/wkXPTotal>0.5):null;
+  
+  // Find under-indexed sections by % of week (anything <5% AND has any history is potentially under-indexed)
+  
+  html+=`<div class="sec" style="background:var(--surface);padding:14px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:14px">⚖️</span>
+      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);text-transform:uppercase;letter-spacing:0.05em">Balance</span>
+      <span style="flex:1"></span>
+      <button class="abtn" style="opacity:1;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);padding:2px 8px;border-radius:6px;background:var(--bg)" id="balance-settings">targets</button>
+    </div>
+    ${wkXPTotal>0?`<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border);margin-bottom:6px">${balanceBar}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);margin-bottom:10px">${SECTION_DEFS.filter(s=>wkXPBySec[s.key]>0).map(s=>{const pct=Math.round(wkXPBySec[s.key]/wkXPTotal*100);return`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block"></span>${s.emoji}<span>${pct}%</span></span>`;}).join('')}</div>`:'<div class="emsg" style="padding:6px;text-align:center;font-size:11px">No XP this week yet</div>'}
+    ${behindList.length?`<div style="padding:8px 10px;background:#FEF3C7;border-radius:var(--r2);margin-bottom:6px">
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:#92400E;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">behind pace</div>
+      ${behindList.map(s=>{const p=paceBySec[s.key];return`<div style="font-size:12px;color:#78350F;display:flex;justify-content:space-between;padding:2px 0"><span>${s.emoji} ${s.label}</span><span style="font-family:'DM Mono',monospace;font-size:10px">${Math.round((1-p.ratio)*100)}% behind · ${p.source==='target'?'vs target':'vs avg'}</span></div>`;}).join('')}
+    </div>`:''}
+    ${heavySec?`<div style="padding:8px 10px;background:#F0F9FF;border-radius:var(--r2);margin-bottom:6px">
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:#0C4A6E;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.05em">heavy week</div>
+      <div style="font-size:12px;color:#0369A1">${heavySec.emoji} ${heavySec.label} is ${Math.round(wkXPBySec[heavySec.key]/wkXPTotal*100)}% of this week's XP</div>
+    </div>`:''}
+    ${!behindList.length&&!heavySec&&wkXPTotal>0?`<div style="font-size:11px;color:var(--t3);font-family:'DM Mono',monospace;text-align:center;padding:4px">✓ balanced week</div>`:''}
+  </div>`;
+
   // summary cards
   html+=`<div class="sum-grid">
-    ${scCard('💕','Paige','var(--cpaige)','paige',{all:D.relActs.filter(r=>freshObj(r).overdue).length,done:D.relActs.filter(r=>!freshObj(r).overdue).length,over:0},'')}
-    ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'')}
+    ${scCard('💕','Paige','var(--cpaige)','paige',{all:D.relActs.filter(r=>freshObj(r).overdue).length,done:D.relActs.filter(r=>!freshObj(r).overdue).length,over:0},'',paceBySec.paige?paceBySec.paige.status:null)}
+    ${scCard('💼','Work','var(--cwork)','work',secStat('work'),'',paceBySec.work?paceBySec.work.status:null)}
     ${(()=>{
       const wkLogs=(D.contactLog||[]).filter(l=>l.date>=WEEK_START);
       const distinctIds=new Set(wkLogs.map(l=>l.personId));
@@ -2289,11 +2520,15 @@ function rHome(){
       const famPct=fam.length?Math.round(famHit/fam.length*100):0;
       const friPct=fri.length?Math.round(friHit/fri.length*100):0;
       const sub=`${distinctIds.size} connects · ${famPct}% fam · ${friPct}% fri`;
-      return scCard('👥','Community','var(--ccommunity)','community',{all:fam.length+fri.length,done:distinctIds.size,over:0},sub);
+      // Use the worse of family/friends pace for community card
+      const famStat=paceBySec.community_family?paceBySec.community_family.status:null;
+      const friStat=paceBySec.community_friends?paceBySec.community_friends.status:null;
+      const commPace=(famStat==='behind'||friStat==='behind')?'behind':(famStat==='ahead'&&friStat==='ahead')?'ahead':null;
+      return scCard('👥','Community','var(--ccommunity)','community',{all:fam.length+fri.length,done:distinctIds.size,over:0},sub,commPace);
     })()}
-    <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
-    ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions')}
-    ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved')}
+    <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div>${paceBySec.chores&&paceBySec.chores.status!=='neutral'?`<div style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:${paceBySec.chores.status==='ahead'?'#16A34A':'#F59E0B'}"></div>`:''}<div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
+    ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions',paceBySec.health?paceBySec.health.status:null)}
+    ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved',paceBySec.personal?paceBySec.personal.status:null)}
   </div>`;
 
   // Badges
@@ -2452,9 +2687,11 @@ function rHome(){
 
   document.getElementById('home-content').innerHTML=html;
 }
-function scCard(icon,name,color,tab,stat,extra){
+function scCard(icon,name,color,tab,stat,extra,pace){
   const pct=stat.all?Math.round(stat.done/stat.all*100):0;
-  return`<div class="sc" onclick="switchTab('${tab}')"><div class="sc-accent" style="background:${color}"></div><div class="sc-icon">${icon}</div><div class="sc-lbl">${name}</div><div class="sc-big">${stat.all-stat.done>0?stat.all-stat.done:stat.done}</div><div class="sc-sub">${stat.done} done${extra?' · '+extra:''}</div>${stat.over?`<div class="sc-over">${stat.over} overdue</div>`:''}<div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+  const dotColor=pace==='ahead'?'#16A34A':pace==='behind'?'#F59E0B':'transparent';
+  const dotTitle=pace==='ahead'?'at or above pace':pace==='behind'?'behind pace':'';
+  return`<div class="sc" onclick="switchTab('${tab}')"><div class="sc-accent" style="background:${color}"></div><div class="sc-icon">${icon}</div>${dotColor!=='transparent'?`<div title="${dotTitle}" style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:${dotColor}"></div>`:''}<div class="sc-lbl">${name}</div><div class="sc-big">${stat.all-stat.done>0?stat.all-stat.done:stat.done}</div><div class="sc-sub">${stat.done} done${extra?' · '+extra:''}</div>${stat.over?`<div class="sc-over">${stat.over} overdue</div>`:''}<div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
 }
 
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
@@ -2920,6 +3157,39 @@ function getLast7Inbox(){
 }
 
 // ── COMMUNITY ─────────────────────────────────────────────────────────────────
+// Compute health bar status for a person.
+// Returns: {pct: 0-100, color: hex/var, label: string, daysSince: number, cadence: number}
+// pct: 100 = just contacted, 0 = at cadence boundary (overdue past that)
+// Family default: 7 days. Friends default: 14 days. Each person can override with cadenceDays.
+function getPersonHealth(p, tier){
+  const defaultCadence = tier==='social_family' ? 7 : 14;
+  const cadence = Number(p.cadenceDays) > 0 ? Number(p.cadenceDays) : defaultCadence;
+  if(!p.lastContact){
+    return {pct:0, color:'var(--t3)', label:'never logged', daysSince:null, cadence, overdue:false, neverLogged:true};
+  }
+  const last = new Date(p.lastContact+'T12:00:00');
+  const now = new Date();
+  const daysSince = Math.max(0, Math.round((now - last) / 86400000));
+  const ratio = daysSince / cadence; // 0 = fresh, 1 = at cadence, >1 = overdue
+  const pct = Math.max(0, Math.min(100, Math.round((1 - ratio) * 100)));
+  const overdue = ratio > 1;
+  let color, label;
+  if(overdue){
+    color = '#DC2626';
+    label = (daysSince - cadence) + 'd overdue';
+  } else if(pct >= 75){
+    color = 'var(--chealth)';
+    label = daysSince === 0 ? 'today' : daysSince + 'd ago';
+  } else if(pct >= 25){
+    color = 'var(--t2)';
+    label = daysSince + 'd ago';
+  } else {
+    color = '#F59E0B';
+    label = daysSince + 'd ago · running low';
+  }
+  return {pct, color, label, daysSince, cadence, overdue, neverLogged:false};
+}
+
 function rCommunity(){
   // Derive lastContact from contactLog as source of truth
   const lastContactMap={};
@@ -2939,8 +3209,7 @@ function rCommunity(){
       }
     });
   });
-  if(driftFixed){D.dirty.add('people');console.log('[debug] reconciled lastContact from contactLog');}
-  const tier=D.communityTier;
+  if(driftFixed){D.dirty.add('people');console.log('[debug] reconciled lastContact from contactLog');}const tier=D.communityTier;
   const key='social_'+tier;
   const ppl=D.people[key]||[];
   const secKey='community_'+tier;
@@ -3000,7 +3269,7 @@ function rCommunity(){
   html+=`<div class="tier-tabs"><button class="tier-tab ${tier==='family'?'active':''}" data-tier="family">👨‍👩‍👧 Family</button><button class="tier-tab ${tier==='friends'?'active':''}" data-tier="friends">👥 Friends</button></div>`;
 
   html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">${tier==='family'?'👨‍👩‍👧':'👥'}</span><div class="sec-name">${tier==='family'?'Family':'Friends'}</div><span class="sbadge sn">${ppl.length} people</span>${tier==='friends'?`<button class="abtn" style="opacity:1;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);margin-left:auto;padding:3px 8px;border-radius:6px;background:${D._reorderingFriends?'var(--ccommunity)':'var(--bg)'};color:${D._reorderingFriends?'#fff':'var(--t2)'}" id="reorder-friends">${D._reorderingFriends?'done':'reorder'}</button>`:''}</div>
-    <div class="pbar">${!ppl.length?'<span class="emsg" style="padding:0">add people below</span>':''}${ppl.map((p,idx)=>{const f=p.lastContact?freshObj({lastDone:p.lastContact,intervalDays:tier==='family'?7:14}):null;const showReorder=tier==='friends'&&D._reorderingFriends;return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer" data-contact="${p.id}" data-ctier="${key}">${showReorder?`<div style="display:flex;gap:2px;margin-bottom:1px"><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="up:${idx}" ${idx===0?'disabled style="opacity:0.3"':''}>↑</button><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="down:${idx}" ${idx===ppl.length-1?'disabled style="opacity:0.3"':''}>↓</button></div>`:''}<div class="pchip">${escH(p.name)}<span class="cdel" data-dp="${p.id}" data-tier="${key}">✕</span></div>${f?`<span style="font-size:9px;font-family:'DM Mono',monospace;color:${f.color}">${f.pct<0?'overdue':f.label}</span>`:''}</div>`;}).join('')}</div>
+    <div class="pbar" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;padding:8px 4px">${!ppl.length?'<span class="emsg" style="padding:0;grid-column:1/-1">add people below</span>':''}${ppl.map((p,idx)=>{const showReorder=tier==='friends'&&D._reorderingFriends;const h=getPersonHealth(p,key);const isSelP=D.selectedPersonId==p.id;return`<div class="pcell${isSelP?' pcell-selected':''}" style="display:flex;flex-direction:column;align-items:stretch;gap:4px;cursor:pointer;padding:6px;border-radius:8px;${isSelP?'background:#FEF3C7;outline:1.5px solid #F59E0B;outline-offset:-1px':''}" data-contact="${p.id}" data-ctier="${key}">${showReorder?`<div style="display:flex;gap:2px;justify-content:center;margin-bottom:1px"><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="up:${idx}" ${idx===0?'disabled style="opacity:0.3"':''}>↑</button><button class="abtn" style="opacity:1;font-size:10px;padding:1px 4px;color:var(--t2)" data-personmove="down:${idx}" ${idx===ppl.length-1?'disabled style="opacity:0.3"':''}>↓</button></div>`:''}<div style="display:flex;align-items:center;justify-content:space-between;gap:4px"><span style="font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(p.name)}</span>${isSelP?`<button class="abtn" style="opacity:1;font-size:10px;padding:1px 3px;color:var(--t2)" data-personedit="${p.id}:${key}">✏️</button><button class="abtn" style="opacity:1;font-size:10px;padding:1px 3px;color:#DC2626" data-dp="${p.id}" data-tier="${key}">✕</button>`:''}</div><div style="height:4px;border-radius:2px;background:var(--border);overflow:hidden"><div style="height:100%;width:${h.pct}%;background:${h.color};transition:width 0.3s"></div></div><div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-family:'DM Mono',monospace;color:${h.color}"><span>${h.label}</span><span style="color:var(--t3)">${h.cadence}d</span></div></div>`;}).join('')}</div>
     <div class="apr"><input class="inp f1" id="pi-${key}" placeholder="Add a person..."/><button class="bsm" data-ap="${key}">+ Add</button></div>
     <div class="div"></div>
     <div class="tlist">
@@ -3036,8 +3305,7 @@ function rCommunity(){
   document.getElementById('inbox-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')setInboxCount();});
   document.querySelectorAll('.tier-tab').forEach(b=>b.addEventListener('click',()=>{D.communityTier=b.dataset.tier;rCommunity();}));
   document.querySelectorAll('[data-ap]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.ap;const i=document.getElementById('pi-'+k);if(i?.value.trim()){addPerson(k,i.value);i.value='';}}));
-  document.querySelectorAll('[data-dp]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();delPerson(el.dataset.tier,el.dataset.dp);}));
-  document.querySelectorAll('[data-contact]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-dp]'))return;openContactModal(el.dataset.contact,el.dataset.ctier);}));
+  // data-dp delete and data-contact tap handled by delegated listener (supports tap-to-select)
   document.querySelectorAll('.apr .inp').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector(`[data-ap="${i.id.replace('pi-','')}"]`)?.click();}));
   // Wire community add button to tier-specific section
   const commAddBtn=document.getElementById('comm-add-btn');
@@ -3363,6 +3631,9 @@ document.getElementById('main').addEventListener('click', function(e){
   // Edit task
   const edit = e.target.closest('[data-edit]');
   if(edit){ openEditTask(edit.dataset.edit); return; }
+  // Balance targets modal
+  const balanceSettings = e.target.closest('#balance-settings');
+  if(balanceSettings){ openBalanceTargets(); return; }
   // Paige date select (tap to reveal edit/del)
   const pdSelect = e.target.closest('[data-pdselect]');
   if(pdSelect && !e.target.closest('[data-pdedit],[data-pddel]')){
@@ -3375,6 +3646,14 @@ document.getElementById('main').addEventListener('click', function(e){
   // Life tab switching (goals/health/personal)
   const lifeTab = e.target.closest('[data-lifetab]');
   if(lifeTab){ D.lifeTab=lifeTab.dataset.lifetab; rLife(); return; }
+  // Person edit (cadence)
+  const personEdit = e.target.closest('[data-personedit]');
+  if(personEdit){
+    e.stopPropagation();
+    const [pid,tierKey]=personEdit.dataset.personedit.split(':');
+    openPersonEdit(pid, tierKey);
+    return;
+  }
   // Friends reorder mode
   const reorderBtn = e.target.closest('#reorder-friends');
   if(reorderBtn){ D._reorderingFriends=!D._reorderingFriends; rCommunity(); return; }
@@ -3614,7 +3893,20 @@ document.getElementById('main').addEventListener('click', function(e){
   if(delnote){ e.stopPropagation(); D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
   // Contact log
   const contact = e.target.closest('[data-contact]');
-  if(contact && !e.target.closest('[data-dp]')){ openContactModal(contact.dataset.contact, contact.dataset.ctier); return; }
+  if(contact && !e.target.closest('[data-dp],[data-personedit],[data-personmove]')){
+    const pid=contact.dataset.contact;
+    const ptier=contact.dataset.ctier;
+    if(D.selectedPersonId==pid){
+      // Second tap → open contact modal
+      D.selectedPersonId=null;
+      openContactModal(pid, ptier);
+    } else {
+      // First tap → select (reveals pencil + delete)
+      D.selectedPersonId=pid;
+      rCommunity();
+    }
+    return;
+  }
   // Contact log delete
   const cldel = e.target.closest('[data-cldel]');
   if(cldel){ e.stopPropagation(); deleteContactLog(cldel.dataset.cldel); return; }
