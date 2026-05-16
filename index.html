@@ -2272,6 +2272,39 @@ function rHome(){
   
   const g=D.gamification;const lvlIdx=getLevelIdx(g.xp);const lvl=LEVELS[lvlIdx];
   const pct=xpPct(g.xp);const w=D.weekSummary;
+  
+  // Pre-compute weekly XP totals for prior weeks (for comparison + balance)
+  const _wkTotals={};
+  const _addToWk=(date,xp)=>{if(!date)return;const ws=getWeekStart(new Date(date+'T12:00:00'));if(ws===WEEK_START)return;_wkTotals[ws]=(_wkTotals[ws]||0)+(Number(xp)||0);};
+  D.tasks.filter(t=>t.done&&t.completedAt).forEach(t=>_addToWk(t.completedAt,(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0)));
+  (D.choreLog||[]).forEach(l=>_addToWk(l.date,l.xpEarned));
+  (D.contactLog||[]).forEach(l=>_addToWk(l.date,l.xp));
+  (D.activities||[]).forEach(a=>{
+    if(!a.date)return;
+    const ws=getWeekStart(new Date(a.date+'T12:00:00'));
+    if(ws===WEEK_START)return;
+    let xpVal=Number(a.xp)||0;
+    if(!xpVal){const t=String(a.type||'');xpVal=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');}
+    _wkTotals[ws]=(_wkTotals[ws]||0)+xpVal;
+  });
+  const _lastWkKey=Object.keys(_wkTotals).sort().reverse()[0];
+  const _lastWkTotal=_lastWkKey?Math.round(_wkTotals[_lastWkKey]):null;
+  const _recentWks=Object.keys(_wkTotals).sort().reverse().slice(0,4);
+  const _avgWkTotal=_recentWks.length>=2?Math.round(_recentWks.reduce((a,ws)=>a+_wkTotals[ws],0)/_recentWks.length):null;
+  const _thisWkXP=w.xpEarned||0;
+  
+  // Build comparison text
+  const _cmpParts=[];
+  if(_lastWkTotal!==null){
+    const diff=_thisWkXP-_lastWkTotal;
+    const arrow=diff>0?'▲':diff<0?'▼':'·';
+    const color=diff>=0?'var(--chealth)':'#DC2626';
+    _cmpParts.push(`<span style="color:${color}">${arrow}${Math.abs(diff).toLocaleString()}</span> <span style="color:var(--t3)">vs last wk</span>`);
+  }
+  if(_avgWkTotal!==null){
+    _cmpParts.push(`<span style="color:var(--t3)">avg ${_avgWkTotal.toLocaleString()}</span>`);
+  }
+  const _cmpHtml=_cmpParts.length?`<div style="font-size:9px;font-family:'DM Mono',monospace;margin-top:3px;text-align:right">${_cmpParts.join(' · ')}</div>`:'';
   const active=D.tasks.filter(t=>!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR));
   const doneTasks=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
   const overdue=active.filter(t=>isOverdue(t.dueDate));
@@ -2288,6 +2321,7 @@ function rHome(){
       <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);font-weight:500">${(w.xpEarned||0).toLocaleString()} XP</span>
     </div>
     <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:3px;text-align:right">this week · ⚡ ${w.proactivePoints||0} PP</div>
+    ${_cmpHtml}
   </div>`;
 
   if(g.streakDays>=2){html+=`<div class="streak-card"><div class="streak-ic">${g.streakDays>=30?'💫':g.streakDays>=7?'🔥':'⚡'}</div><div class="streak-info"><h3>${g.streakDays}-day streak</h3><p>don't break the chain</p><span class="streak-best">best: ${g.bestStreak} days</span></div></div>`;}
@@ -2400,6 +2434,12 @@ function rHome(){
     const sec=t.section||'personal';
     if(sec in wkXPBySec) wkXPBySec[sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
   });
+  // Rel-acts done this week count toward Paige
+  D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).forEach(r=>{
+    wkXPBySec.paige+=xp('relact_base');
+    // approximate: proactive bonus often applies; account for it if it was applied at completion
+    // (we don't have the per-act PP stored historically, so this is just the base)
+  });
   (D.choreLog||[]).filter(l=>l.date>=WEEK_START).forEach(l=>{
     wkXPBySec.chores+=(Number(l.xpEarned)||0);
   });
@@ -2447,6 +2487,17 @@ function rHome(){
     baselineBySec[s.key]=sum/recentWeekStarts.length;
   });
   
+  // Total XP per historical week (for week-over-week comparison)
+  const histWeekTotals={};
+  Object.entries(histWeeks).forEach(([ws,bySec])=>{
+    histWeekTotals[ws]=Object.values(bySec).reduce((s,v)=>s+v,0);
+  });
+  // Last full week's total
+  const lastWeekKey=Object.keys(histWeekTotals).sort().reverse()[0];
+  const lastWeekTotal=lastWeekKey?Math.round(histWeekTotals[lastWeekKey]):null;
+  // Avg of recent weeks
+  const avgWeekTotal=recentWeekStarts.length>=2?Math.round(recentWeekStarts.reduce((a,ws)=>a+histWeekTotals[ws],0)/recentWeekStarts.length):null;
+  
   // Days elapsed in this week (1=Monday)
   const _bal_td=new Date();
   const _bal_d=_bal_td.getDay();
@@ -2493,7 +2544,9 @@ function rHome(){
       <span style="flex:1"></span>
       <button class="abtn" style="opacity:1;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);padding:2px 8px;border-radius:6px;background:var(--bg)" id="balance-settings">targets</button>
     </div>
-    ${wkXPTotal>0?`<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border);margin-bottom:6px">${balanceBar}</div>
+    ${wkXPTotal>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:10px;font-family:'DM Mono',monospace"><span style="color:var(--t2)">total this week</span><span style="color:var(--text);font-weight:500">${wkXPTotal.toLocaleString()} XP</span></div>
+    <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border);margin-bottom:4px">${balanceBar}</div>
+    ${_cmpHtml.replace('text-align:right','text-align:right;margin-bottom:8px')}
     <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);margin-bottom:10px">${SECTION_DEFS.filter(s=>wkXPBySec[s.key]>0).map(s=>{const pct=Math.round(wkXPBySec[s.key]/wkXPTotal*100);return`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block"></span>${s.emoji}<span>${pct}%</span></span>`;}).join('')}</div>`:'<div class="emsg" style="padding:6px;text-align:center;font-size:11px">No XP this week yet</div>'}
     ${behindList.length?`<div style="padding:8px 10px;background:#FEF3C7;border-radius:var(--r2);margin-bottom:6px">
       <div style="font-size:10px;font-family:'DM Mono',monospace;color:#92400E;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">behind pace</div>
@@ -2564,7 +2617,8 @@ function rHome(){
   const wkView=D.weekView||'open';
   const wkChores=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const wkContacts=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const completedAny=doneTasks.length||wkChores.length||wkContacts.length;
+  const wkRelActsCount=D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).length;
+  const completedAny=doneTasks.length||wkChores.length||wkContacts.length||wkRelActsCount;
   const sectionEmoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',community:'👥'};
   const wkViewBtn=(key,label,count)=>`<button data-weekview="${key}" style="flex:1;padding:8px 4px;border:none;border-bottom:${wkView===key?'2px solid var(--text)':'2px solid transparent'};background:transparent;color:${wkView===key?'var(--text)':'var(--t3)'};font-size:11px;font-family:'DM Mono',monospace;font-weight:${wkView===key?'500':'400'};cursor:pointer">${label} <span style="opacity:0.6">(${count})</span></button>`;
   
@@ -2572,7 +2626,7 @@ function rHome(){
     <div class="sec-hd"><span class="sec-ic">📆</span><div class="sec-name">This week</div></div>
     <div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px">
       ${wkViewBtn('open','Open',scheduledTasks.length)}
-      ${wkViewBtn('completed','Completed',doneTasks.length+wkChores.length+wkContacts.length)}
+      ${wkViewBtn('completed','Completed',doneTasks.length+wkRelActsCount+wkChores.length+wkContacts.length)}
     </div>`;
   
   if(wkView==='open'){
@@ -2619,13 +2673,25 @@ function rHome(){
     };
     let body='';
     if(tab==='tasks'){
-      if(!doneTasks.length) body='<div class="emsg" style="padding:14px;text-align:center">No completed tasks this week</div>';
-      else groupByDate(doneTasks,'completedAt').forEach(grp=>{
+      // Combine completed tasks + rel-acts done this week (rel-acts count toward Paige)
+      const wkRelActs=D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).map(r=>({
+        id:'rel-'+r.id,
+        text:'💝 '+r.name,
+        section:'paige',
+        completedAt:r.lastDone,
+        xpValue:xp('relact_base'),
+        proactivePoints:0,
+        _isRelAct:true,
+      }));
+      const allDone=[...doneTasks,...wkRelActs];
+      if(!allDone.length) body='<div class="emsg" style="padding:14px;text-align:center">No completed tasks this week</div>';
+      else groupByDate(allDone,'completedAt').forEach(grp=>{
         body+='<div style="margin-bottom:6px">'+dayHeader(grp.date,grp.items.length);
         grp.items.forEach(t=>{
           const taskXP=Number(t.xpValue)||0;
           const totalEarned=taskXP+(Number(t.proactivePoints)||0);
-          body+=`<div class="trow done-r" style="margin-bottom:2px;cursor:pointer" data-completed-edit="${t.id}"><div class="chk ck" data-chk="${t.id}"></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div><div class="tmeta"><span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${sectionEmoji[t.section]||'·'} ${t.section.replace('community_','')}</span>${totalEarned>0?`<span class="tpp" style="color:var(--xp)">+${totalEarned} XP</span>`:''}${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints} PP ⚡</span>`:''}${t.notes?`<span style="font-size:9px;color:var(--t3);font-style:italic">📝</span>`:''}</div></div></div>`;
+          const editAttr=t._isRelAct?'':` data-completed-edit="${t.id}"`;
+          body+=`<div class="trow done-r" style="margin-bottom:2px;cursor:${t._isRelAct?'default':'pointer'}"${editAttr}><div class="chk ck"${t._isRelAct?'':` data-chk="${t.id}"`}></div><div class="tbody"><div class="ttxt">${escH(t.text)}</div><div class="tmeta"><span style="font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--bg)">${sectionEmoji[t.section]||'·'} ${t.section.replace('community_','')}${t._isRelAct?' · rel act':''}</span>${totalEarned>0?`<span class="tpp" style="color:var(--xp)">+${totalEarned} XP</span>`:''}${t.proactivePoints>0?`<span class="tpp">+${t.proactivePoints} PP ⚡</span>`:''}${t.notes?`<span style="font-size:9px;color:var(--t3);font-style:italic">📝</span>`:''}</div></div></div>`;
         });
         body+='</div>';
       });
@@ -2656,7 +2722,7 @@ function rHome(){
     }
     const tabBtn=(key,label,count)=>`<button data-completed-tab="${key}" style="flex:1;padding:6px 4px;border:none;border-bottom:${tab===key?'1.5px solid var(--text)':'1.5px solid transparent'};background:transparent;color:${tab===key?'var(--text)':'var(--t3)'};font-size:10px;font-family:'DM Mono',monospace;font-weight:${tab===key?'500':'400'};cursor:pointer">${label} <span style="opacity:0.6">(${count})</span></button>`;
     html+=`<div style="display:flex;border-bottom:0.5px solid var(--border);margin-bottom:6px;background:var(--bg)">
-        ${tabBtn('tasks','Tasks',doneTasks.length)}
+        ${tabBtn('tasks','Tasks',doneTasks.length+wkRelActsCount)}
         ${tabBtn('chores','Chores',wkChores.length)}
         ${tabBtn('contacts','Contacts',wkContacts.length)}
       </div>
@@ -3165,7 +3231,7 @@ function getPersonHealth(p, tier){
   const defaultCadence = tier==='social_family' ? 7 : 14;
   const cadence = Number(p.cadenceDays) > 0 ? Number(p.cadenceDays) : defaultCadence;
   if(!p.lastContact){
-    return {pct:0, color:'var(--t3)', label:'never logged', daysSince:null, cadence, overdue:false, neverLogged:true};
+    return {pct:0, color:'#DC2626', label:'never logged', daysSince:null, cadence, overdue:false, neverLogged:true};
   }
   const last = new Date(p.lastContact+'T12:00:00');
   const now = new Date();
@@ -3175,17 +3241,17 @@ function getPersonHealth(p, tier){
   const overdue = ratio > 1;
   let color, label;
   if(overdue){
-    color = '#DC2626';
+    color = '#DC2626'; // red — overdue
     label = (daysSince - cadence) + 'd overdue';
-  } else if(pct >= 75){
-    color = 'var(--chealth)';
+  } else if(pct >= 95){
+    color = 'var(--chealth)'; // green — basically just contacted (within ~5% of cadence)
     label = daysSince === 0 ? 'today' : daysSince + 'd ago';
   } else if(pct >= 25){
-    color = 'var(--t2)';
+    color = '#F59E0B'; // yellow — not full, in middle range
     label = daysSince + 'd ago';
   } else {
-    color = '#F59E0B';
-    label = daysSince + 'd ago · running low';
+    color = '#DC2626'; // red — at risk (close to cadence boundary)
+    label = daysSince + 'd ago · at risk';
   }
   return {pct, color, label, daysSince, cadence, overdue, neverLogged:false};
 }
