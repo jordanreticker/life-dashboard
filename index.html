@@ -446,6 +446,16 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn mcancel" onclick="closeModal('paige-date-modal')">Cancel</button>
 </div></div>
 
+<div class="mback hide" id="journal-edit-modal"><div class="modal">
+  <h3>Edit entry</h3>
+  <div class="modal-sub" id="je-date" style="margin-bottom:10px;font-size:11px;color:var(--t3);font-family:'DM Mono',monospace"></div>
+  <div class="mood-row" id="je-mood-row" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
+  <input class="inp" id="je-title" placeholder="Title (optional)" style="width:100%;margin-bottom:6px;font-weight:500"/>
+  <textarea class="inp" id="je-text" style="width:100%;min-height:140px;resize:vertical;margin-bottom:10px"></textarea>
+  <button class="mbtn" onclick="saveJournalEdit()" style="background:var(--text);color:#fff;border:none">Save</button>
+  <button class="mbtn mcancel" onclick="closeModal('journal-edit-modal')">Cancel</button>
+</div></div>
+
 <div class="mback hide" id="person-edit-modal"><div class="modal">
   <h3>Edit person</h3>
   <div style="margin-bottom:10px">
@@ -742,7 +752,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,selectedPersonId:null,sectionTargets:{},
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,selectedPersonId:null,sectionTargets:{},expandedContacts:{},expandedJournalId:null,
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -984,6 +994,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('xpValues'))   payload.xpValues    = D.xpValues;
   if(D.dirty.has('paigeAnswers'))payload.paigeAnswers= D.paigeAnswers;
   if(D.dirty.has('dateIdeas'))   payload.dateIdeas   = D.dateIdeas;
+  if(D.dirty.has('journal'))     payload.journal     = D.journal;
   if(D.dirty.has('journalLock'))payload.journalLockHash = D.journalLockHash;
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
@@ -1440,7 +1451,9 @@ function addPerson(tier,name){
   if(!name.trim())return;
   if(!D.people[tier])D.people[tier]=[];
   D.people[tier].push({id:'p'+D.nextId++,name:name.trim(),tier,lastContact:null});
+  D.dirty.add('people');
   renderAll();sched();
+  toast('+ Added '+name.trim());
 }
 function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);D.dirty.add('people');D.dirty.add('tasks');renderAll();sched();}
 
@@ -1938,11 +1951,48 @@ function deleteFin(id){D.finances=D.finances.filter(f=>f.id!=id);D.dirty.add('fi
 // ── Journal ───────────────────────────────────────────────────────────────────
 async function submitJournal(){
   const txt=document.getElementById('jtext').value.trim();if(!txt)return;
-  const entry={id:D.nextId++,date:TODAY_ISO,text:txt,mood:D.selectedMood};
+  const title=document.getElementById('jtitle')?.value.trim()||'';
+  const entry={id:D.nextId++,date:TODAY_ISO,text:txt,mood:D.selectedMood,title};
   D.journal.unshift(entry);
-  try{await fetch(API,{method:'POST',body:JSON.stringify({action:'addJournal',...entry})});}catch(e){}
-  document.getElementById('jtext').value='';D.selectedMood='';
+  D.dirty.add('journal');
+  document.getElementById('jtext').value='';
+  if(document.getElementById('jtitle')) document.getElementById('jtitle').value='';
+  D.selectedMood='';
   const jeXP=xp('journal_entry');addXP(jeXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+jeXP;D.dirty.add('gamification');D.dirty.add('weekSummary');renderAll();sched();toast('Saved +'+jeXP+' XP');
+}
+
+function openJournalEdit(id){
+  const e=D.journal.find(j=>String(j.id)===String(id));
+  if(!e)return;
+  D._editingJournalId=id;
+  D._editingJournalMood=e.mood||'';
+  document.getElementById('je-date').textContent=fmtDate(e.date);
+  document.getElementById('je-title').value=e.title||'';
+  document.getElementById('je-text').value=e.text||'';
+  // Render mood selector
+  const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲','😎','🤯','😌','🥹','🙏','💪','🌱','🔥'];
+  document.getElementById('je-mood-row').innerHTML=MOODS.map(m=>`<button class="moodbtn ${D._editingJournalMood===m?'sel':''}" data-jemood="${m}">${m}</button>`).join('');
+  document.getElementById('journal-edit-modal').classList.remove('hide');
+}
+function saveJournalEdit(){
+  const id=D._editingJournalId;
+  const e=D.journal.find(j=>String(j.id)===String(id));
+  if(!e){closeModal('journal-edit-modal');return;}
+  e.title=document.getElementById('je-title').value.trim();
+  e.text=document.getElementById('je-text').value.trim();
+  e.mood=D._editingJournalMood||e.mood;
+  D.dirty.add('journal');
+  closeModal('journal-edit-modal');
+  D.expandedJournalId=null;
+  renderAll();sched();
+  toast('Updated');
+}
+function deleteJournalEntry(id){
+  if(!confirm('Delete this entry? This cannot be undone.'))return;
+  D.journal=D.journal.filter(j=>String(j.id)!==String(id));
+  D.dirty.add('journal');
+  D.expandedJournalId=null;
+  renderAll();sched();
 }
 
 // ── Day result (7-game series) ────────────────────────────────────────────────
@@ -2739,6 +2789,38 @@ function rHome(){
     <div class="badges-grid">${PERM_BADGES.map(b=>{const earned=D.gamification.badges.includes(b.id);return`<div class="badge-card ${earned?'earned':'badge-locked'}"><div class="badge-ic">${b.emoji}</div><div class="badge-name">${b.label}</div><div class="badge-desc">${escH(b.desc)}</div></div>`;}).join('')}</div>
   </div>`;
 
+  // Last week summary card — between badges and all-time
+  if(_lastWkKey){
+    const lwStart=new Date(_lastWkKey+'T12:00:00');
+    const lwEnd=new Date(lwStart);lwEnd.setDate(lwStart.getDate()+6);
+    const lwRangeLabel=lwStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+lwEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const lwTasksDone=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===_lastWkKey).length;
+    const lwChoresDone=(D.choreLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===_lastWkKey).length;
+    const lwContacts=(D.contactLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===_lastWkKey).length;
+    const lwActivities=(D.activities||[]).filter(a=>a.date&&getWeekStart(new Date(a.date+'T12:00:00'))===_lastWkKey).length;
+    const lwPP=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===_lastWkKey).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0)+(D.choreLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===_lastWkKey).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
+    const lwTopSec=(()=>{
+      const tot={};
+      D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===_lastWkKey).forEach(t=>{const k=t.section||'personal';tot[k]=(tot[k]||0)+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);});
+      const entries=Object.entries(tot).sort((a,b)=>b[1]-a[1]);
+      if(!entries.length)return null;
+      const semoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥'};
+      return semoji[entries[0][0]]+' '+entries[0][0].replace('community_','')+' ('+entries[0][1].toLocaleString()+' XP)';
+    })();
+    _badgesAndAlltime+=`<div class="alltime-card" style="margin-bottom:10px">
+      <div class="week-title" style="margin-bottom:8px;display:flex;align-items:baseline;gap:8px">Last week<span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);font-weight:400">${lwRangeLabel}</span></div>
+      <div class="alltime-grid">
+        <div class="at-stat"><div class="at-n">${_lastWkTotal.toLocaleString()}</div><div class="at-l">XP earned</div></div>
+        <div class="at-stat"><div class="at-n">${lwTasksDone}</div><div class="at-l">tasks</div></div>
+        <div class="at-stat"><div class="at-n">${lwChoresDone}</div><div class="at-l">chores</div></div>
+        <div class="at-stat"><div class="at-n">${lwContacts}</div><div class="at-l">contacts</div></div>
+        <div class="at-stat"><div class="at-n">${lwActivities}</div><div class="at-l">activities</div></div>
+        <div class="at-stat"><div class="at-n pp">${lwPP}</div><div class="at-l">PP ⚡</div></div>
+      </div>
+      ${lwTopSec?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;text-align:center">heaviest area: ${lwTopSec}</div>`:''}
+    </div>`;
+  }
+
   _badgesAndAlltime+=`<div class="alltime-card"><div class="week-title" style="margin-bottom:10px">All-time stats</div>
     <div class="alltime-grid">
       <div class="at-stat"><div class="at-n">${g.allTimeTasksDone}</div><div class="at-l">tasks done</div></div>
@@ -3341,15 +3423,19 @@ function rCommunity(){
     <div class="tlist">
       ${ppl.map(p=>{
         const pt=grp[p.id]||[];
-        const logs=(D.contactLog||[]).filter(l=>l.personId==p.id).slice(-3).reverse();
-        const logHtml=logs.length?`<div style="margin:4px 0 6px;display:flex;flex-direction:column;gap:3px">
-          ${logs.map(l=>`<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 0">
+        const allLogs=(D.contactLog||[]).filter(l=>l.personId==p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const expanded=D.expandedContacts && D.expandedContacts[p.id];
+        const shownLogs=expanded?allLogs:allLogs.slice(0,1);
+        const hasMore=allLogs.length>1;
+        const logHtml=allLogs.length?`<div style="margin:4px 0 6px;display:flex;flex-direction:column;gap:3px">
+          ${shownLogs.map(l=>`<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 0">
             <span>${{text:'💬',call:'📞',hangout:'🤝'}[l.type]||'👥'}</span>
             <span style="color:var(--t2)">${fmtDate(l.date)}</span>
             ${l.note?`<span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(l.note)}</span>`:'<span style="flex:1"></span>'}
             <span style="color:var(--xp)">+${l.xp}</span>
             <button class="abtn del" style="opacity:1;font-size:9px;padding:2px 4px" data-cldel="${l.id}">✕</button>
           </div>`).join('')}
+          ${hasMore?`<button class="abtn" style="opacity:1;font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 4px;text-align:left;background:transparent;border:none" data-toggle-contacts="${p.id}">${expanded?'▲ show less':'▼ show '+(allLogs.length-1)+' more'}</button>`:''}
         </div>`:'';
         return`<div><div class="plbl-row"><span class="plbl">${escH(p.name)}</span></div>${logHtml}${pt.map(t=>trow(t)).join('')}</div>`;
       }).join('')}
@@ -3507,7 +3593,7 @@ function rLife(){
   const expenses=D.finances.filter(f=>f.type==='expense').reduce((s,f)=>s+f.amount,0);
   const income=D.finances.filter(f=>f.type==='income').reduce((s,f)=>s+f.amount,0);
   const savings=D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+f.amount,0);
-  const MOODS=['😊','😐','😔','😤','😴','🤩'];
+  const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲','😎','🤯','😌','🥹','🙏','💪','🌱','🔥'];
   const prompts=D.selectedMood?MOOD_PROMPTS[D.selectedMood]:[];
 
   let html='';
@@ -3594,6 +3680,7 @@ function rLife(){
   <div class="sec"><div class="sec-hd"><span class="sec-ic">✏️</span><div class="sec-name">Today's entry</div></div>
     <div class="jform"><div class="mood-row">${MOODS.map(m=>`<button class="moodbtn ${D.selectedMood===m?'sel':''}" data-mood="${m}">${m}</button>`).join('')}</div>
     ${prompts.length?`<div class="mood-prompts">${prompts.map(p=>'• '+p).join('<br>')}</div>`:''}
+    <input class="inp" id="jtitle" placeholder="Title (optional)" style="width:100%;margin-bottom:6px;font-weight:500"/>
     <textarea class="jta" id="jtext" placeholder="${D.selectedMood?'Write your thoughts...':'Pick a mood, then write...'}" oninput="document.getElementById('jword-count').textContent=this.value.trim().split(/\s+/).filter(Boolean).length+' words'"></textarea>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3)">
       <span id="jword-count">0 words</span>
@@ -3612,7 +3699,18 @@ function rLife(){
       if(lockSet&&!journalUnlocked){
         pastHtml+='<div style="padding:14px 8px;text-align:center"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">🔒 Journal entries are locked</div><input type="password" class="inp" id="journal-pw" placeholder="Password" style="width:160px;text-align:center;margin-bottom:8px"/><button class="badd" id="journal-unlock" style="display:block;margin:0 auto">Unlock</button><div style="font-size:9px;color:var(--t3);font-family:\'DM Mono\',monospace;margin-top:10px">forgot? remove via clear button when unlocked</div></div>';
       } else {
-        pastHtml+='<div class="jentries">'+D.journal.slice(0,15).map(e=>'<div class="jentry"><div class="jeheader"><span class="jemood">'+(e.mood||'')+'</span><span class="jedate">'+fmtDate(e.date)+'</span></div><div class="jetxt">'+escH(e.text)+'</div></div>').join('');
+        pastHtml+='<div class="jentries">'+D.journal.slice(0,15).map(e=>{
+          const isExp=D.expandedJournalId==e.id;
+          return '<div class="jentry" data-jentryid="'+escH(String(e.id))+'">'
+            +'<div class="jeheader" style="display:flex;align-items:center;gap:6px;cursor:pointer" data-jexpand="'+escH(String(e.id))+'">'
+            +'<span class="jemood">'+(e.mood||'')+'</span>'
+            +(e.title?'<span style="font-weight:500;flex:1">'+escH(e.title)+'</span>':'<span style="flex:1;color:var(--t3);font-style:italic">untitled</span>')
+            +'<span class="jedate">'+fmtDate(e.date)+'</span>'
+            +(isExp?'<button class="abtn" style="opacity:1;font-size:11px" data-jedit="'+escH(String(e.id))+'">✏️</button><button class="abtn del" style="opacity:1;font-size:11px" data-jdel="'+escH(String(e.id))+'">✕</button>':'')
+            +'</div>'
+            +'<div class="jetxt">'+escH(e.text)+'</div>'
+            +'</div>';
+        }).join('');
         if(!lockSet){
           pastHtml+='<div style="padding:8px;text-align:center;border-top:0.5px solid var(--border);margin-top:6px"><button class="abtn" id="journal-set-lock" style="opacity:1;font-size:11px;color:var(--t2)">🔒 Set password</button></div>';
         } else {
@@ -3973,9 +4071,41 @@ document.getElementById('main').addEventListener('click', function(e){
     }
     return;
   }
+  // Journal: expand entry header to reveal edit/delete
+  const jexpand = e.target.closest('[data-jexpand]');
+  if(jexpand){
+    e.stopPropagation();
+    const id=jexpand.dataset.jexpand;
+    D.expandedJournalId=(String(D.expandedJournalId)===String(id))?null:id;
+    rLife();
+    return;
+  }
+  const jedit = e.target.closest('[data-jedit]');
+  if(jedit){ e.stopPropagation(); openJournalEdit(jedit.dataset.jedit); return; }
+  const jdel = e.target.closest('[data-jdel]');
+  if(jdel){ e.stopPropagation(); deleteJournalEntry(jdel.dataset.jdel); return; }
+  const jemood = e.target.closest('[data-jemood]');
+  if(jemood){
+    e.stopPropagation();
+    D._editingJournalMood=jemood.dataset.jemood;
+    // Refresh just the mood row
+    const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲','😎','🤯','😌','🥹','🙏','💪','🌱','🔥'];
+    document.getElementById('je-mood-row').innerHTML=MOODS.map(m=>`<button class="moodbtn ${D._editingJournalMood===m?'sel':''}" data-jemood="${m}">${m}</button>`).join('');
+    return;
+  }
   // Contact log delete
   const cldel = e.target.closest('[data-cldel]');
   if(cldel){ e.stopPropagation(); deleteContactLog(cldel.dataset.cldel); return; }
+  // Toggle expand/collapse contact log for a person
+  const toggleContacts = e.target.closest('[data-toggle-contacts]');
+  if(toggleContacts){
+    e.stopPropagation();
+    if(!D.expandedContacts) D.expandedContacts={};
+    const pid=toggleContacts.dataset.toggleContacts;
+    D.expandedContacts[pid]=!D.expandedContacts[pid];
+    rCommunity();
+    return;
+  }
   // Delete person
   const dp = e.target.closest('[data-dp]');
   if(dp){ e.stopPropagation(); delPerson(dp.dataset.tier||dp.dataset.sec, dp.dataset.dp); return; }
