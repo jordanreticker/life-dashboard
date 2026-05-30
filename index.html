@@ -939,11 +939,13 @@ async function loadData(){
   }
   // ── Stage 1: Load from localStorage cache for instant render ──
   let cacheUsed=false;
+  let cacheTs=0;
   try{
     const cached=localStorage.getItem('jrdr-cache-v2');
     if(cached){
       const parsed=JSON.parse(cached);
       if(parsed&&parsed.data){
+        cacheTs=Number(parsed.ts)||0;
         applyData(parsed.data);
         rHome(); // render home immediately from cache
         setSync('syncing','refreshing');
@@ -956,8 +958,18 @@ async function loadData(){
   try{
     const res=await fetch(API+'?action=getData');
     const data=await res.json();
-    applyData(data);
-    try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
+    // PROTECTION: if local cache was written within last 60s, prefer it
+    // (avoids stale server data overwriting recent local changes)
+    const cacheRecent = cacheTs > 0 && (Date.now() - cacheTs) < 60000;
+    const hasDirty = D.dirty && D.dirty.size > 0;
+    if(!cacheRecent && !hasDirty){
+      applyData(data);
+      try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
+    } else {
+      // Still apply, but our dirty/cache protection kicks in (applyData skips dirty keys)
+      applyData(data);
+      // Don't overwrite the local cache that has our recent edits
+    }
     setSync('synced','synced');
   }catch(e){setSync('error','offline');}
   // Render home now (full data); other tabs lazy-render on tab switch
@@ -1031,7 +1043,25 @@ async function saveAll(retryCount){
     }
   }
 }
-function sched(){clearTimeout(D.saveTimer);D.saveTimer=setTimeout(saveAll,1200);}
+// Save debounce: 300ms feels immediate but still batches rapid changes
+function sched(){
+  // Write local cache IMMEDIATELY so refresh always shows latest state — don't wait for server
+  try{
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
+  }catch(e){}
+  clearTimeout(D.saveTimer);
+  D.saveTimer=setTimeout(saveAll,300);
+}
+// For critical actions (add, mark done), call schedNow to fire instantly
+function schedNow(){
+  try{
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
+  }catch(e){}
+  clearTimeout(D.saveTimer);
+  saveAll();
+}
 async function saveChoresNow(){
   try{
     const res=await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',chores:D.chores})});
@@ -3351,7 +3381,8 @@ function rCommunity(){
   ['social_family','social_friends','work'].forEach(t=>{
     (D.people[t]||[]).forEach(p=>{
       const fromLog=lastContactMap[p.id];
-      if(fromLog && fromLog!==p.lastContact){
+      // Only update if log date is newer than what's stored (don't overwrite with stale slim data)
+      if(fromLog && (!p.lastContact || fromLog>p.lastContact)){
         p.lastContact=fromLog;
         driftFixed=true;
       }
