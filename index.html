@@ -1877,13 +1877,37 @@ function openDayDetail(iso){
   chores.forEach(l=>dayXP+=(Number(l.xpEarned)||0));
   contacts.forEach(l=>dayXP+=(Number(l.xp)||0));
   acts.forEach(a=>{if(a.xp)dayXP+=Number(a.xp)||0;else{const t=String(a.type||'');dayXP+=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');}});
+  // Compute running series score: W-L through this day, within the same week
+  let runningSeries='';
+  if(result){
+    const wkStart=getWeekStart(d);
+    const weekResults=(D.dayResults||[]).filter(r=>r.date>=wkStart&&r.date<=iso&&r.result);
+    const wkWins=weekResults.filter(r=>r.result==='win').length;
+    const wkLosses=weekResults.filter(r=>r.result==='loss').length;
+    runningSeries=`series this week (through this day): ${wkWins}-${wkLosses}`;
+  }
   let html='';
   // Summary header
   html+=`<div style="display:flex;gap:12px;margin-bottom:14px;padding:10px;background:var(--bg);border-radius:8px">
     <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:600;font-family:'DM Mono',monospace;color:var(--xp)">${dayXP.toLocaleString()}</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">XP</div></div>
-    ${result?`<div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:600;color:${result.outcome==='win'?'#16A34A':result.outcome==='loss'?'#DC2626':'var(--t3)'}">${result.outcome==='win'?'W':result.outcome==='loss'?'L':'·'}</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">series</div></div>`:''}
-    ${result&&result.notes?`<div style="flex:2;font-size:11px;color:var(--t2);font-style:italic;align-self:center">${escH(result.notes)}</div>`:''}
+    ${result&&result.result?`<div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:600;color:${result.result==='win'?'#16A34A':result.result==='loss'?'#DC2626':'var(--t3)'}">${result.result==='win'?'W':result.result==='loss'?'L':'·'}</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">day result</div></div>`:''}
   </div>`;
+  if(runningSeries){html+=`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);text-align:center;margin-bottom:12px">${runningSeries}</div>`;}
+  // 3 stats and notes from dayResults
+  if(result){
+    const stats=[];
+    if(result.stat1)stats.push({n:1,t:result.stat1});
+    if(result.stat2)stats.push({n:2,t:result.stat2});
+    if(result.stat3)stats.push({n:3,t:result.stat3});
+    if(stats.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">3 reasons</div>';
+      stats.forEach(s=>{html+=`<div style="display:flex;gap:8px;padding:5px 0;font-size:12px;line-height:1.4"><span style="color:var(--t3);font-family:'DM Mono',monospace;flex-shrink:0">${s.n}.</span><span style="flex:1">${escH(s.t)}</span></div>`;});
+      html+='</div>';
+    }
+    if(result.notes){
+      html+=`<div style="margin-bottom:12px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:2px solid var(--cpaige)"><div style="font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:4px">notes</div><div style="font-size:12px;color:var(--t2);font-style:italic;line-height:1.4">${escH(result.notes)}</div></div>`;
+    }
+  }
   if(!tasks.length&&!chores.length&&!contacts.length&&!acts.length&&!journals.length){
     html+='<div class="emsg" style="padding:16px;text-align:center">nothing logged this day</div>';
   } else {
@@ -3006,7 +3030,7 @@ function rHome(){
       return semoji[entries[0][0]]+' '+entries[0][0].replace('community_','')+' ('+entries[0][1].toLocaleString()+' XP)';
     })();
     
-    // Per-day breakdown
+    // Per-day breakdown with running series score
     const dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
     const dayResults=D.dayResults||[];
     let wins=0, losses=0;
@@ -3017,7 +3041,7 @@ function rHome(){
       const chores=(D.choreLog||[]).filter(l=>l.date===iso);
       const contacts=(D.contactLog||[]).filter(l=>l.date===iso);
       const acts=(D.activities||[]).filter(a=>a.date===iso);
-      const xp=tasks.reduce((s,t)=>s+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0),0)
+      const xpDay=tasks.reduce((s,t)=>s+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0),0)
         +chores.reduce((s,l)=>s+(Number(l.xpEarned)||0),0)
         +contacts.reduce((s,l)=>s+(Number(l.xp)||0),0)
         +acts.reduce((s,a)=>{
@@ -3025,8 +3049,10 @@ function rHome(){
           const t=String(a.type||'');return s+((t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout'));
         },0);
       const result=dayResults.find(r=>r.date===iso);
-      if(result){if(result.outcome==='win')wins++;else if(result.outcome==='loss')losses++;}
-      return {label:dl,iso,xp:Math.round(xp),tasks:tasks.length,chores:chores.length,contacts:contacts.length,acts:acts.length,result};
+      if(result){if(result.result==='win')wins++;else if(result.result==='loss')losses++;}
+      // Running series score AFTER this day
+      const runningSeries=`${wins}-${losses}`;
+      return {label:dl,iso,xp:Math.round(xpDay),tasks:tasks.length,chores:chores.length,contacts:contacts.length,acts:acts.length,result,runningSeries};
     });
     
     _badgesAndAlltime+=`<div class="alltime-card" style="margin-bottom:10px">
@@ -3055,8 +3081,8 @@ function rHome(){
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
           ${days.map(d=>{
             const isEmpty=!d.xp&&!d.tasks&&!d.chores&&!d.contacts&&!d.acts&&!d.result;
-            const resColor=d.result?d.result.outcome==='win'?'#16A34A':d.result.outcome==='loss'?'#DC2626':'var(--t3)':'transparent';
-            const resChar=d.result?d.result.outcome==='win'?'W':d.result.outcome==='loss'?'L':'·':'';
+            const resColor=d.result?d.result.result==='win'?'#16A34A':d.result.result==='loss'?'#DC2626':'var(--t3)':'transparent';
+            const resChar=d.result?d.result.result==='win'?'W':d.result.result==='loss'?'L':'·':'';
             return `<div data-daydetail="${d.iso}" style="text-align:center;padding:5px 2px;border-radius:6px;background:${isEmpty?'transparent':'var(--bg)'};border:0.5px solid ${isEmpty?'transparent':'var(--border)'};${isEmpty?'':'cursor:pointer'}">
               <div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">${d.label}</div>
               <div style="font-size:11px;font-weight:600;color:${isEmpty?'var(--t3)':'var(--text)'};font-family:'DM Mono',monospace;margin:1px 0">${d.xp||'—'}</div>
@@ -3066,7 +3092,7 @@ function rHome(){
                 ${d.contacts?`<span title="${d.contacts} contacts">👥${d.contacts}</span>`:''}
                 ${d.acts?`<span title="${d.acts} activities">🏃${d.acts}</span>`:''}
               </div>
-              ${d.result?`<div style="font-size:10px;font-weight:600;color:${resColor};font-family:'DM Mono',monospace;margin-top:2px">${resChar}</div>`:''}
+              ${d.result&&d.result.result?`<div style="display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px"><span style="font-size:10px;font-weight:600;color:${resColor};font-family:'DM Mono',monospace">${resChar}</span><span style="font-size:8px;color:var(--t3);font-family:'DM Mono',monospace">${d.runningSeries}</span></div>`:''}
             </div>`;
           }).join('')}
         </div>
@@ -3801,6 +3827,7 @@ function rCommunity(){
         const expanded=D.expandedContacts && D.expandedContacts[p.id];
         const shownLogs=expanded?allLogs:allLogs.slice(0,1);
         const hasMore=allLogs.length>1;
+        const h=getPersonHealth(p, key);
         const logHtml=allLogs.length?`<div style="margin:4px 0 6px;display:flex;flex-direction:column;gap:3px">
           ${shownLogs.map(l=>`<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 0">
             <span>${{text:'💬',call:'📞',hangout:'🤝'}[l.type]||'👥'}</span>
@@ -3811,9 +3838,18 @@ function rCommunity(){
           </div>`).join('')}
           ${hasMore?`<button class="abtn" style="opacity:1;font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);padding:2px 4px;text-align:left;background:transparent;border:none" data-toggle-contacts="${p.id}">${expanded?'▲ show less':'▼ show '+(allLogs.length-1)+' more'}</button>`:''}
         </div>`:'';
-        return`<div><div class="plbl-row"><span class="plbl">${escH(p.name)}</span></div>${logHtml}${pt.map(t=>trow(t)).join('')}</div>`;
+        return`<div style="margin-bottom:8px">
+          <div class="plbl-row" style="display:flex;align-items:center;gap:8px">
+            <span class="plbl" style="font-weight:600;font-size:13px;color:var(--text)">${escH(p.name)}</span>
+            <div style="flex:1;display:flex;align-items:center;gap:6px;min-width:0">
+              <div style="height:4px;width:42px;border-radius:2px;background:var(--border);overflow:hidden;flex-shrink:0"><div style="height:100%;width:${h.pct}%;background:${h.color}"></div></div>
+              <span style="font-size:9px;font-family:'DM Mono',monospace;color:${h.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.label}</span>
+            </div>
+          </div>
+          ${logHtml}${pt.map(t=>trow(t)).join('')}
+        </div>`;
       }).join('')}
-      ${grp['__'].length?`<div><div class="plbl-row"><span class="plbl">general</span></div>${grp['__'].map(t=>trow(t)).join('')}</div>`:''}
+      ${grp['__'].length?`<div><div class="plbl-row"><span class="plbl" style="font-weight:600;font-size:13px;color:var(--t2)">general</span></div>${grp['__'].map(t=>trow(t)).join('')}</div>`:''}
       ${!tasks.length&&!ppl.length?'<div class="emsg">add people above then tasks below</div>':''}
       ${doneTasks.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${doneTasks.map(t=>trow(t)).join('')}`:''}</div>
     <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-community" placeholder="Add a task..."/><button class="badd" id="comm-add-btn">Add</button></div>
