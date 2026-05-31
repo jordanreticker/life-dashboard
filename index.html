@@ -958,18 +958,10 @@ async function loadData(){
   try{
     const res=await fetch(API+'?action=getData');
     const data=await res.json();
-    // PROTECTION: if local cache was written within last 60s, prefer it
-    // (avoids stale server data overwriting recent local changes)
-    const cacheRecent = cacheTs > 0 && (Date.now() - cacheTs) < 60000;
-    const hasDirty = D.dirty && D.dirty.size > 0;
-    if(!cacheRecent && !hasDirty){
-      applyData(data);
-      try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
-    } else {
-      // Still apply, but our dirty/cache protection kicks in (applyData skips dirty keys)
-      applyData(data);
-      // Don't overwrite the local cache that has our recent edits
-    }
+    // Always apply server data. applyData internally skips any keys in D.dirty
+    // (so unsaved local edits aren't overwritten). Server is authoritative otherwise.
+    applyData(data);
+    try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
     setSync('synced','synced');
   }catch(e){setSync('error','offline');}
   // Render home now (full data); other tabs lazy-render on tab switch
@@ -1521,10 +1513,25 @@ function openContactModal(id,tier){
   D.pendingContactId=id;D.pendingContactTier=tier;_contactType='text';
   D._extraContactIds=[]; // additional people for group hangouts
   document.getElementById('contact-title').textContent='Log contact · '+p.name;
-  const recentLogs=(D.contactLog||[]).filter(l=>l.personId==id).slice(-3);
-  document.getElementById('contact-sub').innerHTML=
-    (p.lastContact?'last: '+fmtDate(p.lastContact):'no contact logged')+
-    (recentLogs.length?'<br><small style="color:var(--t3)">'+recentLogs.map(l=>l.type+(l.note?' — '+l.note:'')).join(' · ')+'</small>':'');
+  // Recent contacts: clean stacked list, last 3 most recent
+  const recentLogs=(D.contactLog||[]).filter(l=>l.personId==id).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,3);
+  const typeEmoji={text:'💬',call:'📞',hangout:'🤝'};
+  let subHtml='';
+  if(p.lastContact){
+    const h=getPersonHealth(p, D.pendingContactTier);
+    subHtml+=`<div style="font-size:11px;color:${h.color};font-family:'DM Mono',monospace;margin-bottom:6px">last: ${fmtDate(p.lastContact)} · ${h.label}</div>`;
+  } else {
+    subHtml+='<div style="font-size:11px;color:var(--t3);font-family:\'DM Mono\',monospace;margin-bottom:6px">no contact logged yet</div>';
+  }
+  if(recentLogs.length){
+    subHtml+='<div style="background:var(--bg);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:3px">';
+    subHtml+=recentLogs.map(l=>{
+      const noteSnip=l.note?(l.note.length>40?l.note.slice(0,38)+'…':l.note):'';
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);font-family:'DM Mono',monospace"><span>${typeEmoji[l.type]||'·'}</span><span style="color:var(--t3);min-width:48px">${fmtDate(l.date)}</span>${noteSnip?`<span style="color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(noteSnip)}</span>`:''}</div>`;
+    }).join('');
+    subHtml+='</div>';
+  }
+  document.getElementById('contact-sub').innerHTML=subHtml;
   document.getElementById('contact-note').value='';
   document.getElementById('contact-date').value=TODAY_ISO;
   renderExtraPeople();
@@ -1830,8 +1837,9 @@ function renderDateIdeaModalStars(){
 }
 function saveDateIdeaDone(){
   const id=D._editingDateIdea;
-  const idea=(D.dateIdeas||[]).find(i=>i.id==id);
-  if(!idea){closeModal('dateidea-modal');return;}
+  if(!id){toast('No idea selected');closeModal('dateidea-modal');return;}
+  const idea=(D.dateIdeas||[]).find(i=>String(i.id)===String(id));
+  if(!idea){toast('Idea not found');closeModal('dateidea-modal');return;}
   idea.date=document.getElementById('dateidea-date').value||TODAY_ISO;
   idea.notes=document.getElementById('dateidea-notes').value.trim();
   idea.finalRating=Number(D._dateIdeaModalRating)||0;
@@ -2000,8 +2008,12 @@ function openJournalEdit(id){
   document.getElementById('je-title').value=e.title||'';
   document.getElementById('je-text').value=e.text||'';
   // Render mood selector
-  const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲','😎','🤯','😌','🥹','🙏','💪','🌱','🔥'];
-  document.getElementById('je-mood-row').innerHTML=MOODS.map(m=>`<button class="moodbtn ${D._editingJournalMood===m?'sel':''}" data-jemood="${m}">${m}</button>`).join('');
+  const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲'];
+  const cur=D._editingJournalMood||'';
+  const isCustom=cur&&!MOODS.includes(cur);
+  let mh=MOODS.map(m=>`<button class="moodbtn ${cur===m?'sel':''}" data-jemood="${m}">${m}</button>`).join('');
+  mh+=`<button class="moodbtn ${isCustom?'sel':''}" style="font-size:13px;padding:8px 10px;font-family:'DM Mono',monospace;color:var(--t2)" onclick="(()=>{const e=prompt('Type or paste an emoji:');if(e&&e.trim()){D._editingJournalMood=e.trim();const MOODS2=['😊','😐','😔','😤','😴','🤩','😍','🥲'];const isC=!MOODS2.includes(D._editingJournalMood);document.getElementById('je-mood-row').innerHTML=MOODS2.map(m=>'<button class=\\'moodbtn '+(D._editingJournalMood===m?'sel':'')+'\\' data-jemood=\\''+m+'\\'>'+m+'</button>').join('')+'<button class=\\'moodbtn '+(isC?'sel':'')+'\\' style=\\'font-size:13px;padding:8px 10px;font-family:DM Mono,monospace;color:var(--t2)\\' onclick=\\'arguments[0].stopPropagation()\\'>+ custom: '+D._editingJournalMood+'</button>';}})()">+ custom${isCustom?': '+cur:''}</button>`;
+  document.getElementById('je-mood-row').innerHTML=mh;
   document.getElementById('journal-edit-modal').classList.remove('hide');
 }
 function saveJournalEdit(){
@@ -3343,7 +3355,7 @@ function getPersonHealth(p, tier){
   const defaultCadence = tier==='social_family' ? 7 : 14;
   const cadence = Number(p.cadenceDays) > 0 ? Number(p.cadenceDays) : defaultCadence;
   if(!p.lastContact){
-    return {pct:0, color:'#DC2626', label:'never logged', daysSince:null, cadence, overdue:false, neverLogged:true};
+    return {pct:0, color:'#991B1B', label:'never logged', daysSince:null, cadence, overdue:false, neverLogged:true};
   }
   const last = new Date(p.lastContact+'T12:00:00');
   const now = new Date();
@@ -3351,18 +3363,45 @@ function getPersonHealth(p, tier){
   const ratio = daysSince / cadence; // 0 = fresh, 1 = at cadence, >1 = overdue
   const pct = Math.max(0, Math.min(100, Math.round((1 - ratio) * 100)));
   const overdue = ratio > 1;
+  
+  // Color gradient based on ratio: bright green → faded green → yellow → bright orange → faded red → dark red
+  // ratio 0.0–0.3 = bright green to faded green
+  // ratio 0.3–0.55 = green-yellow blend
+  // ratio 0.55–0.8 = bright orange
+  // ratio 0.8–1.0 = faded red
+  // ratio > 1.0   = dark red
   let color, label;
   if(overdue){
-    color = '#DC2626'; // red — overdue
+    // Cap at ratio=2 for color saturation purposes
+    const overRatio = Math.min((ratio - 1) / 1, 1);
+    // Dark red, darkens further the more overdue
+    const lightness = Math.round(35 - overRatio * 10); // 35% → 25%
+    color = `hsl(0, 75%, ${lightness}%)`;
     label = (daysSince - cadence) + 'd overdue';
-  } else if(pct >= 95){
-    color = 'var(--chealth)'; // green — basically just contacted (within ~5% of cadence)
+  } else if(ratio <= 0.3){
+    // Bright green → faded green
+    const t = ratio / 0.3;
+    const lightness = Math.round(40 + t * 8); // 40% → 48%
+    color = `hsl(142, 70%, ${lightness}%)`;
     label = daysSince === 0 ? 'today' : daysSince + 'd ago';
-  } else if(pct >= 25){
-    color = '#F59E0B'; // yellow — not full, in middle range
+  } else if(ratio <= 0.55){
+    // Faded green → yellow
+    const t = (ratio - 0.3) / 0.25;
+    const hue = Math.round(142 - t * 95); // 142 → 47 (yellow)
+    color = `hsl(${hue}, 75%, 48%)`;
+    label = daysSince + 'd ago';
+  } else if(ratio <= 0.8){
+    // Yellow → bright orange
+    const t = (ratio - 0.55) / 0.25;
+    const hue = Math.round(47 - t * 25); // 47 → 22 (bright orange)
+    color = `hsl(${hue}, 90%, 50%)`;
     label = daysSince + 'd ago';
   } else {
-    color = '#DC2626'; // red — at risk (close to cadence boundary)
+    // Bright orange → faded red
+    const t = (ratio - 0.8) / 0.2;
+    const hue = Math.round(22 - t * 22); // 22 → 0 (red)
+    const lightness = Math.round(50 - t * 8); // 50% → 42%
+    color = `hsl(${hue}, 85%, ${lightness}%)`;
     label = daysSince + 'd ago · at risk';
   }
   return {pct, color, label, daysSince, cadence, overdue, neverLogged:false};
@@ -3709,7 +3748,11 @@ function rLife(){
   // Journal
   html+=`<div class="sec-divider">📓 Journal</div>
   <div class="sec"><div class="sec-hd"><span class="sec-ic">✏️</span><div class="sec-name">Today's entry</div></div>
-    <div class="jform"><div class="mood-row">${MOODS.map(m=>`<button class="moodbtn ${D.selectedMood===m?'sel':''}" data-mood="${m}">${m}</button>`).join('')}</div>
+    <div class="jform">
+    <div class="mood-row" style="flex-wrap:wrap;align-items:center">
+    ${MOODS.slice(0,8).map(m=>`<button class="moodbtn ${D.selectedMood===m?'sel':''}" data-mood="${m}">${m}</button>`).join('')}
+    <button class="moodbtn ${D.selectedMood&&!MOODS.slice(0,8).includes(D.selectedMood)?'sel':''}" style="font-size:13px;padding:8px 10px;font-family:'DM Mono',monospace;color:var(--t2)" onclick="(()=>{const e=prompt('Type or paste an emoji:');if(e&&e.trim()){const prev=document.getElementById('jtext')?.value;D.selectedMood=e.trim();rLife();const ta=document.getElementById('jtext');if(ta&&prev)ta.value=prev;}})()">+ custom${D.selectedMood&&!MOODS.slice(0,8).includes(D.selectedMood)?': '+D.selectedMood:''}</button>
+    </div>
     ${prompts.length?`<div class="mood-prompts">${prompts.map(p=>'• '+p).join('<br>')}</div>`:''}
     <input class="inp" id="jtitle" placeholder="Title (optional)" style="width:100%;margin-bottom:6px;font-weight:500"/>
     <textarea class="jta" id="jtext" placeholder="${D.selectedMood?'Write your thoughts...':'Pick a mood, then write...'}" oninput="document.getElementById('jword-count').textContent=this.value.trim().split(/\s+/).filter(Boolean).length+' words'"></textarea>
@@ -3730,7 +3773,7 @@ function rLife(){
       if(lockSet&&!journalUnlocked){
         pastHtml+='<div style="padding:14px 8px;text-align:center"><div style="font-size:13px;color:var(--t2);margin-bottom:10px">🔒 Journal entries are locked</div><input type="password" class="inp" id="journal-pw" placeholder="Password" style="width:160px;text-align:center;margin-bottom:8px"/><button class="badd" id="journal-unlock" style="display:block;margin:0 auto">Unlock</button><div style="font-size:9px;color:var(--t3);font-family:\'DM Mono\',monospace;margin-top:10px">forgot? remove via clear button when unlocked</div></div>';
       } else {
-        pastHtml+='<div class="jentries">'+D.journal.slice(0,15).map(e=>{
+        pastHtml+='<div class="jentries">'+[...D.journal].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15).map(e=>{
           const isExp=D.expandedJournalId==e.id;
           return '<div class="jentry" data-jentryid="'+escH(String(e.id))+'">'
             +'<div class="jeheader" style="display:flex;align-items:center;gap:6px;cursor:pointer" data-jexpand="'+escH(String(e.id))+'">'
@@ -4120,7 +4163,7 @@ document.getElementById('main').addEventListener('click', function(e){
     e.stopPropagation();
     D._editingJournalMood=jemood.dataset.jemood;
     // Refresh just the mood row
-    const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲','😎','🤯','😌','🥹','🙏','💪','🌱','🔥'];
+    const MOODS=['😊','😐','😔','😤','😴','🤩','😍','🥲'];
     document.getElementById('je-mood-row').innerHTML=MOODS.map(m=>`<button class="moodbtn ${D._editingJournalMood===m?'sel':''}" data-jemood="${m}">${m}</button>`).join('');
     return;
   }
