@@ -3020,13 +3020,49 @@ function rHome(){
     const wkActivities=(D.activities||[]).filter(a=>a.date&&getWeekStart(new Date(a.date+'T12:00:00'))===targetKey).length;
     const wkXP=Math.round(_wkTotals[targetKey]||0);
     const wkPP=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===targetKey).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0)+(D.choreLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
+    // Per-section XP for target week (for balance bar)
+    const _wkSecXP={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
+    D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===targetKey).forEach(t=>{
+      const sec=t.section||'personal';
+      if(sec in _wkSecXP) _wkSecXP[sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+    });
+    D.relActs.filter(r=>r.lastDone&&getWeekStart(new Date(r.lastDone+'T12:00:00'))===targetKey).forEach(()=>{
+      _wkSecXP.paige+=xp('relact_base');
+    });
+    (D.choreLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).forEach(l=>{
+      _wkSecXP.chores+=(Number(l.xpEarned)||0);
+    });
+    (D.contactLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).forEach(l=>{
+      const isFam=(D.people.social_family||[]).some(p=>p.id==l.personId);
+      _wkSecXP[isFam?'community_family':'community_friends']+=(Number(l.xp)||0);
+    });
+    (D.activities||[]).filter(a=>a.date&&getWeekStart(new Date(a.date+'T12:00:00'))===targetKey).forEach(a=>{
+      if(a.xp!==undefined&&a.xp!==null&&a.xp!=='') _wkSecXP.health+=Number(a.xp)||0;
+      else { const t=String(a.type||''); _wkSecXP.health+=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout'); }
+    });
+    const _wkSecTotal=Object.values(_wkSecXP).reduce((s,v)=>s+v,0);
+    const _wkSecDefs=[
+      {key:'paige',label:'Paige',emoji:'💕',color:'var(--cpaige)'},
+      {key:'work',label:'Work',emoji:'💼',color:'var(--cwork)'},
+      {key:'community_family',label:'Family',emoji:'👨‍👩‍👧',color:'var(--ccommunity)'},
+      {key:'community_friends',label:'Friends',emoji:'👥',color:'var(--ccommunity)'},
+      {key:'health',label:'Health',emoji:'🏃',color:'var(--chealth)'},
+      {key:'chores',label:'Chores',emoji:'🏠',color:'var(--cchores)'},
+      {key:'personal',label:'Personal',emoji:'✦',color:'var(--cpersonal)'},
+    ];
+    let _wkBalBar='';
+    if(_wkSecTotal>0){
+      _wkSecDefs.forEach(s=>{
+        const pct=_wkSecXP[s.key]/_wkSecTotal*100;
+        if(pct<0.5)return;
+        _wkBalBar+=`<div title="${s.label}: ${Math.round(pct)}%" style="height:100%;width:${pct}%;background:${s.color}"></div>`;
+      });
+    }
     // Top section
     const topSec=(()=>{
-      const tot={};
-      D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===targetKey).forEach(t=>{const k=t.section||'personal';tot[k]=(tot[k]||0)+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);});
-      const entries=Object.entries(tot).sort((a,b)=>b[1]-a[1]);
+      const entries=Object.entries(_wkSecXP).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
       if(!entries.length)return null;
-      const semoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥'};
+      const semoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥',chores:'🏠'};
       return semoji[entries[0][0]]+' '+entries[0][0].replace('community_','')+' ('+entries[0][1].toLocaleString()+' XP)';
     })();
     
@@ -3098,6 +3134,11 @@ function rHome(){
         </div>
       </div>
       
+      ${_wkSecTotal>0?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">balance</div>
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border);margin-bottom:6px">${_wkBalBar}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2)">${_wkSecDefs.filter(s=>_wkSecXP[s.key]>0).map(s=>{const pct=Math.round(_wkSecXP[s.key]/_wkSecTotal*100);return`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block"></span>${s.emoji}<span>${pct}%</span></span>`;}).join('')}</div>
+      </div>`:''}
       ${topSec?`<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;text-align:center">heaviest area: ${topSec}</div>`:''}
     </div>`;
   }
