@@ -446,6 +446,12 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn mcancel" onclick="closeModal('paige-date-modal')">Cancel</button>
 </div></div>
 
+<div class="mback hide" id="day-detail-modal"><div class="modal" style="max-width:480px;width:94%">
+  <h3 id="dd-title">Day detail</h3>
+  <div id="dd-content"></div>
+  <button class="mbtn mcancel" onclick="closeModal('day-detail-modal')">Close</button>
+</div></div>
+
 <div class="mback hide" id="journal-edit-modal"><div class="modal">
   <h3>Edit entry</h3>
   <div class="modal-sub" id="je-date" style="margin-bottom:10px;font-size:11px;color:var(--t3);font-family:'DM Mono',monospace"></div>
@@ -511,7 +517,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <button class="mbtn" id="focus-confirm" style="background:var(--cpaige);color:#fff;border:none">Save</button>
   <button class="mbtn mcancel" onclick="closeModal('focus-modal')">Cancel</button>
 </div></div>
-<div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
+<div class="mback hide" id="act-modal"><div class="modal"><h3>Log activity</h3><div class="modal-sub" id="act-type-lbl"></div><div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px"><div style="display:flex;gap:8px;align-items:center"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace">When:</label><input class="inp" type="date" id="act-date" style="flex:1"/></div><input class="inp f1" id="act-notes" placeholder="Notes (optional)"/><input class="inp f1" id="act-dur" placeholder="Duration (e.g. 45 min)"/></div><button class="mbtn" id="act-confirm">Log it +15 XP</button><button class="mbtn mcancel" onclick="closeModal('act-modal')">Cancel</button></div></div>
 <div class="mback hide" id="edit-modal"><div class="modal">
   <h3>Edit task</h3>
   <div class="edit-form" style="margin-top:12px">
@@ -745,7 +751,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],dateIdeas:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],dateIdeas:[],paigeActions:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0},
   nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
@@ -885,6 +891,7 @@ function applyData(data){
   if(data.inboxLog) D.inboxLog=data.inboxLog;
   if(data.dayResults) D.dayResults=data.dayResults;
   if(data.paigeDates) D.paigeDates=data.paigeDates;
+  if(data.paigeActions) D.paigeActions=data.paigeActions;
   if(data.paigeFocuses){
     D.paigeFocuses=data.paigeFocuses.map((f,i)=>{
       if(typeof f==='string'){
@@ -992,6 +999,7 @@ async function saveAll(retryCount){
   if(D.dirty.has('inboxLog'))    payload.inboxLog    = D.inboxLog;
   if(D.dirty.has('dayResults'))  payload.dayResults  = D.dayResults;
   if(D.dirty.has('paigeDates'))  payload.paigeDates  = D.paigeDates;
+  if(D.dirty.has('paigeActions'))payload.paigeActions= D.paigeActions;
   if(D.dirty.has('paigeFocuses'))payload.paigeFocuses= D.paigeFocuses;
   if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
   if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
@@ -1018,7 +1026,7 @@ async function saveAll(retryCount){
         D.lastSavedAt=Date.now();
         // Refresh cache so reload shows correct state
         try{
-          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
           localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
         }catch(e){}
         setSync('synced','saved');
@@ -1039,7 +1047,7 @@ async function saveAll(retryCount){
 function sched(){
   // Write local cache IMMEDIATELY so refresh always shows latest state — don't wait for server
   try{
-    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
     localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
   }catch(e){}
   clearTimeout(D.saveTimer);
@@ -1048,7 +1056,7 @@ function sched(){
 // For critical actions (add, mark done), call schedNow to fire instantly
 function schedNow(){
   try{
-    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
     localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
   }catch(e){}
   clearTimeout(D.saveTimer);
@@ -1677,6 +1685,8 @@ function openActModal(type){
   D._pendingBowlingGames=type==='bowling'?['']:[];
   document.getElementById('act-type-lbl').textContent=type;
   document.getElementById('act-notes').value='';document.getElementById('act-dur').value='';
+  const dateInput=document.getElementById('act-date');
+  if(dateInput) dateInput.value=TODAY_ISO;
   const bowlSec=document.getElementById('bowling-games-section');
   if(bowlSec) bowlSec.style.display=type==='bowling'?'block':'none';
   if(type==='bowling') renderBowlingGames();
@@ -1698,22 +1708,27 @@ function openActModal(type){
     btn.textContent='Logging...';
     const notes=document.getElementById('act-notes').value;
     const dur=document.getElementById('act-dur').value;
+    const actDate=document.getElementById('act-date')?.value||TODAY_ISO;
     const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');
-    const entry={id:D.nextId++,type:D.pendingActType,date:TODAY_ISO,notes,duration:dur,xp:actXP};
+    const entry={id:D.nextId++,type:D.pendingActType,date:actDate,notes,duration:dur,xp:actXP};
     if(D.pendingActType==='bowling'&&Array.isArray(D._pendingBowlingGames)){
       D._pendingBowlingGames.forEach((g,i)=>{if(i<8&&g!==''&&g!=null) entry['game'+(i+1)]=Number(g)||0;});
     }
     D.activities.push(entry);
     addXP(actXP);markActive();
     D.gamification.allTimeActivities++;
-    D.weekSummary.activitiesLogged++;
-    D.weekSummary.xpEarned+=actXP;
+    // Only count toward this week if date is in this week
+    if(actDate>=WEEK_START){
+      D.weekSummary.activitiesLogged++;
+      D.weekSummary.xpEarned+=actXP;
+    }
     D.dirty.add('activities');D.dirty.add('gamification');D.dirty.add('weekSummary');
     checkWeekBadges();
     closeModal('act-modal');
     renderAll();sched();
     haptic('success');
-    toast('💪 Logged! +'+actXP+' XP');fireConfetti();
+    const dateLabel=actDate!==TODAY_ISO?' on '+fmtDate(actDate):'';
+    toast('💪 Logged'+dateLabel+'! +'+actXP+' XP');fireConfetti();
   };
   document.getElementById('act-modal').classList.remove('hide');
 }
@@ -1799,6 +1814,31 @@ function saveBalanceTargets(){
 }
 
 // ── Date Ideas ────────────────────────────────────────────────────────────────
+function logPaigeAction(kind){
+  // kind: 'focus_hit' (positive) or 'fight' (negative) or 'mistake' (small negative)
+  if(!D.paigeActions) D.paigeActions=[];
+  const xpMap={focus_hit:75, fight:-150, mistake:-50};
+  const xpDelta=xpMap[kind]||0;
+  const entry={id:'pa'+Date.now(),kind,date:TODAY_ISO,xp:xpDelta};
+  D.paigeActions.push(entry);
+  D.dirty.add('paigeActions');
+  if(xpDelta>0){addXP(xpDelta);D.dirty.add('gamification');}
+  // Negative actions don't subtract all-time XP — they only impact the Paige health score
+  renderAll();sched();
+  const labels={focus_hit:'✨ Focus hit! +75 XP', fight:'💢 Fight logged (health -)', mistake:'💢 Mistake logged (health -)'};
+  toast(labels[kind]||'Logged');
+  haptic(kind==='focus_hit'?'success':'heavy');
+}
+function undoLastPaigeAction(){
+  if(!D.paigeActions||!D.paigeActions.length)return;
+  const last=D.paigeActions[D.paigeActions.length-1];
+  D.paigeActions.pop();
+  D.dirty.add('paigeActions');
+  if(last.xp>0){D.gamification.xp=Math.max(0,D.gamification.xp-last.xp);D.dirty.add('gamification');}
+  renderAll();sched();
+  toast('Undone');
+}
+
 function addDateIdea(){
   const inp=document.getElementById('dateidea-inp');
   const text=inp?.value.trim();
@@ -1817,6 +1857,66 @@ function addDateIdea(){
   toast('💖 Idea added');
   haptic('light');
 }
+function openDayDetail(iso){
+  if(!iso)return;
+  const d=new Date(iso+'T12:00:00');
+  const dayLabel=d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  document.getElementById('dd-title').textContent=dayLabel;
+  // Gather what happened that day
+  const tasks=D.tasks.filter(t=>t.done&&t.completedAt===iso);
+  const chores=(D.choreLog||[]).filter(l=>l.date===iso);
+  const contacts=(D.contactLog||[]).filter(l=>l.date===iso);
+  const acts=(D.activities||[]).filter(a=>a.date===iso);
+  const journals=(D.journal||[]).filter(j=>j.date===iso);
+  const result=(D.dayResults||[]).find(r=>r.date===iso);
+  const semoji={paige:'💕',work:'💼',health:'🏃',personal:'✦',community_family:'👨‍👩‍👧',community_friends:'👥'};
+  const typeEmoji={text:'💬',call:'📞',hangout:'🤝'};
+  // Total XP for the day
+  let dayXP=0;
+  tasks.forEach(t=>dayXP+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0));
+  chores.forEach(l=>dayXP+=(Number(l.xpEarned)||0));
+  contacts.forEach(l=>dayXP+=(Number(l.xp)||0));
+  acts.forEach(a=>{if(a.xp)dayXP+=Number(a.xp)||0;else{const t=String(a.type||'');dayXP+=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');}});
+  let html='';
+  // Summary header
+  html+=`<div style="display:flex;gap:12px;margin-bottom:14px;padding:10px;background:var(--bg);border-radius:8px">
+    <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:600;font-family:'DM Mono',monospace;color:var(--xp)">${dayXP.toLocaleString()}</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">XP</div></div>
+    ${result?`<div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:600;color:${result.outcome==='win'?'#16A34A':result.outcome==='loss'?'#DC2626':'var(--t3)'}">${result.outcome==='win'?'W':result.outcome==='loss'?'L':'·'}</div><div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">series</div></div>`:''}
+    ${result&&result.notes?`<div style="flex:2;font-size:11px;color:var(--t2);font-style:italic;align-self:center">${escH(result.notes)}</div>`:''}
+  </div>`;
+  if(!tasks.length&&!chores.length&&!contacts.length&&!acts.length&&!journals.length){
+    html+='<div class="emsg" style="padding:16px;text-align:center">nothing logged this day</div>';
+  } else {
+    if(tasks.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">tasks completed ('+tasks.length+')</div>';
+      tasks.forEach(t=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px"><span style="font-size:11px">${semoji[t.section]||'·'}</span><span style="flex:1">${escH(t.text)}</span><span style="font-size:10px;color:var(--xp);font-family:'DM Mono',monospace">+${(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0)}</span></div>`;});
+      html+='</div>';
+    }
+    if(chores.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">chores ('+chores.length+')</div>';
+      chores.forEach(l=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px"><span>🏠</span><span style="flex:1">${escH(l.choreName||'')}</span><span style="font-size:10px;color:var(--xp);font-family:'DM Mono',monospace">+${Number(l.xpEarned)||0}</span></div>`;});
+      html+='</div>';
+    }
+    if(contacts.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">contacts ('+contacts.length+')</div>';
+      contacts.forEach(l=>{html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px"><span>${typeEmoji[l.type]||'·'}</span><span style="flex:1">${escH(l.personName||'')}${l.note?' — '+escH(l.note):''}</span><span style="font-size:10px;color:var(--xp);font-family:'DM Mono',monospace">+${Number(l.xp)||0}</span></div>`;});
+      html+='</div>';
+    }
+    if(acts.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">activities ('+acts.length+')</div>';
+      acts.forEach(a=>{const axp=Number(a.xp)||((String(a.type||'').includes('bowling')||String(a.type||'').includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout'));html+=`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px"><span>🏃</span><span style="flex:1">${escH(a.type||'')}${a.notes?' — '+escH(a.notes):''}</span><span style="font-size:10px;color:var(--xp);font-family:'DM Mono',monospace">+${axp}</span></div>`;});
+      html+='</div>';
+    }
+    if(journals.length){
+      html+='<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--t3);font-family:\'DM Mono\',monospace;text-transform:uppercase;margin-bottom:6px">journal</div>';
+      journals.forEach(j=>{html+=`<div style="padding:6px;background:var(--bg);border-radius:6px;margin-bottom:4px"><div style="font-size:12px"><span>${j.mood||''}</span> ${j.title?'<b>'+escH(j.title)+'</b>':''}</div><div style="font-size:11px;color:var(--t2);margin-top:2px">${escH(j.text||'').slice(0,200)}${(j.text||'').length>200?'…':''}</div></div>`;});
+      html+='</div>';
+    }
+  }
+  document.getElementById('dd-content').innerHTML=html;
+  document.getElementById('day-detail-modal').classList.remove('hide');
+}
+
 function openDateIdeaModal(id){
   const idea=(D.dateIdeas||[]).find(i=>i.id==id);
   if(!idea)return;
@@ -2415,7 +2515,22 @@ function rHome(){
   const _lastWkTotal=_lastWkKey?Math.round(_wkTotals[_lastWkKey]):null;
   const _recentWks=Object.keys(_wkTotals).sort().reverse().slice(0,4);
   const _avgWkTotal=_recentWks.length>=2?Math.round(_recentWks.reduce((a,ws)=>a+_wkTotals[ws],0)/_recentWks.length):null;
-  const _thisWkXP=w.xpEarned||0;
+  // Compute THIS WEEK XP live from same sources as balance bar (so the two displays agree)
+  let _thisWkXP=0;
+  D.tasks.filter(t=>t.done&&t.completedAt&&t.completedAt>=WEEK_START).forEach(t=>{
+    _thisWkXP+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+  });
+  D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).forEach(()=>{
+    _thisWkXP+=xp('relact_base');
+  });
+  (D.choreLog||[]).filter(l=>l.date>=WEEK_START).forEach(l=>{_thisWkXP+=(Number(l.xpEarned)||0);});
+  (D.contactLog||[]).filter(l=>l.date>=WEEK_START).forEach(l=>{_thisWkXP+=(Number(l.xp)||0);});
+  (D.activities||[]).filter(a=>a.date>=WEEK_START).forEach(a=>{
+    if(a.xp!==undefined&&a.xp!==null&&a.xp!=='') _thisWkXP+=Number(a.xp)||0;
+    else { const t=String(a.type||''); _thisWkXP+=(t.includes('bowling')||t.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout'); }
+  });
+  // Override the persisted value so badges/UI agree
+  w.xpEarned=_thisWkXP;
   
   // Build comparison text
   const _cmpParts=[];
@@ -2703,7 +2818,7 @@ function rHome(){
       const commPace=(famStat==='behind'||friStat==='behind')?'behind':(famStat==='ahead'&&friStat==='ahead')?'ahead':null;
       return scCard('👥','Community','var(--ccommunity)','community',{all:fam.length+fri.length,done:distinctIds.size,over:0},sub,commPace);
     })()}
-    <div class="sc" onclick="switchTab('chores')"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div>${paceBySec.chores&&paceBySec.chores.status!=='neutral'?`<div style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:${paceBySec.chores.status==='ahead'?'#16A34A':'#F59E0B'}"></div>`:''}<div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
+    <div class="sc" onclick="switchTab('chores')" style="${paceBySec.chores&&paceBySec.chores.status==='ahead'?'border:1.5px solid #16A34A':paceBySec.chores&&paceBySec.chores.status==='behind'?'border:1.5px solid #F59E0B':''}"><div class="sc-accent" style="background:var(--cchores)"></div><div class="sc-icon">🏠</div><div class="sc-lbl">Home</div><div class="sc-big">${staleChores}</div><div class="sc-sub">chores overdue</div><div class="sc-bar"><div class="sc-bar-fill" style="width:${D.chores.length?Math.round((D.chores.length-staleChores)/D.chores.length*100):0}%;background:var(--cchores)"></div></div></div>
     ${scCard('🏃','Health','var(--chealth)','life',secStat('health'),D.activities.filter(a=>a.date>=WEEK_START).length+' sessions',paceBySec.health?paceBySec.health.status:null)}
     ${scCard('✦','Life','var(--cpersonal)','life',secStat('personal'),D.journal.filter(j=>j.date>=WEEK_START).length+' entries · $'+D.finances.filter(f=>f.type==='savings').reduce((s,f)=>s+Number(f.amount||0),0).toLocaleString()+' saved',paceBySec.personal?paceBySec.personal.status:null)}
   </div>`;
@@ -2942,7 +3057,7 @@ function rHome(){
             const isEmpty=!d.xp&&!d.tasks&&!d.chores&&!d.contacts&&!d.acts&&!d.result;
             const resColor=d.result?d.result.outcome==='win'?'#16A34A':d.result.outcome==='loss'?'#DC2626':'var(--t3)':'transparent';
             const resChar=d.result?d.result.outcome==='win'?'W':d.result.outcome==='loss'?'L':'·':'';
-            return `<div style="text-align:center;padding:5px 2px;border-radius:6px;background:${isEmpty?'transparent':'var(--bg)'};border:0.5px solid ${isEmpty?'transparent':'var(--border)'}">
+            return `<div data-daydetail="${d.iso}" style="text-align:center;padding:5px 2px;border-radius:6px;background:${isEmpty?'transparent':'var(--bg)'};border:0.5px solid ${isEmpty?'transparent':'var(--border)'};${isEmpty?'':'cursor:pointer'}">
               <div style="font-size:9px;color:var(--t3);font-family:'DM Mono',monospace;text-transform:uppercase">${d.label}</div>
               <div style="font-size:11px;font-weight:600;color:${isEmpty?'var(--t3)':'var(--text)'};font-family:'DM Mono',monospace;margin:1px 0">${d.xp||'—'}</div>
               <div style="display:flex;justify-content:center;gap:1px;font-size:8px;color:var(--t2);font-family:'DM Mono',monospace">
@@ -2977,9 +3092,11 @@ function rHome(){
 }
 function scCard(icon,name,color,tab,stat,extra,pace){
   const pct=stat.all?Math.round(stat.done/stat.all*100):0;
-  const dotColor=pace==='ahead'?'#16A34A':pace==='behind'?'#F59E0B':'transparent';
-  const dotTitle=pace==='ahead'?'at or above pace':pace==='behind'?'behind pace':'';
-  return`<div class="sc" onclick="switchTab('${tab}')"><div class="sc-accent" style="background:${color}"></div><div class="sc-icon">${icon}</div>${dotColor!=='transparent'?`<div title="${dotTitle}" style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:${dotColor}"></div>`:''}<div class="sc-lbl">${name}</div><div class="sc-big">${stat.all-stat.done>0?stat.all-stat.done:stat.done}</div><div class="sc-sub">${stat.done} done${extra?' · '+extra:''}</div>${stat.over?`<div class="sc-over">${stat.over} overdue</div>`:''}<div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+  // Pace shows as colored card border (more visible than a tiny dot)
+  let borderStyle='';
+  if(pace==='ahead'){borderStyle='border:1.5px solid #16A34A';}
+  else if(pace==='behind'){borderStyle='border:1.5px solid #F59E0B';}
+  return`<div class="sc" onclick="switchTab('${tab}')" style="${borderStyle}"><div class="sc-accent" style="background:${color}"></div><div class="sc-icon">${icon}</div><div class="sc-lbl">${name}</div><div class="sc-big">${stat.all-stat.done>0?stat.all-stat.done:stat.done}</div><div class="sc-sub">${stat.done} done${extra?' · '+extra:''}</div>${stat.over?`<div class="sc-over">${stat.over} overdue</div>`:''}<div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
 }
 
 // ── PAIGE ─────────────────────────────────────────────────────────────────────
@@ -3096,21 +3213,29 @@ function rPaige(){
   
   // ── Paige health bar — top of screen
   // Score (out of 100):
-  //   - Rel acts on schedule: 40 pts (% of acts not overdue)
-  //   - Weekly Paige tasks done: 30 pts (target 3/week)
-  //   - Recent date logged (≤30d): 20 pts
+  //   - Rel acts on schedule: 30 pts (% of acts not overdue)
+  //   - Weekly Paige tasks done: 25 pts (target 3/week)
+  //   - Recent date logged (≤30d): 15 pts
   //   - Active focuses exist: 10 pts
+  //   - Weekly actions: 20 pts (focus hits +, fights/mistakes -)
   const _relTotal=D.relActs.length;
   const _relHealthy=D.relActs.filter(r=>!freshObj(r).overdue).length;
-  const _relScore=_relTotal?Math.round(40*_relHealthy/_relTotal):0;
-  const _taskScore=Math.min(30, donePaige.length*10);
+  const _relScore=_relTotal?Math.round(30*_relHealthy/_relTotal):0;
+  const _taskScore=Math.min(25, donePaige.length*9);
   const _recentDate=(D.dateIdeas||[]).filter(d=>d.status==='done'&&d.date).some(d=>{
     const days=(Date.now()-new Date(d.date+'T12:00:00').getTime())/86400000;
     return days<=30;
   });
-  const _dateScore=_recentDate?20:0;
+  const _dateScore=_recentDate?15:0;
   const _focusScore=activeFocuses.length>0?10:0;
-  const _paigeScore=Math.min(100, _relScore+_taskScore+_dateScore+_focusScore);
+  // Weekly actions score: starts at 10 (neutral). Each focus hit +4 (cap +10). Each fight -8, each mistake -3 (cap -10).
+  const _wkActions=(D.paigeActions||[]).filter(a=>a.date>=WEEK_START);
+  const _focusHits=_wkActions.filter(a=>a.kind==='focus_hit').length;
+  const _fights=_wkActions.filter(a=>a.kind==='fight').length;
+  const _mistakes=_wkActions.filter(a=>a.kind==='mistake').length;
+  const _actionDelta=Math.min(10, _focusHits*4) - Math.min(10, _fights*8 + _mistakes*3);
+  const _actionScore=Math.max(0, Math.min(20, 10+_actionDelta));
+  const _paigeScore=Math.min(100, _relScore+_taskScore+_dateScore+_focusScore+_actionScore);
   let _paigeColor, _paigeLabel;
   if(_paigeScore>=85){_paigeColor='hsl(142, 70%, 42%)';_paigeLabel='strong';}
   else if(_paigeScore>=65){_paigeColor='hsl(95, 65%, 48%)';_paigeLabel='healthy';}
@@ -3129,13 +3254,38 @@ function rPaige(){
     <div style="height:10px;border-radius:5px;background:rgba(255,255,255,0.6);overflow:hidden;margin-bottom:8px">
       <div style="height:100%;width:${_paigeScore}%;background:${_paigeColor};transition:width 0.4s"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);flex-wrap:wrap">
-      <span title="Rel acts on schedule">💝 ${_relHealthy}/${_relTotal} acts (${_relScore}pt)</span>
+    <div style="display:flex;justify-content:space-between;gap:6px;font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);flex-wrap:wrap;margin-bottom:10px">
+      <span title="Rel acts on schedule">💝 ${_relHealthy}/${_relTotal} (${_relScore}pt)</span>
       <span title="Paige tasks completed this week">✓ ${donePaige.length} tasks (${_taskScore}pt)</span>
-      <span title="Recent date in last 30d">📅 ${_recentDate?'date logged':'no date'} (${_dateScore}pt)</span>
-      <span title="Active focuses">🎯 ${activeFocuses.length} focus${activeFocuses.length===1?'':'es'} (${_focusScore}pt)</span>
+      <span title="Recent date in last 30d">📅 ${_recentDate?'date':'no date'} (${_dateScore}pt)</span>
+      <span title="Active focuses">🎯 ${activeFocuses.length} focus (${_focusScore}pt)</span>
+      <span title="Weekly actions: focus hits + / fights - / mistakes -" style="color:${_actionDelta>0?'#16A34A':_actionDelta<0?'#DC2626':'var(--t2)'}">⚡ ${_focusHits}✨ ${_fights}💢 (${_actionScore}pt)</span>
+    </div>
+    <div style="display:flex;gap:6px;padding-top:10px;border-top:0.5px solid rgba(244,114,182,0.2)">
+      <button class="abtn" data-paigeact="focus_hit" style="flex:1;opacity:1;background:rgba(22,163,74,0.1);color:#15803D;border-radius:8px;padding:7px 4px;font-size:11px;font-weight:500;border:0.5px solid rgba(22,163,74,0.3)">✨ Focus hit</button>
+      <button class="abtn" data-paigeact="mistake" style="flex:1;opacity:1;background:rgba(245,158,11,0.1);color:#B45309;border-radius:8px;padding:7px 4px;font-size:11px;font-weight:500;border:0.5px solid rgba(245,158,11,0.3)">😬 Mistake</button>
+      <button class="abtn" data-paigeact="fight" style="flex:1;opacity:1;background:rgba(220,38,38,0.1);color:#B91C1C;border-radius:8px;padding:7px 4px;font-size:11px;font-weight:500;border:0.5px solid rgba(220,38,38,0.3)">💢 Fight</button>
     </div>
   </div>`;
+  
+  // Recent paige actions log (last 5, collapsible) — gives undo affordance
+  const allActs=(D.paigeActions||[]).slice().sort((a,b)=>(b.id||'').localeCompare(a.id||''));
+  if(allActs.length){
+    const recentActs=allActs.slice(0,5);
+    const actLabel={focus_hit:'✨ focus hit', fight:'💢 fight', mistake:'😬 mistake'};
+    const actColor={focus_hit:'#16A34A', fight:'#DC2626', mistake:'#F59E0B'};
+    html+=`<div style="margin-bottom:12px;padding:8px 12px;background:var(--surface);border-radius:var(--r2);border:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);margin-bottom:4px">
+        <span>recent paige actions</span>
+        <button class="abtn" id="paige-undo-last" style="opacity:1;font-size:10px;color:var(--t2);padding:1px 5px">↶ undo last</button>
+      </div>
+      ${recentActs.map(a=>`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:${actColor[a.kind]||'var(--t2)'};font-family:'DM Mono',monospace;padding:1px 0">
+        <span>${actLabel[a.kind]||a.kind}</span>
+        <span style="flex:1"></span>
+        <span style="color:var(--t3)">${fmtDate(a.date)}</span>
+      </div>`).join('')}
+    </div>`;
+  }
   
   let focusHtml='<div class="focus-card"><div class="focus-hd"><div class="focus-title">💕 active focuses</div>';
   if(activeFocuses.length<3){focusHtml+='<button class="focus-edit-btn" data-focusadd="1">+ Add focus</button>';}
@@ -3394,9 +3544,13 @@ function rWork(){
   const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   const wStart=localIso(weekDays[0]);const wEnd=localIso(weekDays[6]);
   const byDay={};weekDays.forEach(d=>{byDay[localIso(d)]=[];});
+  const overdue=[];
+  const future=[];
   const unscheduled=[];
   active.forEach(t=>{
     if(t.dueDate&&t.dueDate>=wStart&&t.dueDate<=wEnd) byDay[t.dueDate].push(t);
+    else if(t.dueDate&&t.dueDate<wStart) overdue.push(t);
+    else if(t.dueDate&&t.dueDate>wEnd) future.push(t);
     else unscheduled.push(t);
   });
   const sortP=arr=>[...arr].sort((a,b)=>((PRI[a.priority||'']??4)-(PRI[b.priority||'']??4)));
@@ -3431,6 +3585,14 @@ function rWork(){
           ${dayTasks.map(taskCard).join('')}
         </div>`;
       }).join('')}
+      ${overdue.length?`<div style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:4px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:#DC2626;margin-bottom:6px;font-weight:600">⚠ overdue (${overdue.length})</div>
+        ${sortP(overdue).map(taskCard).join('')}
+      </div>`:''}
+      ${future.length?`<div style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:4px">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);margin-bottom:6px">upcoming (${future.length})</div>
+        ${sortP(future).map(taskCard).join('')}
+      </div>`:''}
       ${unscheduled.length?`<div style="border-top:0.5px solid var(--border);padding-top:8px;margin-top:4px">
         <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3);margin-bottom:6px">unscheduled</div>
         ${sortP(unscheduled).map(taskCard).join('')}
@@ -3714,9 +3876,10 @@ function rChores(){
       inner+=nonStaples.map(i=>renderItem(i,false)).join('');
     }
     if(done.length){
+      const doneSorted=[...done].sort((a,b)=>{if(a.staple&&!b.staple)return -1;if(!a.staple&&b.staple)return 1;return 0;});
       inner+='<div style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3);padding:6px 6px 4px;border-top:0.5px solid var(--border);margin-top:4px;cursor:pointer" data-doneopen="'+name+'"><span>'+(doneOpen?'▲':'▼')+'</span><span>previously bought ('+done.length+')</span><span style="flex:1;height:0.5px;background:var(--border)"></span><span style="font-size:9px">tap to re-add</span></div>';
       if(doneOpen){
-        inner+=done.map(i=>renderItem(i,true)).join('');
+        inner+=doneSorted.map(i=>renderItem(i,true)).join('');
       }
     }
     if(!arr.length) inner='<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>';
@@ -3811,12 +3974,19 @@ function rLife(){
   let html='';
 
   // Health
+  const actRecentOpen=D.actRecentOpen===true;
   html+=`<div class="sec-divider">🏃 Health</div>
   <div class="sec"><div class="sec-hd"><span class="sec-ic">📅</span><div class="sec-name">This week</div><span class="sbadge sn">${actWeek} sessions</span></div>
     <div class="wgrid">${weekDays.map(d=>{const iso=localIso(d);const ct=byDate[iso]||0;return`<div class="wday"><div class="wdlbl">${d.toLocaleDateString('en-US',{weekday:'short'}).slice(0,1)}</div><div class="wddot ${ct?'has':''} ${iso===TODAY_ISO?'tod':''}">${ct||''}</div></div>`;}).join('')}</div>
     <div class="act-types">${ACT_TYPES.map(t=>`<button class="atbtn" data-acttype="${t}">${t}</button>`).join('')}</div>
+    ${recent.length?`<div style="border-top:0.5px solid var(--border);margin-top:10px;padding-top:8px">
+      <div data-actrecent style="display:flex;align-items:center;cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);padding:2px 0">
+        <span>📋 Recent sessions (${recent.length})</span>
+        <span style="margin-left:auto;color:var(--t3)">${actRecentOpen?'▲':'▼'}</span>
+      </div>
+      ${actRecentOpen?`<div class="alog" style="margin-top:6px">${recent.map(a=>`<div class="ali"><span class="atbadge">${a.type}</span><span class="alnotes">${a.notes||'—'}</span><span class="aldate">${fmtDate(a.date)}</span></div>`).join('')}</div>`:''}
+    </div>`:''}
   </div>`;
-  if(recent.length){html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📋</span><div class="sec-name">Recent sessions</div></div><div class="alog">${recent.map(a=>`<div class="ali"><span class="atbadge">${a.type}</span><span class="alnotes">${a.notes||'—'}</span><span class="aldate">${fmtDate(a.date)}</span></div>`).join('')}</div></div>`;}
 
   // Tabbed Health tasks / Weekly goals / Personal todos (default: weekly goals)
   const lifeTab=D.lifeTab||'goals';
@@ -3877,15 +4047,7 @@ function rLife(){
   }
   html+=`</div></div>`;
 
-  // Finances
-
-  // Finances
-  html+=`<div class="sec-divider">💰 Finances</div>
-  <div class="sec"><div class="sec-hd"><span class="sec-ic">📊</span><div class="sec-name">Overview</div><button class="bsm" onclick="openFinModal(null)" style="font-size:11px;padding:5px 9px">+ Add</button></div>
-    <div class="fin-summary"><div class="fin-sum-item"><div class="fin-sum-n" style="color:#DC2626">$${expenses.toLocaleString()}</div><div class="fin-sum-l">expenses</div></div><div class="fin-sum-item"><div class="fin-sum-n" style="color:#16A34A">$${income.toLocaleString()}</div><div class="fin-sum-l">income</div></div><div class="fin-sum-item"><div class="fin-sum-n" style="color:#1D4ED8">$${savings.toLocaleString()}</div><div class="fin-sum-l">savings</div></div></div>
-    <div class="fin-grid">${!D.finances.length?'<div class="emsg" style="padding:8px;grid-column:span 2">no entries yet</div>':''}${D.finances.map(f=>`<div class="fcard"><div class="fcard-lbl">${escH(f.category)}</div><div class="fcard-amt">$${Number(f.amount).toLocaleString()}</div><span class="fcard-type ftype-${f.type}">${escH(f.label)}</span>${f.notes?`<div style="font-size:10px;color:var(--t3);font-style:italic;margin-top:4px;line-height:1.3">${escH(f.notes)}</div>`:''}<button class="fedit" onclick="openFinModal('${f.id}')">edit</button></div>`).join('')}</div>
-    <div style="padding:0 8px 10px"><button class="bsm" style="width:100%" onclick="openFinModal(null)">+ Add entry</button></div>
-  </div>`;
+  // Finances section removed — re-add later if needed
 
   // Journal
   html+=`<div class="sec-divider">📓 Journal</div>
@@ -4154,6 +4316,16 @@ document.getElementById('main').addEventListener('click', function(e){
   if(cd){ deleteChore(cd.dataset.cd); return; }
   const cedit = e.target.closest('[data-cedit]');
   if(cedit){ openChoreEdit(cedit.dataset.cedit); return; }
+  // Day detail modal (from last week mini grid)
+  const dayDet = e.target.closest('[data-daydetail]');
+  if(dayDet){ openDayDetail(dayDet.dataset.daydetail); return; }
+  // Paige action buttons (focus_hit / mistake / fight)
+  const paigeAct = e.target.closest('[data-paigeact]');
+  if(paigeAct){ logPaigeAction(paigeAct.dataset.paigeact); return; }
+  if(e.target.closest('#paige-undo-last')){ undoLastPaigeAction(); return; }
+  // Activity recent sessions toggle
+  const actRecent = e.target.closest('[data-actrecent]');
+  if(actRecent){ D.actRecentOpen=!D.actRecentOpen; rLife(); return; }
   // Journal section toggle
   const jhd = e.target.closest('#journal-hd');
   if(jhd && !e.target.closest('#journal-pw,#journal-unlock,#journal-set-lock,#journal-relock,#journal-clear-lock')){
