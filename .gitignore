@@ -1,0 +1,8 @@
+# Secrets — Supabase CLI personal access token
+.env.local
+
+# Legacy migration source material (personal data — never commit)
+migration-source/
+
+# OS noise
+.DS_Store
