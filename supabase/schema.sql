@@ -624,6 +624,55 @@ END;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.send_push(p_title text, p_message text, p_priority integer DEFAULT 0, p_url text DEFAULT 'https://jordanreticker.github.io/life-dashboard'::text, p_attachment_b64 text DEFAULT NULL::text, p_attachment_type text DEFAULT 'image/png'::text)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_token text;
+  v_user  text;
+  v_body  jsonb;
+  v_request_id bigint;
+begin
+  select decrypted_secret into v_token
+    from vault.decrypted_secrets where name = 'pushover_app_token';
+  select decrypted_secret into v_user
+    from vault.decrypted_secrets where name = 'pushover_user_key';
+
+  if v_token is null or v_user is null then
+    raise exception 'Pushover credentials missing from Vault';
+  end if;
+
+  v_body := jsonb_build_object(
+    'token',    v_token,
+    'user',     v_user,
+    'title',    p_title,
+    'message',  p_message,
+    'html',     1,
+    'priority', coalesce(p_priority, 0),
+    'url',      p_url
+  );
+
+  if p_attachment_b64 is not null then
+    v_body := v_body || jsonb_build_object(
+      'attachment_base64', p_attachment_b64,
+      'attachment_type',   coalesce(p_attachment_type, 'image/png')
+    );
+  end if;
+
+  select net.http_post(
+    url     := 'https://api.pushover.net/1/messages.json',
+    body    := v_body,
+    headers := jsonb_build_object('Content-Type', 'application/json')
+  ) into v_request_id;
+
+  return v_request_id;
+end;
+$function$
+;
+
 
 -- =====================================================
 -- TRIGGERS

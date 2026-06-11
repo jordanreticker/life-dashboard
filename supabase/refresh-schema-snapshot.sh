@@ -24,14 +24,21 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
+# Write to a temp file first so a failed query/parse never clobbers schema.sql.
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+
+# Older CLI wraps results as {"rows":[...]}; newer CLI emits the array directly.
 SUPABASE_ACCESS_TOKEN="$TOKEN" \
   supabase db query --linked --workdir "$ROOT" \
     --file supabase/schema-snapshot.gen.sql -o json 2>/dev/null \
-  | jq -r '.rows[0].schema_sql' > supabase/schema.sql
+  | jq -r 'if type == "array" then .[0].schema_sql else .rows[0].schema_sql end' > "$TMP"
 
-LINES="$(wc -l < supabase/schema.sql | tr -d ' ')"
+LINES="$(wc -l < "$TMP" | tr -d ' ')"
 if [ "$LINES" -lt 50 ]; then
-  echo "error: generated schema.sql looks empty ($LINES lines) — check the query/connection" >&2
+  echo "error: generated schema looks empty ($LINES lines) — check the query/connection; schema.sql left untouched" >&2
   exit 1
 fi
+mv "$TMP" supabase/schema.sql
+trap - EXIT
 echo "wrote supabase/schema.sql ($LINES lines)"

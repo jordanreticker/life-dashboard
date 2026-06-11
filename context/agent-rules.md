@@ -65,7 +65,7 @@ Only open a migration file to understand history or to author a new one.
 
 - Secrets live in `.env.local` at the repo root: `SUPABASE_ACCESS_TOKEN` (personal access token for the CLI). `.env.local` is gitignored — never commit it, never echo its contents into logs.
 - Every `supabase` command needs the token plus `--linked --workdir $(pwd)`, exactly as shown above. Without them the CLI fails with 401.
-- No Supabase MCP server is configured; use the CLI.
+- A Supabase MCP connector IS configured in Claude (Cowork). Agents may use it for **reads** (`execute_sql` with SELECT, `list_tables`) and for invoking `public.send_push(...)` from scheduled routines — never for DDL or data writes. Schema changes remain CLI-migration-only (the Cowork sandbox cannot reach `api.supabase.com`, so `db push` runs from the user's terminal). See [routines-pushover.md](routines-pushover.md).
 - The browser app itself uses only the **project URL** and **anon key** — these are public by design (they ship in `index.html` on GitHub Pages) and are safe ONLY because every table has RLS restricting access to the authenticated owner. Never relax RLS to "anon can read/write".
 
 ## 4. Data layer: `src/db.js` only

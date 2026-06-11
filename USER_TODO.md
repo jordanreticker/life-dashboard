@@ -53,6 +53,24 @@ Everything **you** (the user) must do by hand. Agents cannot do these steps but 
 - [ ] **E2. Keep the Google Sheet** as a read-only historical archive (rename it e.g. "JrDr Office — pre-Supabase archive"). Do not delete it.
 - [ ] **E3. Confirm cleanup:** agent removes the `API` constant and all dead Sheets sync code from `index.html`.
 
+## Phase F — Push-notification routines (Claude + Pushover)
+
+Claude's Cowork sandbox cannot reach `api.supabase.com` or `api.pushover.net`, so these two steps run from **your** terminal at the repo root:
+
+- [ ] **F1. Push the `send_push` migration** (enables `pg_net`, adds `public.send_push()` reading creds from Vault — review `supabase/migrations/20260611210132_pushover_send_push.sql` first). Note: file was agent-named with a UTC timestamp (CLI unavailable in sandbox); format matches CLI convention so `db push` accepts it.
+  ```bash
+  SUPABASE_ACCESS_TOKEN=$(grep '^SUPABASE_ACCESS_TOKEN=' .env.local | cut -d'=' -f2) \
+    supabase db push --linked --workdir $(pwd)
+  ./supabase/refresh-schema-snapshot.sh
+  ```
+- [ ] **F2. Store Pushover credentials in Supabase Vault** via the Dashboard UI (no hand-run SQL): *Project Settings → Vault → Add new secret*. Create two secrets — values are in `.env.local`:
+  | Name | Value |
+  |---|---|
+  | `pushover_app_token` | the `PUSHOVER_APP_TOKEN` value |
+  | `pushover_user_key` | the `PUSHOVER_USER_KEY` value |
+- [x] **F3. Tell Claude it's done** — *(done 2026-06-11; test pushes delivered, 3 routines created)* it will test `send_push` (read-only `select`) and activate the scheduled routines (morning briefing 8:00, drift detector 17:00, Sunday weekly review 18:00).
+- [ ] **F4. Push the send_push v2 migration** (`20260611212418_send_push_html_attachments.sql` — HTML formatting + image attachments). ⚠️ The routines already call the new 6-arg signature, so push this **before the next 8:00 AM run** or the briefing will fail. Same commands as F1 (db push + snapshot refresh).
+
 ---
 
 ## Ongoing (post-migration) rules that involve you
