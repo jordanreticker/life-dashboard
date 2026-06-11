@@ -19,6 +19,12 @@ A single-page, mobile-first personal dashboard ("JrDr's Office") used by one per
 
 The "no build step" constraint is structural: the deploy story is *git push*, and the app must stay editable as plain files. Frameworks, TypeScript compilation, and bundlers are out of scope unless the user explicitly changes this.
 
+### Layout invariants (iOS standalone)
+
+- `html,body` are `overflow:hidden`; `#app` is exactly `100dvh`; **`#main` is the only scroll container.** Body scrolling + fixed bars is unreliable in iOS standalone mode (panes got cut off at the bottom) — do not reintroduce body scrolling. Scroll listeners (pull-to-refresh, tab-bar auto-hide) attach to `#main`.
+- `#tabbar` auto-hides: any `#main` scroll shows it, 1.5s of settle hides it (class `nav-hidden`), and it stays visible when the pane doesn't overflow. `switchTab()` calls `showNav()` so it never vanishes right after navigation.
+- Manual ordering UIs follow one pattern: a small "reorder" toggle button enters a mode where rows show ↑/↓ buttons; each move rewrites `sort_order` (1-based) for changed rows only via `src/db.js`. Used by Community people (family + friends, `D._reorderingPeople`) and the shopping want-list (`D._reorderingShopping`).
+
 ## Running locally
 
 ```bash

@@ -36,7 +36,10 @@ export const healthGoals = table('health_goals', { orderBy: 'created_at', ascend
 export const importantDates = table('important_dates', { orderBy: 'date', ascending: true })
 export const focuses = table('focuses', { orderBy: 'sort_order', ascending: true })
 export const paigeActions = table('paige_actions', { orderBy: 'date' })
-export const listItems = table('list_items', { orderBy: 'added_date' })
+export const listItems = {
+  ...table('list_items'),
+  list: () => supabase.from('list_items').select('*').order('sort_order').order('added_date'),
+}
 export const dateIdeas = table('date_ideas')
 
 export const healthGoalLogs = {

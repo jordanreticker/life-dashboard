@@ -168,7 +168,8 @@ CREATE TABLE list_items (
   done boolean NOT NULL DEFAULT false,
   added_date date,
   staple boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  sort_order integer NOT NULL DEFAULT 0
 );
 
 CREATE TABLE paige_actions (
