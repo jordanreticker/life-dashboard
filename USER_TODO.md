@@ -42,8 +42,8 @@ Everything **you** (the user) must do by hand. Agents cannot do these steps but 
 
 ## Phase D — Cutover
 
-- [ ] **D1. Data freeze.** Stop using the live (Sheets-backed) app. Re-export the Sheet (repeat A1, overwriting `legacy-data.xlsx`) so the final import has zero data gap. The agent regenerates and re-applies the import into clean tables.
-- [ ] **D2. Test locally** (`python3 -m http.server 8000`): sign in with your B6 credentials, click through every tab, add/complete/delete a task, log a chore and a contact, confirm XP/streaks look right.
+- [x] **D1. Data freeze.** *(n/a — user confirmed 2026-06-11 that no legacy data changed after the A1 export, so the one-time import already covers everything; no re-import needed)*
+- [x] **D2. Test locally** *(done 2026-06-11 — signed in, clicked through; chore lastDone derivation bug found and fixed)*
 - [ ] **D3. Deploy:** merge/push to `main` — GitHub Pages serves the new version automatically (no Pages settings change needed). Open it on your phone and sign in once.
 - [ ] **D4. Soak period (a few days–a week).** Use the app normally. The Google Sheet remains untouched as a rollback archive.
 
