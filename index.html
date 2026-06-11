@@ -403,7 +403,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 </div>
 <div id="main"><div id="ptr-indicator" style="position:absolute;top:calc(var(--safe-t) + 80px);left:50%;transform:translateX(-50%) translateY(-30px);font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);background:var(--surface);padding:6px 14px;border-radius:20px;border:0.5px solid var(--border);transition:transform 0.2s,opacity 0.2s;opacity:0;z-index:30">↓ pull to refresh</div>
     <div class="pane active" id="pane-home"><div class="topbar"><div><h1>JrDr's<br/><b>Office</b></h1></div><div class="topbar-r" style="display:flex;align-items:center;gap:8px"><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2)">🔍</button><div class="topbar-date" id="top-date"></div></div></div>
-<div class="sync-row"><div class="pip" id="sync-pip"></div><span class="sync-txt" id="sync-txt">connecting</span></div><div id="home-content"><div class="loading">loading</div></div></div>
+<div class="sync-row" id="sync-row" style="cursor:pointer" title="Connection"><div class="pip" id="sync-pip"></div><span class="sync-txt" id="sync-txt">connecting</span></div><div id="home-content"><div class="loading">loading</div></div></div>
     <div class="pane" id="pane-paige"><div class="topbar"><h1><b>💕 Paige</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="paige-content"><div class="loading">loading</div></div></div>
     <div class="pane" id="pane-work"><div class="topbar"><h1><b>💼 Work</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="work-content"><div class="loading">loading</div></div></div>
     <div class="pane" id="pane-community"><div class="topbar"><h1><b>👥 Community</b></h1><button class="search-btn" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:var(--t2);margin-left:auto">🔍</button></div><div id="community-content"><div class="loading">loading</div></div></div>
@@ -582,9 +582,30 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
   <div id="wr-content"></div>
 </div></div>
 
+<div class="mback hide" id="conn-modal"><div class="modal">
+  <h3>Connection</h3>
+  <div class="modal-sub" id="conn-info"></div>
+  <button class="mbtn" id="conn-refresh">⟳ Refresh data</button>
+  <button class="mbtn" id="conn-signout" style="color:#DC2626">Sign out</button>
+  <button class="mbtn mcancel" onclick="closeModal('conn-modal')">Close</button>
+</div></div>
+
 <div class="toast" id="toast"></div>
+
+<div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:none;align-items:center;justify-content:center">
+  <div style="width:280px;display:flex;flex-direction:column;gap:10px">
+    <h2 style="font-weight:300;letter-spacing:-0.5px;text-align:center;margin-bottom:8px">JrDr's Office</h2>
+    <input id="auth-email" class="inp" type="text" placeholder="username" autocomplete="username"/>
+    <input id="auth-pw" class="inp" type="password" placeholder="password" autocomplete="current-password"/>
+    <button id="auth-btn" class="mbtn" style="background:var(--text);color:#fff;border:none">Sign in</button>
+    <div id="auth-err" style="color:#DC2626;font-size:12px;text-align:center"></div>
+  </div>
+</div>
+
 <script>
-const API='https://script.google.com/macros/s/AKfycbx8LVK-TFR1xXsu2Bis8tAt1ERERXN5__wVsbaA_MEY_dm8Fqw-r_lc3ihIHa3EDmDr9w/exec';
+// Backend: Supabase via src/db.js — exposed as window.db by the module bridge at
+// the bottom of this file. All ids are uuids generated client-side.
+const newId=()=>crypto.randomUUID();
 
 // ── Dates (local, no UTC offset) ──────────────────────────────────────────────
 const TODAY=new Date();
@@ -754,7 +775,7 @@ let D={
   finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],dateIdeas:[],paigeActions:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0},
-  nextId:Date.now(),saveTimer:null,currentTab:'home',dirty:new Set(),lastSavedAt:null,
+  profileStatsId:null,currentTab:'home',lastSavedAt:null,
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
@@ -804,20 +825,6 @@ function fireConfetti(){
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 function applyData(data){
-  // Don't overwrite unsaved local changes — universal: skip ANY key in D.dirty
-  if(D.dirty&&D.dirty.size>0){
-    D.dirty.forEach(key=>{
-      if(data && key in data) delete data[key];
-    });
-    // Special: weekSummary lives inside weeklySummary.data
-    if(D.dirty.has('weekSummary') && data.weeklySummary) delete data.weeklySummary;
-    // Special: gamification has multiple fields
-    if(D.dirty.has('gamification') && data.gamification) delete data.gamification;
-    if(D.dirty.has('journalLock')){
-      if('journalLockHash' in (data||{})) delete data.journalLockHash;
-    }
-  }
-
   const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
   if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
   if(data.chores&&data.chores.length){
@@ -837,39 +844,8 @@ function applyData(data){
       return {id:String(q.id||(i+1)),question:String(q.question||'')};
     }).filter(q=>q.question);
   }
+  if(data.profileStatsId)D.profileStatsId=data.profileStatsId;
   if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[]),weeklyBadgeHistory:typeof g.weeklyBadgeHistory==='object'&&g.weeklyBadgeHistory!==null?g.weeklyBadgeHistory:(typeof g.weeklyBadgeHistory==='string'&&g.weeklyBadgeHistory?(()=>{try{return JSON.parse(g.weeklyBadgeHistory)}catch(e){return{}}})():{}),weeklyBadgeLastEarned:typeof g.weeklyBadgeLastEarned==='object'&&g.weeklyBadgeLastEarned!==null?g.weeklyBadgeLastEarned:(typeof g.weeklyBadgeLastEarned==='string'&&g.weeklyBadgeLastEarned?(()=>{try{return JSON.parse(g.weeklyBadgeLastEarned)}catch(e){return{}}})():{})};}
-  // ONE-TIME CLEANUP: if any weekly badge has count > 1 but was earned this week, normalize to 1
-  // This fixes badges that got inflated by repeated check fires before the per-week guard was added
-  setTimeout(()=>{
-    if(!D.gamification.weeklyBadgeHistory) return;
-    if(!D.gamification.weeklyBadgeLastEarned) D.gamification.weeklyBadgeLastEarned={};
-    let cleaned=false;
-    Object.keys(D.gamification.weeklyBadgeHistory).forEach(badgeId=>{
-      const count=Number(D.gamification.weeklyBadgeHistory[badgeId])||0;
-      // If count is suspiciously high (>1 and we're seeing it currently active this week)
-      if(count>1 && D.weeklyBadges.includes(badgeId)){
-        // Cap at 1 — assume this is the first time
-        D.gamification.weeklyBadgeHistory[badgeId]=1;
-        D.gamification.weeklyBadgeLastEarned[badgeId]=WEEK_START;
-        cleaned=true;
-      }
-    });
-    if(cleaned){
-      D.dirty.add('gamification');
-      console.log('[debug] cleaned inflated badge counts');
-      sched();
-      renderAll();
-    }
-    // Auto-correct all-time PP if stored value is less than derived
-    const taskPPSum=(D.tasks||[]).filter(t=>t.done).reduce((s,t)=>s+(Number(t.proactivePoints)||0),0);
-    const chorePPSum=(D.choreLog||[]).reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
-    const derivedPP=taskPPSum+chorePPSum;
-    if(derivedPP>D.gamification.proactivePoints){
-      D.gamification.proactivePoints=derivedPP;
-      D.dirty.add('gamification');
-      console.log('[debug] auto-corrected all-time PP to',derivedPP);
-    }
-  },300);
   if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
   if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
   if(data.journal) D.journal=data.journal;
@@ -877,6 +853,10 @@ function applyData(data){
   if(data.relActs&&data.relActs.length) D.relActs=data.relActs.map(r=>({...r,lastDone:toDateStr(r.lastDone)||null})); else if(!D.relActs.length) D.relActs=JSON.parse(JSON.stringify(DEFAULT_REL_ACTS));
   if(data.encycNotes) D.encycNotes=data.encycNotes;
   if(data.choreLog) D.choreLog=data.choreLog;
+  // Derive each chore's lastDone from the log (legacy did this server-side; chore_log is authoritative)
+  const _lastDoneMap={};
+  (D.choreLog||[]).forEach(l=>{const d=toDateStr(l.date)||String(l.date||'');if(l.choreId&&d&&(!_lastDoneMap[l.choreId]||d>_lastDoneMap[l.choreId]))_lastDoneMap[l.choreId]=d;});
+  (D.chores||[]).forEach(c=>{if(_lastDoneMap[c.id]&&(!c.lastDone||_lastDoneMap[c.id]>c.lastDone))c.lastDone=_lastDoneMap[c.id];});
   const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6]);});
   const wkChoresDone=thisWeekLogs.length;
   const wkChoreXP=thisWeekLogs.reduce((s,l)=>s+Number(l.xpEarned||0),0);
@@ -933,8 +913,67 @@ function applyData(data){
   }));
   if(data.journalLockHash!==undefined&&data.journalLockHash!==null) D.journalLockHash=String(data.journalLockHash||'');
   if(data.healthGoals) D.healthGoals=data.healthGoals.map(g=>({...g,target:Number(g.target)||7,logs:Array.isArray(g.logs)?g.logs:(g.logs?String(g.logs).split(',').filter(Boolean):[])}));
-  if(D.tasks.length) D.nextId=Math.max(...D.tasks.map(t=>Number(t.id)||0),D.nextId)+1;
   updateStreak();checkPermBadges();checkWeekBadges();
+}
+
+// ── Row converters: snake_case db rows → legacy camelCase D shapes ───────────
+function taskFromRow(r){return{id:r.id,section:r.section,text:r.text,done:!!r.done,priority:r.priority||'',dueDate:r.due_date||'',personId:r.person_id||'',tags:r.tags||[],scheduledFor:r.scheduled_for||'',createdAt:r.created_date||'',completedAt:r.completed_date||'',proactivePoints:Number(r.proactive_points)||0,xpValue:Number(r.xp_value)||5,recurrence:r.recurrence||'',notes:r.notes||''};}
+function activityFromRow(r){const a={id:r.id,type:r.type,date:r.date||'',notes:r.notes||'',duration:r.duration||'',xp:r.xp!=null?Number(r.xp):''};(r.games||[]).forEach((g,i)=>{if(i<8)a['game'+(i+1)]=g;});return a;}
+function fetchAllData(){
+  // Parallel reads through src/db.js; returns the legacy-shaped data blob applyData expects.
+  return Promise.all([
+    db.tasks.list(),db.chores.list(),db.choreLog.list(),db.people.list(),db.contactLog.list(),
+    db.activities.list(),db.questions.list(),db.questionAnswers.list(),db.profileStats.get(),
+    db.financeEntries.list(),db.journalEntries.list(),db.weeklyStats.list(),db.relActs.list(),
+    db.encycNotes.list(),db.inboxLog.list(),db.dayResults.list(),db.importantDates.list(),
+    db.focuses.list(),db.paigeActions.list(),db.listItems.list(),db.xpValues.list(),
+    db.dateIdeas.list(),db.healthGoals.list(),db.healthGoalLogs.list(),db.appSettings.get('journal_lock_hash'),
+  ]).then(results=>{
+    const err=results.find(r=>r.error);
+    if(err&&err.error)throw err.error;
+    const [tasks,chores,choreLog,people,contactLog,activities,questions,answers,stats,finances,
+      journal,weeklyStats,relActs,encycNotes,inboxLog,dayResults,paigeDates,focuses,paigeActions,
+      listItems,xpValues,dateIdeas,healthGoals,healthGoalLogs,lockSetting]=results.map(r=>r.data);
+    const g=stats||{};
+    D.profileStatsId=g.id||null;
+    const ppl={social_family:[],social_friends:[],work:[]};
+    (people||[]).forEach(p=>{
+      const key=p.tier==='family'?'social_family':p.tier==='friends'?'social_friends':'work';
+      const obj={id:p.id,name:p.name,tier:p.tier,lastContact:p.last_contact||null,sortOrder:Number(p.sort_order)||0};
+      if(Number(p.cadence_days)>0)obj.cadenceDays=Number(p.cadence_days);
+      ppl[key].push(obj);
+    });
+    ppl.social_friends.sort((a,b)=>(a.sortOrder-b.sortOrder)||a.name.localeCompare(b.name));
+    const xpObj={};(xpValues||[]).forEach(x=>{xpObj[x.key]=Number(x.value);});
+    return{
+      tasks:(tasks||[]).map(taskFromRow),
+      chores:(chores||[]).map(c=>({id:c.id,name:c.name,intervalDays:Number(c.interval_days)||7,xpValue:Number(c.xp_value)||0,lastDone:null})),
+      choreLog:(choreLog||[]).map(l=>({id:l.id,choreId:l.chore_id||'',choreName:l.chore_name||'',date:l.date,xpEarned:Number(l.xp_earned)||0,proactivePoints:Number(l.proactive_points)||0})),
+      people:ppl,
+      contactLog:(contactLog||[]).map(l=>({id:l.id,personId:l.person_id||'',personName:l.person_name||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0})),
+      activities:(activities||[]).map(activityFromRow),
+      questions:(questions||[]).map(q=>({id:q.id,question:q.question})),
+      paigeAnswers:(answers||[]).map(a=>({id:a.id,questionId:a.question_id||'',question:a.question||'',answer:a.answer||'',date:a.date||''})),
+      gamification:{xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streak_days)||0,bestStreak:Number(g.best_streak)||0,lastActiveDate:g.last_active_date||'',badges:g.badges||[],proactivePoints:Number(g.proactive_points)||0,totalTasksDone:Number(g.total_tasks_done)||0,totalChoresDone:Number(g.total_chores_done)||0,totalActivities:Number(g.total_activities)||0,allTimeTasksDone:Number(g.all_time_tasks_done)||0,allTimeChoresDone:Number(g.all_time_chores_done)||0,allTimeActivities:Number(g.all_time_activities)||0,weeklyBadgeHistory:g.weekly_badge_history||{},weeklyBadgeLastEarned:g.weekly_badge_last_earned||{}},
+      finances:(finances||[]).map(f=>({id:f.id,category:f.category||'',label:f.label||'',amount:Number(f.amount)||0,type:f.type||'',notes:f.notes||'',updatedAt:f.updated_date||''})),
+      journal:(journal||[]).map(j=>({id:j.id,date:j.date,text:j.text||'',mood:j.mood||'',title:j.title||''})),
+      weeklyStats:(weeklyStats||[]).map(w=>({weekStart:w.week_start,tasksDone:w.tasks_done,choresDone:w.chores_done,activitiesLogged:w.activities_logged,contactsLogged:w.contacts_logged,xpEarned:Number(w.xp_earned)||0,proactivePoints:Number(w.proactive_points)||0})),
+      relActs:(relActs||[]).map(r=>({id:r.id,name:r.name,intervalDays:Number(r.interval_days)||7,lastDone:r.last_done||null})),
+      encycNotes:(encycNotes||[]).map(n=>({id:n.id,text:n.text,cat:n.cat||'',done:!!n.done,completedNote:n.completed_note||'',sortOrder:Number(n.sort_order)||0})),
+      inboxLog:(inboxLog||[]).map(l=>({date:l.date,count:Number(l.count)||0})),
+      dayResults:(dayResults||[]).map(r=>({date:r.date,result:r.result||'',stat1:r.stat1||'',stat2:r.stat2||'',stat3:r.stat3||'',notes:r.notes||''})),
+      paigeDates:(paigeDates||[]).map(d=>({id:d.id,name:d.name,date:d.date,recur:d.recur||'',notes:d.notes||''})),
+      paigeFocuses:(focuses||[]).map(f=>({id:f.id,text:f.text,notes:f.notes||'',status:f.status||'active',createdAt:f.created_date||'',completedAt:f.completed_date||'',reactivatedAt:f.reactivated_date||'',sortOrder:Number(f.sort_order)||0})),
+      paigeActions:(paigeActions||[]).map(a=>({id:a.id,kind:a.kind,date:a.date,xp:Number(a.xp)||0})),
+      shoppingList:(listItems||[]).filter(i=>i.list==='shopping').map(i=>({id:i.id,text:i.text,done:!!i.done,addedAt:i.added_date||'',staple:!!i.staple})),
+      groceryList:(listItems||[]).filter(i=>i.list==='grocery').map(i=>({id:i.id,text:i.text,done:!!i.done,addedAt:i.added_date||'',staple:!!i.staple})),
+      xpValues:xpObj,
+      dateIdeas:(dateIdeas||[]).map(i=>({id:i.id,text:i.text,preRating:Number(i.pre_rating)||0,date:i.date||'',notes:i.notes||'',finalRating:Number(i.final_rating)||0,starred:!!i.starred,status:i.status||'idea'})),
+      healthGoals:(healthGoals||[]).map(gl=>({id:gl.id,name:gl.name,target:Number(gl.target)||7,logs:(healthGoalLogs||[]).filter(l=>l.goal_id===gl.id).map(l=>l.date)})),
+      journalLockHash:lockSetting?String(lockSetting.value||''):'',
+      profileStatsId:g.id||null,
+    };
+  });
 }
 
 async function loadData(){
@@ -946,13 +985,11 @@ async function loadData(){
   }
   // ── Stage 1: Load from localStorage cache for instant render ──
   let cacheUsed=false;
-  let cacheTs=0;
   try{
-    const cached=localStorage.getItem('jrdr-cache-v2');
+    const cached=localStorage.getItem('jrdr-cache-v3');
     if(cached){
       const parsed=JSON.parse(cached);
       if(parsed&&parsed.data){
-        cacheTs=Number(parsed.ts)||0;
         applyData(parsed.data);
         rHome(); // render home immediately from cache
         setSync('syncing','refreshing');
@@ -961,123 +998,112 @@ async function loadData(){
     }
   }catch(e){console.warn('Cache load failed',e);}
   if(!cacheUsed) setSync('syncing','loading');
-  // ── Stage 2: Fetch fresh data ──
+  // ── Stage 2: Fetch fresh data from Supabase ──
   try{
-    const res=await fetch(API+'?action=getData');
-    const data=await res.json();
-    // Always apply server data. applyData internally skips any keys in D.dirty
-    // (so unsaved local edits aren't overwritten). Server is authoritative otherwise.
+    const data=await fetchAllData();
     applyData(data);
-    try{localStorage.setItem('jrdr-cache-v2',JSON.stringify({data,ts:Date.now()}));}catch(e){}
+    try{localStorage.setItem('jrdr-cache-v3',JSON.stringify({data,ts:Date.now()}));}catch(e){}
+    D.lastLoadedAt=Date.now();
     setSync('synced','synced');
-  }catch(e){setSync('error','offline');}
+  }catch(e){console.error('Load failed',e);setSync('error','offline · tap to retry');}
   // Render home now (full data); other tabs lazy-render on tab switch
   rHome();
   D.tabsRendered={home:true};
+  // Restore the last-open tab (first load only) — phone reloads land where you left off
+  if(!D._tabRestored){
+    D._tabRestored=true;
+    try{
+      const last=localStorage.getItem('jrdr-tab');
+      if(last&&last!=='home'&&document.getElementById('pane-'+last))switchTab(last);
+    }catch(e){}
+  } else if(D.currentTab&&D.currentTab!=='home'){
+    // background refresh: re-render the showing tab in place (no scroll jump)
+    ({paige:rPaige,work:rWork,community:rCommunity,chores:rChores,life:rLife}[D.currentTab]||(()=>{}))();
+  }
   // Pre-render other tabs in idle time so switching is instant
   const idle=window.requestIdleCallback||((cb)=>setTimeout(cb,200));
   idle(()=>{rPaige();idle(()=>{rWork();idle(()=>{rCommunity();idle(()=>{rChores();idle(()=>{rLife();});});});});});
 }
 
-async function saveAll(retryCount){
-  retryCount=retryCount||0;
-  if(D.dirty.size===0){setSync('synced','saved');return;}
-  setSync('syncing','saving');
-  const payload={action:'saveData'};
-  if(D.dirty.has('tasks'))       payload.tasks       = D.tasks;
-  if(D.dirty.has('chores'))      payload.chores      = D.chores;
-  if(D.dirty.has('people'))      payload.people      = D.people;
-  if(D.dirty.has('activities'))  payload.activities  = D.activities;
-  if(D.dirty.has('gamification'))payload.gamification= D.gamification;
-  if(D.dirty.has('finances'))    payload.finances    = D.finances;
-  if(D.dirty.has('weeklyStats')) payload.weeklyStats = D.weeklyStats;
-  if(D.dirty.has('relActs'))     payload.relActs     = D.relActs;
-  if(D.dirty.has('encycNotes'))  payload.encycNotes  = D.encycNotes;
-  if(D.dirty.has('weekSummary')) payload.weeklySummary={weekStart:WEEK_START,data:D.weekSummary};
-  if(D.dirty.has('healthGoals')) payload.healthGoals = D.healthGoals;
-  if(D.dirty.has('contactLog'))  payload.contactLog  = D.contactLog;
-  if(D.dirty.has('inboxLog'))    payload.inboxLog    = D.inboxLog;
-  if(D.dirty.has('dayResults'))  payload.dayResults  = D.dayResults;
-  if(D.dirty.has('paigeDates'))  payload.paigeDates  = D.paigeDates;
-  if(D.dirty.has('paigeActions'))payload.paigeActions= D.paigeActions;
-  if(D.dirty.has('paigeFocuses'))payload.paigeFocuses= D.paigeFocuses;
-  if(D.dirty.has('shoppingList'))payload.shoppingList= D.shoppingList;
-  if(D.dirty.has('groceryList'))payload.groceryList = D.groceryList;
-  if(D.dirty.has('xpValues'))   payload.xpValues    = D.xpValues;
-  if(D.dirty.has('paigeAnswers'))payload.paigeAnswers= D.paigeAnswers;
-  if(D.dirty.has('dateIdeas'))   payload.dateIdeas   = D.dateIdeas;
-  if(D.dirty.has('journal'))     payload.journal     = D.journal;
-  if(D.dirty.has('journalLock'))payload.journalLockHash = D.journalLockHash;
+// ── Write layer: per-row Supabase writes (whole-blob saveAll is gone) ─────────
+// Every mutation site calls dbWrite() with a db.js builder. Optimistic: D is
+// already updated and re-rendered; the pip flips to error if the write fails.
+function cacheNow(){
   try{
-    const res=await fetch(API,{method:'POST',body:JSON.stringify(payload)});
-    const text=await res.text();
-    try{
-      const r=JSON.parse(text);
-      if(r.error){
-        // Retry up to 2 times with backoff
-        if(retryCount<2){
-          setSync('syncing','retrying...');
-          setTimeout(()=>saveAll(retryCount+1),1000*(retryCount+1));
-        } else {
-          setSync('error','err: '+r.error.slice(0,25));
-        }
-      } else {
-        D.dirty.clear();
-        D.lastSavedAt=Date.now();
-        // Refresh cache so reload shows correct state
-        try{
-          const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
-          localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
-        }catch(e){}
-        setSync('synced','saved');
-      }
-    }
-    catch(pe){D.dirty.clear();D.lastSavedAt=Date.now();setSync('synced','saved');}
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,profileStatsId:D.profileStatsId};
+    localStorage.setItem('jrdr-cache-v3',JSON.stringify({data:fullData,ts:Date.now()}));
+  }catch(e){}
+}
+let _pendingWrites=0;
+async function dbWrite(builder,label,attempt){
+  cacheNow();
+  _pendingWrites++;setSync('syncing','saving');
+  try{
+    const {error}=await builder;
+    // 23505 = unique violation: the row already landed (e.g. first try's response
+    // was lost and this is the retry) — treat as saved.
+    if(error&&error.code!=='23505')throw error;
+    D.lastSavedAt=Date.now();
   }catch(e){
-    if(retryCount<2){
-      setSync('syncing','retrying...');
-      setTimeout(()=>saveAll(retryCount+1),1000*(retryCount+1));
-    } else {
-      setSync('error','offline');
-      console.error('Save:',e);
+    _pendingWrites=Math.max(0,_pendingWrites-1);
+    if(!attempt){ // one quiet retry before alarming the user
+      setSync('syncing','retrying…');
+      setTimeout(()=>dbWrite(builder,label,1),1500);
+      return;
     }
+    console.error('[save failed]',label||'',e);
+    setSync('error','save failed · tap to retry');
+    toast('⚠️ Save failed — tap the sync dot to retry');
+    return;
   }
+  _pendingWrites=Math.max(0,_pendingWrites-1);
+  if(_pendingWrites===0)setSync('synced','saved');
 }
-// Save debounce: 300ms feels immediate but still batches rapid changes
-function sched(){
-  // Write local cache IMMEDIATELY so refresh always shows latest state — don't wait for server
-  try{
-    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
-    localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
-  }catch(e){}
-  clearTimeout(D.saveTimer);
-  D.saveTimer=setTimeout(saveAll,300);
+// Single-row profile_stats: debounced so a burst of XP/badge/streak mutations
+// lands as one write reading the final state.
+let _statsTimer=null;
+function saveStats(){
+  clearTimeout(_statsTimer);
+  _statsTimer=setTimeout(()=>{
+    if(!D.profileStatsId)return;
+    const g=D.gamification;
+    dbWrite(db.profileStats.update(D.profileStatsId,{
+      xp:g.xp,level:g.level,streak_days:g.streakDays,best_streak:g.bestStreak,
+      last_active_date:g.lastActiveDate||null,badges:g.badges,
+      proactive_points:g.proactivePoints,
+      total_tasks_done:g.totalTasksDone,total_chores_done:g.totalChoresDone,total_activities:g.totalActivities,
+      all_time_tasks_done:g.allTimeTasksDone,all_time_chores_done:g.allTimeChoresDone,all_time_activities:g.allTimeActivities,
+      weekly_badge_history:g.weeklyBadgeHistory||{},weekly_badge_last_earned:g.weeklyBadgeLastEarned||{},
+    }),'profile_stats');
+  },400);
 }
-// For critical actions (add, mark done), call schedNow to fire instantly
-function schedNow(){
-  try{
-    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,weeklySummary:{weekStart:WEEK_START,data:D.weekSummary}};
-    localStorage.setItem('jrdr-cache-v2',JSON.stringify({data:fullData,ts:Date.now()}));
-  }catch(e){}
-  clearTimeout(D.saveTimer);
-  saveAll();
-}
-async function saveChoresNow(){
-  try{
-    const res=await fetch(API,{method:'POST',body:JSON.stringify({action:'saveData',chores:D.chores})});
-    const result=await res.json();
-    if(result.error){console.error('Chore save error:',result.error);setSync('error','chore save failed');}
-    else{console.log('Chores saved. lastDone:',D.chores.map(c=>c.id+':'+c.lastDone).join(', '));}
-  }catch(e){console.error('Chore save exception:',e);}
-}
+// ── Row converters: camelCase D objects → snake_case db rows ─────────────────
+const taskRow=t=>({id:t.id,section:t.section,text:t.text,done:!!t.done,priority:t.priority||null,due_date:t.dueDate||null,person_id:t.personId||null,tags:t.tags||[],scheduled_for:t.scheduledFor||null,created_date:t.createdAt||null,completed_date:t.completedAt||null,proactive_points:Number(t.proactivePoints)||0,xp_value:Number(t.xpValue)||5,recurrence:t.recurrence||null,notes:t.notes||''});
+const choreRow=c=>({id:c.id,name:c.name,interval_days:Number(c.intervalDays)||7,xp_value:Number(c.xpValue)||0});
+const personRow=(p,tierKey)=>({id:p.id,name:p.name,tier:tierKey==='social_family'?'family':tierKey==='social_friends'?'friends':'work',last_contact:p.lastContact||null,cadence_days:Number(p.cadenceDays)>0?Number(p.cadenceDays):null,sort_order:Number(p.sortOrder)||0});
+const contactLogRow=l=>({id:l.id,person_id:l.personId||null,person_name:l.personName||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0});
+const choreLogRow=l=>({id:l.id,chore_id:l.choreId||null,chore_name:l.choreName||'',date:l.date,xp_earned:Number(l.xpEarned)||0,proactive_points:Number(l.proactivePoints)||0});
+const activityRow=a=>{const games=[];for(let i=1;i<=8;i++){const g=a['game'+i];if(g!==undefined&&g!==null&&g!=='')games.push(Number(g)||0);}return{id:a.id,type:a.type,date:a.date||null,notes:a.notes||'',duration:String(a.duration||''),xp:(a.xp!=null&&a.xp!=='')?Number(a.xp):null,games};};
+const relActRow=r=>({id:r.id,name:r.name,interval_days:Number(r.intervalDays)||7,last_done:r.lastDone||null});
+const journalRow=j=>({id:j.id,date:j.date,text:j.text||'',mood:j.mood||'',title:j.title||''});
+const financeRow=f=>({id:f.id,category:f.category||'',label:f.label||'',amount:Number(f.amount)||0,type:f.type||null,notes:f.notes||'',updated_date:toDateStr(f.updatedAt)||null});
+const dayResultRow=r=>({date:r.date,result:r.result||null,stat1:r.stat1||'',stat2:r.stat2||'',stat3:r.stat3||'',notes:r.notes||''});
+const importantDateRow=d=>({id:d.id,name:d.name,date:d.date,recur:d.recur||'',notes:d.notes||''});
+const focusRow=f=>({id:f.id,text:f.text,notes:f.notes||'',status:f.status||'active',created_date:f.createdAt||null,completed_date:f.completedAt||null,reactivated_date:f.reactivatedAt||null,sort_order:Number(f.sortOrder)||0});
+const paigeActionRow=a=>({id:a.id,kind:a.kind,date:a.date,xp:Number(a.xp)||0});
+const listItemRow=(i,listName)=>({id:i.id,list:listName,text:i.text,done:!!i.done,added_date:i.addedAt||null,staple:!!i.staple});
+const dateIdeaRow=i=>({id:i.id,text:i.text,pre_rating:Number(i.preRating)||0,date:i.date||null,notes:i.notes||'',final_rating:Number(i.finalRating)||0,starred:!!i.starred,status:i.status||'idea'});
+const answerRow=a=>({id:a.id,question_id:a.questionId||null,question:a.question||'',answer:a.answer||'',date:a.date||null});
+const encycRow=n=>({id:n.id,text:n.text,cat:n.cat||'',done:!!n.done,completed_note:n.completedNote||'',sort_order:Number(n.sortOrder)||0});
+const healthGoalRow=g=>({id:g.id,name:g.name,target:Number(g.target)||7});
 
 // ── Gamification ──────────────────────────────────────────────────────────────
-function addXP(amt){D.gamification.xp+=amt;D.dirty.add('gamification');const newIdx=getLevelIdx(D.gamification.xp);if(newIdx>D.gamification.level){D.gamification.level=newIdx;toast(LEVELS[newIdx].emoji+' Level up! '+LEVELS[newIdx].label,3000);fireConfetti();}checkPermBadges();}
+function addXP(amt){D.gamification.xp+=amt;saveStats();const newIdx=getLevelIdx(D.gamification.xp);if(newIdx>D.gamification.level){D.gamification.level=newIdx;toast(LEVELS[newIdx].emoji+' Level up! '+LEVELS[newIdx].label,3000);fireConfetti();}checkPermBadges();}
 
 function checkPermBadges(){
   PERM_BADGES.forEach(b=>{
     if(!D.gamification.badges.includes(b.id)&&b.check(D.gamification,D.tasks,D.activities,D)){
-      D.gamification.badges.push(b.id);toast(b.emoji+' Badge: '+b.label,3500);
+      D.gamification.badges.push(b.id);toast(b.emoji+' Badge: '+b.label,3500);saveStats();
     }
   });
 }
@@ -1094,7 +1120,7 @@ function checkWeekBadges(){
         if(!D.gamification.weeklyBadgeHistory)D.gamification.weeklyBadgeHistory={};
         D.gamification.weeklyBadgeHistory[b.id]=(D.gamification.weeklyBadgeHistory[b.id]||0)+1;
         D.gamification.weeklyBadgeLastEarned[b.id]=WEEK_START;
-        D.dirty.add('gamification');
+        saveStats();
         toast(b.emoji+' Weekly badge: '+b.label,3500);fireConfetti();
       }
     }
@@ -1136,6 +1162,7 @@ function markActive(){
   D.gamification.streakDays=diff===1?D.gamification.streakDays+1:1;
   if(D.gamification.streakDays>D.gamification.bestStreak)D.gamification.bestStreak=D.gamification.streakDays;
   D.gamification.lastActiveDate=TODAY_ISO;
+  saveStats();
 }
 
 // ── Freshness (supports negative = overdue) ───────────────────────────────────
@@ -1221,12 +1248,16 @@ function confirmReset(){
     proactivePoints:Number(week.proactivePoints)||0,
   };
   if(existing>=0)D.weeklyStats[existing]=record;else D.weeklyStats.push(record);
+  const doneTaskIds=D.tasks.filter(t=>t.done).map(t=>t.id);
   D.tasks=D.tasks.filter(t=>!t.done);
   D.weekSummary={weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0};
   D.healthGoals=D.healthGoals.map(g=>({...g,logs:[]}));
   D.weeklyBadges=[];
-  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('weeklyStats');D.dirty.add('healthGoals');
-  closeModal('weekly-review-modal');renderAll();sched();toast('Week reset ✓');
+  dbWrite(db.weeklyStats.upsert({week_start:record.weekStart,tasks_done:record.tasksDone,chores_done:record.choresDone,activities_logged:record.activitiesLogged,contacts_logged:record.contactsLogged,xp_earned:record.xpEarned,proactive_points:record.proactivePoints}),'weekly_stats');
+  doneTaskIds.forEach(id=>dbWrite(db.tasks.remove(id),'task purge'));
+  dbWrite(db.healthGoalLogs.clear(),'hg logs clear');
+  saveStats();
+  closeModal('weekly-review-modal');renderAll();toast('Week reset ✓');
 }
 
 // ── Task actions ──────────────────────────────────────────────────────────────
@@ -1259,12 +1290,15 @@ function toggleTask(id){
     if(t.recurrence){
       const baseDate=t.dueDate||TODAY_ISO;
       const nextDate=advanceDate(baseDate,t.recurrence);
-      D.tasks.push({...t,id:D.nextId++,done:false,completedAt:'',proactivePoints:0,dueDate:nextDate,createdAt:TODAY_ISO});
+      const clone={...t,id:newId(),done:false,completedAt:'',proactivePoints:0,dueDate:nextDate,createdAt:TODAY_ISO};
+      D.tasks.push(clone);
+      dbWrite(db.tasks.insert(taskRow(clone)),'task recur');
       setTimeout(()=>toast('🔁 Repeats '+t.recurrence+' — next: '+fmtDate(nextDate),3000),1500);
     }
   } else {t.completedAt='';t.proactivePoints=0;}
-  D.dirty.add('tasks');D.dirty.add('gamification');D.dirty.add('weekSummary');
-  renderAll();sched();
+  renderAll();
+  dbWrite(db.tasks.update(t.id,taskRow(t)),'task toggle');
+  saveStats();
 }
 function advanceDate(iso,rec){
   const d=new Date(iso+'T12:00:00');
@@ -1273,13 +1307,14 @@ function advanceDate(iso,rec){
   else if(rec==='monthly') d.setMonth(d.getMonth()+1);
   return localIso(d);
 }
-function deleteTask(id){D.tasks=D.tasks.filter(t=>t.id!=id);D.dirty.add('tasks');renderAll();sched();}
+function deleteTask(id){D.tasks=D.tasks.filter(t=>t.id!=id);renderAll();dbWrite(db.tasks.remove(id),'task delete');}
 function dupeTask(id){
   const t=D.tasks.find(t=>t.id==id);if(!t)return;
   const next=new Date();next.setDate(next.getDate()+7);
   const lbl=next.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  D.tasks.push({...t,id:D.nextId++,done:false,scheduledFor:lbl,dueDate:'',proactivePoints:0,completedAt:''});
-  D.dirty.add('tasks');renderAll();sched();toast('📋 Duped → '+lbl);
+  const clone={...t,id:newId(),done:false,scheduledFor:lbl,dueDate:'',proactivePoints:0,completedAt:''};
+  D.tasks.push(clone);
+  renderAll();dbWrite(db.tasks.insert(taskRow(clone)),'task dupe');toast('📋 Duped → '+lbl);
 }
 function openEditTask(id){
   const t=D.tasks.find(t=>t.id==id);if(!t)return;
@@ -1296,7 +1331,7 @@ function openEditTask(id){
     t2.dueDate=document.getElementById('edit-date').value;
     t2.recurrence=document.getElementById('edit-recur').value;
     t2.notes=document.getElementById('edit-notes').value;
-    closeModal('edit-modal');D.dirty.add('tasks');renderAll();sched();toast('✏️ Updated');
+    closeModal('edit-modal');renderAll();dbWrite(db.tasks.update(t2.id,taskRow(t2)),'task edit');toast('✏️ Updated');
   };
   document.getElementById('edit-modal').classList.remove('hide');
 }
@@ -1419,8 +1454,9 @@ function updateQAPersonDropdown(){updateQAFields();}
 function addTask(section,text,priority,dueDate,personId,tags,recurrence,notes){
   if(!text.trim())return;
   const xpValue=priority==='urgent'?xp('task_urgent'):priority==='high'?xp('task_high'):priority==='medium'?xp('task_medium'):priority==='low'?xp('task_low'):xp('task_default');
-  D.tasks.push({id:D.nextId++,section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue,recurrence:recurrence||'',notes:notes||''});
-  markActive();D.dirty.add('tasks');renderAll();sched();
+  const t={id:newId(),section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue,recurrence:recurrence||'',notes:notes||''};
+  D.tasks.push(t);
+  markActive();renderAll();dbWrite(db.tasks.insert(taskRow(t)),'task add');
 }
 
 // ── Chore actions ─────────────────────────────────────────────────────────────
@@ -1437,7 +1473,7 @@ function openChoreModal(id){
     const totalXP=(Number(c2.xpValue)||0)+pp;
     addXP(totalXP);markActive();
     // Log to ChoreLog for accurate tracking
-    const choreEntry={id:Date.now(),choreId:c2.id,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
+    const choreEntry={id:newId(),choreId:c2.id,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
     D.choreLog.push(choreEntry);
     D.gamification.allTimeChoresDone=D.choreLog.length;
     // Recount this week from log
@@ -1448,10 +1484,10 @@ function openChoreModal(id){
     D.weekSummary.xpEarned+=totalXP;
     if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
     checkWeekBadges();
-    // ChoreLog write is the source of truth for lastDone - no need to write Chores sheet
-    try{fetch(API,{method:'POST',body:JSON.stringify({action:'logChore',...choreEntry})});}catch(e){}
+    // chore_log is the source of truth for lastDone — the chores row isn't touched
     renderAll();
-    sched();
+    dbWrite(db.choreLog.insert(choreLogRow(choreEntry)),'chore log');
+    saveStats();
     toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
     closeModal('chore-modal');
   };
@@ -1468,24 +1504,36 @@ function openChoreEdit(id){
     const interval=parseInt(document.getElementById('ce-interval').value)||7;
     const xp=parseInt(document.getElementById('ce-xp').value)||8;
     if(!name)return;
-    if(D.editingChoreId){const c2=D.chores.find(c=>c.id==D.editingChoreId);if(c2){c2.name=name;c2.intervalDays=interval;c2.xpValue=xp;}}
-    else D.chores.push({id:'c'+D.nextId++,name,intervalDays:interval,lastDone:null,xpValue:xp});
-    D.dirty.add('chores');closeModal('chore-edit-modal');renderAll();sched();
+    if(D.editingChoreId){
+      const c2=D.chores.find(c=>c.id==D.editingChoreId);
+      if(c2){c2.name=name;c2.intervalDays=interval;c2.xpValue=xp;dbWrite(db.chores.update(c2.id,choreRow(c2)),'chore edit');}
+    } else {
+      const c2={id:newId(),name,intervalDays:interval,lastDone:null,xpValue:xp};
+      D.chores.push(c2);
+      dbWrite(db.chores.insert(choreRow(c2)),'chore add');
+    }
+    closeModal('chore-edit-modal');renderAll();
   };
   document.getElementById('chore-edit-modal').classList.remove('hide');
 }
-function deleteChore(id){D.chores=D.chores.filter(c=>c.id!=id);D.dirty.add('chores');renderAll();sched();}
+function deleteChore(id){D.chores=D.chores.filter(c=>c.id!=id);renderAll();dbWrite(db.chores.remove(id),'chore delete');}
 
 // ── People / contact ──────────────────────────────────────────────────────────
 function addPerson(tier,name){
   if(!name.trim())return;
   if(!D.people[tier])D.people[tier]=[];
-  D.people[tier].push({id:'p'+D.nextId++,name:name.trim(),tier,lastContact:null});
-  D.dirty.add('people');
-  renderAll();sched();
+  const p={id:newId(),name:name.trim(),tier,lastContact:null};
+  D.people[tier].push(p);
+  renderAll();dbWrite(db.people.insert(personRow(p,tier)),'person add');
   toast('+ Added '+name.trim());
 }
-function delPerson(tier,id){D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);D.dirty.add('people');D.dirty.add('tasks');renderAll();sched();}
+function delPerson(tier,id){
+  D.people[tier]=(D.people[tier]||[]).filter(p=>p.id!=id);
+  D.tasks=D.tasks.map(t=>t.personId==id?{...t,personId:''}:t);
+  renderAll();
+  // person_id on tasks/contact_log is ON DELETE SET NULL in the db — no per-task writes needed
+  dbWrite(db.people.remove(id),'person delete');
+}
 
 function openPersonEdit(id, tierKey){
   const p=(D.people[tierKey]||[]).find(p=>p.id==id);
@@ -1509,10 +1557,9 @@ function savePersonEdit(){
   if(newName) p.name=newName;
   if(cadenceVal>0) p.cadenceDays=cadenceVal;
   else delete p.cadenceDays;
-  D.dirty.add('people');
   closeModal('person-edit-modal');
   D.selectedPersonId=null;
-  renderAll();sched();
+  renderAll();dbWrite(db.people.update(p.id,personRow(p,tier)),'person edit');
   toast('Updated');
 }
 let _contactType='text';
@@ -1622,20 +1669,24 @@ function confirmContact(){
     const baseXP={text:xp('contact_text'),call:xp('contact_call'),hangout:xp('contact_hangout')}[_contactType]||xp('contact_text');
     const personXP=isFamily?Math.round(baseXP*xp('contact_family_mult')):baseXP;
     // Only bump lastContact if contactDate is newer than current
-    if(!person.lastContact||contactDate>person.lastContact) person.lastContact=contactDate;
+    if(!person.lastContact||contactDate>person.lastContact){
+      person.lastContact=contactDate;
+      dbWrite(db.people.update(person.id,{last_contact:contactDate}),'person lastContact');
+    }
     if(!D.contactLog)D.contactLog=[];
-    D.contactLog.push({id:D.nextId++,personId:person.id,personName:person.name,type:_contactType,note,date:contactDate,xp:personXP});
+    const log={id:newId(),personId:person.id,personName:person.name,type:_contactType,note,date:contactDate,xp:personXP};
+    D.contactLog.push(log);
+    dbWrite(db.contactLog.insert(contactLogRow(log)),'contact log');
     totalAwarded+=personXP;
   });
-  
+
   addXP(totalAwarded);markActive();
   // Only count toward this week if the contact date is in this week
   if(contactDate>=WEEK_START){
     D.weekSummary.contactsLogged=(D.weekSummary.contactsLogged||0)+allTargets.length;
     D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+totalAwarded;
   }
-  D.dirty.add('people');D.dirty.add('gamification');D.dirty.add('weekSummary');D.dirty.add('contactLog');
-  checkWeekBadges();renderAll();sched();
+  checkWeekBadges();renderAll();
   const em={text:'💬',call:'📞',hangout:'🤝'};
   const groupSuffix=allTargets.length>1?' ('+allTargets.length+' people)':'';
   const dateSuffix=contactDate!==TODAY_ISO?' on '+fmtDate(contactDate):'';
@@ -1649,8 +1700,8 @@ function deleteContactLog(id){
   D.contactLog=D.contactLog.filter(l=>l.id!=id);
   // Refund XP
   D.gamification.xp=Math.max(0,D.gamification.xp-(log.xp||0));
-  D.dirty.add('contactLog');D.dirty.add('gamification');
-  renderAll();sched();toast('Removed -'+log.xp+' XP');
+  saveStats();
+  renderAll();dbWrite(db.contactLog.remove(id),'contact delete');toast('Removed -'+log.xp+' XP');
 }
 
 // ── Activities ────────────────────────────────────────────────────────────────
@@ -1710,7 +1761,7 @@ function openActModal(type){
     const dur=document.getElementById('act-dur').value;
     const actDate=document.getElementById('act-date')?.value||TODAY_ISO;
     const actXP=D.pendingActType&&(D.pendingActType.includes('bowling')||D.pendingActType.includes('volleyball'))?xp('activity_lowimpact'):xp('activity_workout');
-    const entry={id:D.nextId++,type:D.pendingActType,date:actDate,notes,duration:dur,xp:actXP};
+    const entry={id:newId(),type:D.pendingActType,date:actDate,notes,duration:dur,xp:actXP};
     if(D.pendingActType==='bowling'&&Array.isArray(D._pendingBowlingGames)){
       D._pendingBowlingGames.forEach((g,i)=>{if(i<8&&g!==''&&g!=null) entry['game'+(i+1)]=Number(g)||0;});
     }
@@ -1722,10 +1773,9 @@ function openActModal(type){
       D.weekSummary.activitiesLogged++;
       D.weekSummary.xpEarned+=actXP;
     }
-    D.dirty.add('activities');D.dirty.add('gamification');D.dirty.add('weekSummary');
     checkWeekBadges();
     closeModal('act-modal');
-    renderAll();sched();
+    renderAll();dbWrite(db.activities.insert(activityRow(entry)),'activity log');
     haptic('success');
     const dateLabel=actDate!==TODAY_ISO?' on '+fmtDate(actDate):'';
     toast('💪 Logged'+dateLabel+'! +'+actXP+' XP');fireConfetti();
@@ -1736,10 +1786,11 @@ function openActModal(type){
 // ── Rel acts ──────────────────────────────────────────────────────────────────
 function addRelAct(name,interval){
   if(!name.trim())return;
-  D.relActs.push({id:'ra'+D.nextId++,name:name.trim(),intervalDays:Number(interval)||7,lastDone:null});
-  D.dirty.add('relActs');renderAll();sched();
+  const r={id:newId(),name:name.trim(),intervalDays:Number(interval)||7,lastDone:null};
+  D.relActs.push(r);
+  renderAll();dbWrite(db.relActs.insert(relActRow(r)),'rel act add');
 }
-function deleteRelAct(id){D.relActs=D.relActs.filter(r=>r.id!=id);D.dirty.add('relActs');renderAll();sched();}
+function deleteRelAct(id){D.relActs=D.relActs.filter(r=>r.id!=id);renderAll();dbWrite(db.relActs.remove(id),'rel act delete');}
 function openRelEdit(id){
   const r=D.relActs.find(r=>r.id==id);if(!r)return;
   D.editingRelId=id;
@@ -1749,7 +1800,7 @@ function openRelEdit(id){
     const r2=D.relActs.find(r=>r.id==D.editingRelId);if(!r2)return;
     r2.name=document.getElementById('re-name').value.trim()||r2.name;
     r2.intervalDays=Number(document.getElementById('re-interval').value)||7;
-    closeModal('rel-edit-modal');D.dirty.add('relActs');renderAll();sched();
+    closeModal('rel-edit-modal');renderAll();dbWrite(db.relActs.update(r2.id,relActRow(r2)),'rel act edit');
   };
   document.getElementById('rel-edit-modal').classList.remove('hide');
 }
@@ -1770,9 +1821,8 @@ function confirmRelAct(){
   addXP(totalXP);markActive();
   D.weekSummary.paigeActs++;D.weekSummary.xpEarned+=totalXP;
   if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
-  D.dirty.add('relActs');D.dirty.add('gamification');D.dirty.add('weekSummary');
   checkWeekBadges();
-  renderAll();sched();
+  renderAll();dbWrite(db.relActs.update(r.id,relActRow(r)),'rel act done');
   toast('💕 Nice! +'+totalXP+' XP'+(pp>0?' +'+pp+' PP ⚡':''));fireConfetti();
   closeModal('rel-modal');
 }
@@ -1804,12 +1854,13 @@ function saveBalanceTargets(){
     const sec=inp.dataset.sectarget;
     const v=Number(inp.value)||0;
     D.sectionTargets[sec]=v;
-    if(v>0) D.xpValues['section_target_'+sec]=v;
-    else delete D.xpValues['section_target_'+sec];
+    const key='section_target_'+sec;
+    const had=key in D.xpValues;
+    if(v>0){D.xpValues[key]=v;dbWrite(db.xpValues.upsert({key,value:v}),'section target');}
+    else if(had){delete D.xpValues[key];dbWrite(db.xpValues.remove(key),'section target clear');}
   });
-  D.dirty.add('xpValues');
   closeModal('balance-targets-modal');
-  renderAll();sched();
+  renderAll();
   toast('Targets saved');
 }
 
@@ -1819,12 +1870,11 @@ function logPaigeAction(kind){
   if(!D.paigeActions) D.paigeActions=[];
   const xpMap={focus_hit:75, fight:-150, mistake:-50};
   const xpDelta=xpMap[kind]||0;
-  const entry={id:'pa'+Date.now(),kind,date:TODAY_ISO,xp:xpDelta};
+  const entry={id:newId(),kind,date:TODAY_ISO,xp:xpDelta};
   D.paigeActions.push(entry);
-  D.dirty.add('paigeActions');
-  if(xpDelta>0){addXP(xpDelta);D.dirty.add('gamification');}
+  if(xpDelta>0)addXP(xpDelta);
   // Negative actions don't subtract all-time XP — they only impact the Paige health score
-  renderAll();sched();
+  renderAll();dbWrite(db.paigeActions.insert(paigeActionRow(entry)),'paige action');
   const labels={focus_hit:'✨ Focus hit! +75 XP', fight:'💢 Fight logged (health -)', mistake:'💢 Mistake logged (health -)'};
   toast(labels[kind]||'Logged');
   haptic(kind==='focus_hit'?'success':'heavy');
@@ -1833,9 +1883,8 @@ function undoLastPaigeAction(){
   if(!D.paigeActions||!D.paigeActions.length)return;
   const last=D.paigeActions[D.paigeActions.length-1];
   D.paigeActions.pop();
-  D.dirty.add('paigeActions');
-  if(last.xp>0){D.gamification.xp=Math.max(0,D.gamification.xp-last.xp);D.dirty.add('gamification');}
-  renderAll();sched();
+  if(last.xp>0){D.gamification.xp=Math.max(0,D.gamification.xp-last.xp);saveStats();}
+  renderAll();dbWrite(db.paigeActions.remove(last.id),'paige action undo');
   toast('Undone');
 }
 
@@ -1844,16 +1893,16 @@ function addDateIdea(){
   const text=inp?.value.trim();
   if(!text)return;
   if(!D.dateIdeas)D.dateIdeas=[];
-  D.dateIdeas.push({
-    id:'di'+Date.now(),
+  const idea={
+    id:newId(),
     text,
     preRating:Number(D._dateIdeaPreRating)||3,
     date:'', notes:'', finalRating:0, starred:false, status:'idea',
-  });
-  D.dirty.add('dateIdeas');
+  };
+  D.dateIdeas.push(idea);
   D._dateIdeaPreRating=3;
   inp.value='';
-  rPaige();sched();
+  rPaige();dbWrite(db.dateIdeas.insert(dateIdeaRow(idea)),'date idea add');
   toast('💖 Idea added');
   haptic('light');
 }
@@ -1978,9 +2027,8 @@ function saveDateIdeaDone(){
   idea.notes=document.getElementById('dateidea-notes').value.trim();
   idea.finalRating=Number(D._dateIdeaModalRating)||0;
   idea.status='done';
-  D.dirty.add('dateIdeas');
   closeModal('dateidea-modal');
-  rPaige();sched();
+  rPaige();dbWrite(db.dateIdeas.update(idea.id,dateIdeaRow(idea)),'date idea done');
   toast('💕 Date logged');
   haptic('success');
 }
@@ -1988,16 +2036,14 @@ function toggleDateIdeaStar(id){
   const idea=(D.dateIdeas||[]).find(i=>i.id==id);
   if(!idea)return;
   idea.starred=!idea.starred;
-  D.dirty.add('dateIdeas');
-  rPaige();sched();
+  rPaige();dbWrite(db.dateIdeas.update(idea.id,{starred:idea.starred}),'date idea star');
   haptic('light');
 }
 function deleteDateIdea(id){
   const idea=(D.dateIdeas||[]).find(i=>i.id==id);
   if(!idea||!confirm('Delete "'+idea.text+'"?'))return;
   D.dateIdeas=D.dateIdeas.filter(i=>i.id!=id);
-  D.dirty.add('dateIdeas');
-  rPaige();sched();
+  rPaige();dbWrite(db.dateIdeas.remove(id),'date idea delete');
 }
 
 // ── Journal lock ──────────────────────────────────────────────────────────────
@@ -2014,10 +2060,8 @@ async function setJournalLock(){
   if(pw!==confirm){toast('Passwords do not match');return;}
   D.journalLockHash=await hashPw(pw);
   D.journalUnlocked=true;
-  D.dirty.add('journalLock');
-  console.log('[journal-lock] hash set, dirty added');
   renderAll();
-  schedNow(); // save immediately, not debounced
+  dbWrite(db.appSettings.set('journal_lock_hash',D.journalLockHash),'journal lock');
   toast('🔒 Password set. Re-locks on reload.');
 }
 async function unlockJournal(){
@@ -2048,16 +2092,16 @@ async function clearJournalLock(){
   if(hash!==D.journalLockHash){toast('Wrong password');return;}
   D.journalLockHash='';
   D.journalUnlocked=false;
-  D.dirty.add('journalLock');
-  renderAll();sched();
+  renderAll();dbWrite(db.appSettings.set('journal_lock_hash',''),'journal unlock');
   toast('Password removed');
 }
 
 // ── Health goals ──────────────────────────────────────────────────────────────
 function addHealthGoal(name, target){
   if(!name.trim())return;
-  D.healthGoals.push({id:'hg'+D.nextId++,name:name.trim(),target:Number(target)||7,logs:[]});
-  D.dirty.add('healthGoals');renderAll();sched();
+  const g={id:newId(),name:name.trim(),target:Number(target)||7,logs:[]};
+  D.healthGoals.push(g);
+  renderAll();dbWrite(db.healthGoals.insert(healthGoalRow(g)),'health goal add');
 }
 function logHealthGoal(id){
   // Backwards-compat: log today (called from quick action). Use toggleHealthGoalDay otherwise.
@@ -2072,10 +2116,12 @@ function toggleHealthGoalDay(id, dateIso){
   if(wasHit){
     // Toggle off
     g.logs=g.logs.filter(d=>d!==dateIso);
+    dbWrite(db.healthGoalLogs.removeByGoalDate(g.id,dateIso),'hg log remove');
     haptic('light');
     toast('Removed');
   } else {
     g.logs.push(dateIso);
+    dbWrite(db.healthGoalLogs.insert({id:newId(),goal_id:g.id,date:dateIso}),'hg log add');
     const thisWeekHits=g.logs.filter(d=>d>=WEEK_START).length;
     const target=Number(g.target)||7;
     const full=thisWeekHits>=target;
@@ -2086,17 +2132,17 @@ function toggleHealthGoalDay(id, dateIso){
         toast('🌟 Super badge! "'+g.name+'" — full week!',4000);
         haptic('heavy');fireBigConfetti();
       }
-      const hgwXP=xp('health_goal_full_week');addXP(hgwXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgwXP;D.dirty.add('weekSummary');
+      const hgwXP=xp('health_goal_full_week');addXP(hgwXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgwXP;
     } else {
-      const hgdXP=xp('health_goal_daily');addXP(hgdXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgdXP;D.dirty.add('weekSummary');
+      const hgdXP=xp('health_goal_daily');addXP(hgdXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+hgdXP;
       toast('✓ '+thisWeekHits+'/'+target+' +'+hgdXP+'XP');
       haptic('success');
     }
   }
-  markActive();D.dirty.add('healthGoals');D.dirty.add('gamification');renderAll();sched();
+  markActive();renderAll();
 }
 function deleteHealthGoal(id){
-  D.healthGoals=D.healthGoals.filter(g=>g.id!=id);renderAll();sched();
+  D.healthGoals=D.healthGoals.filter(g=>g.id!=id);renderAll();dbWrite(db.healthGoals.remove(id),'health goal delete');
 }
 function openFinModal(id){
   D.editingFinId=id||null;
@@ -2114,27 +2160,31 @@ function openFinModal(id){
     const category=document.getElementById('fin-cat').value;
     const notes=document.getElementById('fin-notes').value.trim();
     if(!label)return;
-    if(D.editingFinId){const f2=D.finances.find(f=>f.id==D.editingFinId);if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.notes=notes;f2.updatedAt=TODAY_ISO;}}
-    else D.finances.push({id:D.nextId++,category,label,amount,type,notes,updatedAt:TODAY_ISO});
-    D.dirty.add('finances');
-    if(type==='savings'&&amount>0){const svXP=xp('savings_log');addXP(svXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+svXP;D.dirty.add('gamification');D.dirty.add('weekSummary');toast('Savings logged +'+svXP+' XP');}
-    closeModal('fin-modal');renderAll();sched();
+    if(D.editingFinId){
+      const f2=D.finances.find(f=>f.id==D.editingFinId);
+      if(f2){f2.label=label;f2.amount=amount;f2.type=type;f2.category=category;f2.notes=notes;f2.updatedAt=TODAY_ISO;dbWrite(db.financeEntries.update(f2.id,financeRow(f2)),'finance edit');}
+    } else {
+      const f2={id:newId(),category,label,amount,type,notes,updatedAt:TODAY_ISO};
+      D.finances.push(f2);
+      dbWrite(db.financeEntries.insert(financeRow(f2)),'finance add');
+    }
+    if(type==='savings'&&amount>0){const svXP=xp('savings_log');addXP(svXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+svXP;toast('Savings logged +'+svXP+' XP');}
+    closeModal('fin-modal');renderAll();
   };
   document.getElementById('fin-modal').classList.remove('hide');
 }
-function deleteFin(id){D.finances=D.finances.filter(f=>f.id!=id);D.dirty.add('finances');renderAll();sched();}
+function deleteFin(id){D.finances=D.finances.filter(f=>f.id!=id);renderAll();dbWrite(db.financeEntries.remove(id),'finance delete');}
 
 // ── Journal ───────────────────────────────────────────────────────────────────
 async function submitJournal(){
   const txt=document.getElementById('jtext').value.trim();if(!txt)return;
   const title=document.getElementById('jtitle')?.value.trim()||'';
-  const entry={id:D.nextId++,date:TODAY_ISO,text:txt,mood:D.selectedMood,title};
+  const entry={id:newId(),date:TODAY_ISO,text:txt,mood:D.selectedMood,title};
   D.journal.unshift(entry);
-  D.dirty.add('journal');
   document.getElementById('jtext').value='';
   if(document.getElementById('jtitle')) document.getElementById('jtitle').value='';
   D.selectedMood='';
-  const jeXP=xp('journal_entry');addXP(jeXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+jeXP;D.dirty.add('gamification');D.dirty.add('weekSummary');renderAll();sched();toast('Saved +'+jeXP+' XP');
+  const jeXP=xp('journal_entry');addXP(jeXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+jeXP;renderAll();dbWrite(db.journalEntries.insert(journalRow(entry)),'journal add');toast('Saved +'+jeXP+' XP');
 }
 
 function openJournalEdit(id){
@@ -2179,18 +2229,16 @@ function saveJournalEdit(){
   e.title=document.getElementById('je-title').value.trim();
   e.text=document.getElementById('je-text').value.trim();
   e.mood=D._editingJournalMood||e.mood;
-  D.dirty.add('journal');
   closeModal('journal-edit-modal');
   D.expandedJournalId=null;
-  renderAll();sched();
+  renderAll();dbWrite(db.journalEntries.update(e.id,journalRow(e)),'journal edit');
   toast('Updated');
 }
 function deleteJournalEntry(id){
   if(!confirm('Delete this entry? This cannot be undone.'))return;
   D.journal=D.journal.filter(j=>String(j.id)!==String(id));
-  D.dirty.add('journal');
   D.expandedJournalId=null;
-  renderAll();sched();
+  renderAll();dbWrite(db.journalEntries.remove(id),'journal delete');
 }
 
 // ── Day result (7-game series) ────────────────────────────────────────────────
@@ -2247,8 +2295,8 @@ function confirmDayResult(){
     const record={date,result:'',stat1:s1,stat2:s2,stat3:s3,notes};
     if(existingIdx>=0)D.dayResults[existingIdx]={...D.dayResults[existingIdx],...record,result:D.dayResults[existingIdx].result||''};
     else D.dayResults.push(record);
-    D.dirty.add('dayResults');
-    closeModal('day-result-modal');renderAll();sched();
+    const saved=existingIdx>=0?D.dayResults[existingIdx]:record;
+    closeModal('day-result-modal');renderAll();dbWrite(db.dayResults.upsert(dayResultRow(saved)),'day stats');
     toast('💾 Stats saved · come back to commit W/L');
     return;
   }
@@ -2259,30 +2307,27 @@ function confirmDayResult(){
   const record={date,result:_drType,stat1:s1,stat2:s2,stat3:s3,notes};
   if(existingIdx>=0) D.dayResults[existingIdx]=record;
   else D.dayResults.push(record);
-  D.dirty.add('dayResults');
+  dbWrite(db.dayResults.upsert(dayResultRow(record)),'day result');
   if(isNew){
     const drXP=_drType==='win'?xp('day_win'):xp('day_loss');
     addXP(drXP);
     D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+drXP;
     markActive();
-    D.dirty.add('gamification');D.dirty.add('weekSummary');
     // Check if week was won (4+ wins)
     const weekWins=D.dayResults.filter(r=>r.date>=WEEK_START&&r.date<=localIso(new Date(new Date(WEEK_START+'T12:00:00').getTime()+6*86400000))&&r.result==='win').length;
     if(weekWins===4){
       const sXP=xp('series_win');addXP(sXP);
       D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+sXP;
-      D.dirty.add('weekSummary');
       toast('Series won! 4-day victory! +'+sXP+' XP',4000);
       haptic('heavy');fireBigConfetti();
     } else if(weekWins===7){
       const swXP=xp('series_sweep');addXP(swXP);
       D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+swXP;
-      D.dirty.add('weekSummary');
       toast('SWEEP! Perfect week! +'+swXP+' XP',5000);
       haptic('heavy');fireBigConfetti();
     }
   }
-  closeModal('day-result-modal');renderAll();sched();
+  closeModal('day-result-modal');renderAll();
   toast(_drType==='win'?'✓ Win logged':'✗ Loss logged');
 }
 function getWeekRecord(){
@@ -2332,15 +2377,17 @@ function openPaigeDateModal(id){
     if(!name||!date)return;
     if(D.editingPaigeDateId){
       const d2=D.paigeDates.find(d=>d.id==D.editingPaigeDateId);
-      if(d2){d2.name=name;d2.date=date;d2.recur=recur;d2.notes=notes;}
+      if(d2){d2.name=name;d2.date=date;d2.recur=recur;d2.notes=notes;dbWrite(db.importantDates.update(d2.id,importantDateRow(d2)),'paige date edit');}
     } else {
-      D.paigeDates.push({id:'pd'+D.nextId++,name,date,recur,notes});
+      const d2={id:newId(),name,date,recur,notes};
+      D.paigeDates.push(d2);
+      dbWrite(db.importantDates.insert(importantDateRow(d2)),'paige date add');
     }
-    D.dirty.add('paigeDates');closeModal('paige-date-modal');renderAll();sched();
+    closeModal('paige-date-modal');renderAll();
   };
   document.getElementById('paige-date-modal').classList.remove('hide');
 }
-function deletePaigeDate(id){D.paigeDates=D.paigeDates.filter(d=>d.id!=id);D.dirty.add('paigeDates');renderAll();sched();}
+function deletePaigeDate(id){D.paigeDates=D.paigeDates.filter(d=>d.id!=id);renderAll();dbWrite(db.importantDates.remove(id),'paige date delete');}
 function getNextOccurrence(d){
   // Returns next occurrence date - if annual and date already passed this year, advance to next year
   const dateIso=d.date;
@@ -2372,9 +2419,9 @@ function addListItem(name,text){
   if(!text.trim())return;
   const list=name==='shopping'?'shoppingList':'groceryList';
   if(!D[list])D[list]=[];
-  D[list].push({id:'li'+D.nextId++,text:text.trim(),done:false,addedAt:TODAY_ISO});
-  D.dirty.add(list);
-  renderAll();sched();
+  const item={id:newId(),text:text.trim(),done:false,addedAt:TODAY_ISO};
+  D[list].push(item);
+  renderAll();dbWrite(db.listItems.insert(listItemRow(item,name)),'list add');
   haptic('light');
 }
 function toggleListItem(name,id){
@@ -2382,16 +2429,16 @@ function toggleListItem(name,id){
   const item=D[list].find(i=>i.id==id);
   if(!item)return;
   item.done=!item.done;
-  if(item.done){haptic('success');addXP(xp('list_item_done'));D.dirty.add('gamification');}
+  if(item.done){haptic('success');addXP(xp('list_item_done'));}
   else haptic('light');
-  D.dirty.add(list);renderAll();sched();
+  renderAll();dbWrite(db.listItems.update(item.id,{done:item.done}),'list toggle');
 }
 function toggleStaple(name,id){
   const list=name==='shopping'?'shoppingList':'groceryList';
   const item=D[list].find(i=>i.id==id);
   if(!item)return;
   item.staple=!item.staple;
-  D.dirty.add(list);rChores();sched();
+  rChores();dbWrite(db.listItems.update(item.id,{staple:item.staple}),'staple toggle');
   haptic('light');
 }
 function toggleDoneSection(name){
@@ -2402,7 +2449,7 @@ function toggleDoneSection(name){
 function deleteListItem(name,id){
   const list=name==='shopping'?'shoppingList':'groceryList';
   D[list]=D[list].filter(i=>i.id!=id);
-  D.dirty.add(list);renderAll();sched();
+  renderAll();dbWrite(db.listItems.remove(id),'list delete');
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -2455,6 +2502,7 @@ function switchTab(tab){
   document.getElementById('pane-'+tab).classList.add('active');
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   D.currentTab=tab;
+  try{localStorage.setItem('jrdr-tab',tab);}catch(e){}
   document.getElementById('main').scrollTo(0,0);
   // Always render on switch — keeps data fresh after edits in other tabs
   if(tab==='paige')         rPaige();
@@ -3177,16 +3225,16 @@ function openLogAnswerModal(question, questionId){
     const text=document.getElementById('logqa-text').value.trim();
     if(!text){toast('Add an answer first');return;}
     if(!D.paigeAnswers)D.paigeAnswers=[];
-    D.paigeAnswers.push({
-      id:'pa'+Date.now(),
+    const ans={
+      id:newId(),
       questionId:D._loggingAnswerForQId,
       question:D._loggingAnswerForQ,
       answer:text,
       date:TODAY_ISO,
-    });
-    D.dirty.add('paigeAnswers');
+    };
+    D.paigeAnswers.push(ans);
     closeModal('logqa-modal');
-    rPaige();sched();
+    rPaige();dbWrite(db.questionAnswers.insert(answerRow(ans)),'answer add');
     toast('Answer logged');
     haptic('success');
   };
@@ -3196,8 +3244,7 @@ function openLogAnswerModal(question, questionId){
 function deletePaigeAnswer(id){
   if(!confirm('Delete this answer?'))return;
   D.paigeAnswers=D.paigeAnswers.filter(a=>a.id!=id);
-  D.dirty.add('paigeAnswers');
-  rPaige();sched();
+  rPaige();dbWrite(db.questionAnswers.remove(id),'answer delete');
 }
 
 // ── Paige focuses ───────────────────────────────────────────────────────────────
@@ -3213,16 +3260,17 @@ function openFocusModal(focusId){
     if(!text)return;
     if(focusId){
       const f=D.paigeFocuses.find(x=>x.id==focusId);
-      if(f){f.text=text;f.notes=notes;}
+      if(f){f.text=text;f.notes=notes;dbWrite(db.focuses.update(f.id,focusRow(f)),'focus edit');}
     } else {
       const activeCount=(D.paigeFocuses||[]).filter(f=>f.status==='active').length;
       if(activeCount>=3){toast('Max 3 active focuses');return;}
       const order=(D.paigeFocuses||[]).filter(f=>f.status==='active').reduce((m,f)=>Math.max(m,f.sortOrder||0),0)+1;
       if(!D.paigeFocuses)D.paigeFocuses=[];
-      D.paigeFocuses.push({id:'pf'+Date.now(),text,notes,status:'active',createdAt:TODAY_ISO,completedAt:'',reactivatedAt:'',sortOrder:order});
+      const f={id:newId(),text,notes,status:'active',createdAt:TODAY_ISO,completedAt:'',reactivatedAt:'',sortOrder:order};
+      D.paigeFocuses.push(f);
+      dbWrite(db.focuses.insert(focusRow(f)),'focus add');
     }
-    D.dirty.add('paigeFocuses');
-    closeModal('focus-modal');renderAll();sched();
+    closeModal('focus-modal');renderAll();
     toast('Focus saved');
   };
   document.getElementById('focus-modal').classList.remove('hide');
@@ -3232,7 +3280,7 @@ function completeFocus(id){
   const f=(D.paigeFocuses||[]).find(x=>x.id==id);
   if(!f)return;
   f.status='completed';f.completedAt=TODAY_ISO;
-  D.dirty.add('paigeFocuses');renderAll();sched();
+  renderAll();dbWrite(db.focuses.update(f.id,focusRow(f)),'focus complete');
   haptic('success');toast('Focus completed');
 }
 function reactivateFocus(id){
@@ -3241,7 +3289,7 @@ function reactivateFocus(id){
   const activeCount=(D.paigeFocuses||[]).filter(x=>x.status==='active').length;
   if(activeCount>=3){toast('Max 3 active focuses');return;}
   f.status='active';f.reactivatedAt=TODAY_ISO;f.completedAt='';
-  D.dirty.add('paigeFocuses');renderAll();sched();
+  renderAll();dbWrite(db.focuses.update(f.id,focusRow(f)),'focus reactivate');
   toast('Focus reactivated');
 }
 function archiveFocus(id){
@@ -3249,14 +3297,14 @@ function archiveFocus(id){
   if(!f)return;
   if(!confirm('Archive "'+f.text+'"? Can be reactivated later.'))return;
   f.status='archived';
-  D.dirty.add('paigeFocuses');renderAll();sched();
+  renderAll();dbWrite(db.focuses.update(f.id,focusRow(f)),'focus archive');
 }
 function deleteFocus(id){
   const f=(D.paigeFocuses||[]).find(x=>x.id==id);
   if(!f)return;
   if(!confirm('Permanently delete "'+f.text+'"?'))return;
   D.paigeFocuses=D.paigeFocuses.filter(x=>x.id!=id);
-  D.dirty.add('paigeFocuses');renderAll();sched();
+  renderAll();dbWrite(db.focuses.remove(id),'focus delete');
 }
 
 function rPaige(){
@@ -3594,7 +3642,7 @@ function rPaige(){
   });
   // rel acts handled by delegated listener now
   // encyc-hd click handled by delegated listener
-  document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];D.encycNotes.push({text:i.value.trim(),cat:c?.value.trim()||''});i.value='';if(c)c.value='';D.dirty.add('encycNotes');rPaige();sched();});
+  document.getElementById('encyc-add')?.addEventListener('click',()=>{const i=document.getElementById('encyc-inp');const c=document.getElementById('encyc-cat');if(!i?.value.trim())return;if(!D.encycNotes)D.encycNotes=[];const n={id:newId(),text:i.value.trim(),cat:c?.value.trim()||'',done:false,completedNote:'',sortOrder:D.encycNotes.reduce((m,x)=>Math.max(m,Number(x.sortOrder)||0),0)+1};D.encycNotes.push(n);i.value='';if(c)c.value='';rPaige();dbWrite(db.encycNotes.insert(encycRow(n)),'encyc add');});
   document.getElementById('encyc-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('encyc-add')?.click();});
 }
 
@@ -3688,12 +3736,10 @@ function setInboxCount(){
     const izXP=xp('inbox_zero');
     addXP(izXP);markActive();
     D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+izXP;
-    D.dirty.add('gamification');D.dirty.add('weekSummary');
     toast('Inbox zero! +'+izXP+' XP');
     haptic('success');fireBigConfetti();
   }
-  D.dirty.add('inboxLog');
-  rCommunity();sched();
+  rCommunity();dbWrite(db.inboxLog.upsert({date:TODAY_ISO,count:val}),'inbox log');
 }
 function getInboxStreak(){
   if(!D.inboxLog||!D.inboxLog.length)return 0;
@@ -3786,7 +3832,7 @@ function rCommunity(){
     if(!d||!l.personId)return;
     if(!lastContactMap[l.personId] || d>lastContactMap[l.personId]) lastContactMap[l.personId]=d;
   });
-  // Apply to people in memory + flag dirty if any drift
+  // Apply to people in memory (render-time only; logs are authoritative)
   let driftFixed=false;
   ['social_family','social_friends','work'].forEach(t=>{
     (D.people[t]||[]).forEach(p=>{
@@ -3798,7 +3844,8 @@ function rCommunity(){
       }
     });
   });
-  if(driftFixed){D.dirty.add('people');console.log('[debug] reconciled lastContact from contactLog');}const tier=D.communityTier;
+  // (render-time reconcile only — contact_log is authoritative; nothing is written back)
+  const tier=D.communityTier;
   const key='social_'+tier;
   const ppl=D.people[key]||[];
   const secKey='community_'+tier;
@@ -4013,9 +4060,9 @@ function rChores(){
     if(!ai?.value.trim())return;
     const interval=parseInt(document.getElementById('chore-interval')?.value)||7;
     const xp=parseInt(document.getElementById('chore-xp')?.value)||8;
-    D.chores.push({id:'c'+D.nextId++,name:ai.value.trim(),intervalDays:interval,lastDone:null,xpValue:xp});
-    D.dirty.add('chores');
-    ai.value='';renderAll();sched();
+    const c={id:newId(),name:ai.value.trim(),intervalDays:interval,lastDone:null,xpValue:xp};
+    D.chores.push(c);
+    ai.value='';renderAll();dbWrite(db.chores.insert(choreRow(c)),'chore add');
     toast('🧹 Chore added');
   });
   ai?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('chore-add')?.click();});
@@ -4294,8 +4341,10 @@ document.getElementById('main').addEventListener('click', function(e){
     } else if(dir==='down'&&i<arr.length-1){
       [arr[i+1],arr[i]]=[arr[i],arr[i+1]];
     }
-    D.dirty.add('people');
-    rCommunity();sched();
+    arr.forEach((p,idx2)=>{
+      if(p.sortOrder!==idx2+1){p.sortOrder=idx2+1;dbWrite(db.people.update(p.id,{sort_order:p.sortOrder}),'person reorder');}
+    });
+    rCommunity();
     return;
   }
   // Extra contact person remove (group hangout)
@@ -4519,14 +4568,14 @@ document.getElementById('main').addEventListener('click', function(e){
         n.done=false;
         n.completedNote='';
       }
-      D.dirty.add('encycNotes');rPaige();sched();
-      if(n.done){const ecXP=xp('encyc_complete');addXP(ecXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+ecXP;D.dirty.add('gamification');D.dirty.add('weekSummary');toast('Marked complete +'+ecXP+' XP');haptic('success');}
+      rPaige();dbWrite(db.encycNotes.update(n.id,encycRow(n)),'encyc toggle');
+      if(n.done){const ecXP=xp('encyc_complete');addXP(ecXP);D.weekSummary.xpEarned=(D.weekSummary.xpEarned||0)+ecXP;toast('Marked complete +'+ecXP+' XP');haptic('success');}
     }
     return;
   }
   // Delete note (encyclopedia)
   const delnote = e.target.closest('[data-delnote]');
-  if(delnote){ e.stopPropagation(); D.encycNotes.splice(parseInt(delnote.dataset.delnote),1);D.dirty.add('encycNotes');rPaige();sched();return; }
+  if(delnote){ e.stopPropagation(); const _ei=parseInt(delnote.dataset.delnote);const _en=D.encycNotes[_ei];D.encycNotes.splice(_ei,1);rPaige();if(_en&&_en.id)dbWrite(db.encycNotes.remove(_en.id),'encyc delete');return; }
   // Contact log
   const contact = e.target.closest('[data-contact]');
   if(contact && !e.target.closest('[data-dp],[data-personedit],[data-personmove]')){
@@ -4663,6 +4712,7 @@ _main.addEventListener('touchend',e=>{
     _ptr.textContent='⟳ refreshing...';
     _ptr.style.transform='translateX(-50%) translateY(0)';
     _ptr.style.opacity='1';
+    // Pull-to-refresh always forces a real fetch (no staleness throttle)
     loadData().then(()=>{
       setTimeout(()=>{_ptr.style.opacity='0';_ptr.style.transform='translateX(-50%) translateY(-30px)';},800);
     });
@@ -4686,7 +4736,81 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='5') switchTab('chores');
   else if(e.key==='6') switchTab('life');
 });
-loadData();
+
+// ── Connection menu (tap the sync pip) ────────────────────────────────────────
+async function openConnModal(){
+  let who='not signed in';
+  try{const {data:{session}}=await db.auth.getSession();if(session)who='signed in as '+(session.user.email||'');}catch(e){}
+  const saved=D.lastSavedAt?new Date(D.lastSavedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—';
+  document.getElementById('conn-info').innerHTML=escH(who)+'<br>last save: '+saved;
+  document.getElementById('conn-modal').classList.remove('hide');
+}
+document.getElementById('sync-row').addEventListener('click',()=>{
+  // Error state: tapping the pip retries immediately; otherwise open the menu
+  if(document.getElementById('sync-pip').classList.contains('error')){loadData();return;}
+  openConnModal();
+});
+document.getElementById('conn-refresh').addEventListener('click',()=>{closeModal('conn-modal');loadData();toast('⟳ Refreshing');});
+document.getElementById('conn-signout').addEventListener('click',async()=>{
+  if(!confirm('Sign out on this device?'))return;
+  try{await db.auth.signOut();}catch(e){}
+  try{localStorage.removeItem('jrdr-cache-v3');}catch(e){}
+  location.reload();
+});
+
+// ── Background refresh: re-pull when the app regains focus or comes back online.
+// Reads are cheap now; this keeps multi-device state fresh. Skips when a write is
+// in flight, a modal is open, or the user is typing.
+function quietRefresh(force){
+  if(!window.db)return;
+  if(document.getElementById('auth-overlay').style.display==='flex')return;
+  if(_pendingWrites>0)return;
+  if(document.querySelector('.mback:not(.hide)'))return;
+  const ae=document.activeElement;
+  if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'))return;
+  const stale=!D.lastLoadedAt||(Date.now()-D.lastLoadedAt)>60000;
+  const hasError=document.getElementById('sync-pip').classList.contains('error');
+  if(force||stale||hasError)loadData();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')quietRefresh(false);});
+window.addEventListener('online',()=>quietRefresh(true));
+
+// ── Boot: auth gate, then load (called by the module bridge below) ────────────
+async function boot(){
+  const {data:{session}}=await db.auth.getSession();
+  if(session){loadData();return;}
+  const overlay=document.getElementById('auth-overlay');
+  overlay.style.display='flex';
+  const userInp=document.getElementById('auth-email');
+  if(!userInp.value)userInp.value='jrdr';
+  setTimeout(()=>document.getElementById('auth-pw').focus(),100);
+  const doSignIn=async()=>{
+    const raw=userInp.value.trim();
+    const pw=document.getElementById('auth-pw').value;
+    if(!raw||!pw)return;
+    // Username shorthand: anything without an @ means the single owner account
+    const email=raw.includes('@')?raw:'jordanreticker@gmail.com';
+    document.getElementById('auth-err').textContent='';
+    document.getElementById('auth-btn').textContent='Signing in…';
+    const {error}=await db.auth.signIn(email,pw);
+    document.getElementById('auth-btn').textContent='Sign in';
+    if(error){
+      const msg=/invalid login credentials/i.test(error.message||'')?'Wrong username or password':error.message;
+      document.getElementById('auth-err').textContent=msg;
+      return;
+    }
+    overlay.style.display='none';
+    loadData();
+  };
+  document.getElementById('auth-btn').onclick=doSignIn;
+  userInp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('auth-pw').focus();});
+  document.getElementById('auth-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doSignIn();});
+}
+</script>
+<script type="module">
+  import * as db from './src/db.js';
+  window.db=db;
+  boot();
 </script>
 </body>
 </html>
