@@ -71,6 +71,30 @@ Claude's Cowork sandbox cannot reach `api.supabase.com` or `api.pushover.net`, s
 - [x] **F3. Tell Claude it's done** — *(done 2026-06-11; test pushes delivered, 3 routines created)* it will test `send_push` (read-only `select`) and activate the scheduled routines (morning briefing 8:00, drift detector 17:00, Sunday weekly review 18:00).
 - [ ] **F4. Push the send_push v2 migration** (`20260611212418_send_push_html_attachments.sql` — HTML formatting + image attachments). ⚠️ The routines already call the new 6-arg signature, so push this **before the next 8:00 AM run** or the briefing will fail. Same commands as F1 (db push + snapshot refresh).
 
+## Phase G — Image cards via Edge Function
+
+Why: agents cannot reliably transcribe image bytes (the "black image" bug), so card images are now rendered **inside Supabase** by `supabase/functions/push-card/index.ts` and posted straight to Pushover. Your steps, from the repo root:
+
+- [ ] **G1. Set Edge Function secrets** (values for the first two are in `.env.local`; the third is a new shared secret that authenticates callers of the function):
+  ```bash
+  SUPABASE_ACCESS_TOKEN=$(grep '^SUPABASE_ACCESS_TOKEN=' .env.local | cut -d'=' -f2) \
+    supabase secrets set --linked --workdir $(pwd) \
+    PUSHOVER_APP_TOKEN=<from .env.local> \
+    PUSHOVER_USER_KEY=<from .env.local> \
+    PUSH_FN_SECRET=a17f3b64e57e8032e5b2d19cd9f9d44bf96104c619ad2ee0
+  ```
+- [ ] **G2. Add the shared secret to Vault** (Dashboard → Project Settings → Vault → Add new secret) so Postgres can authenticate to the function:
+  | Name | Value |
+  |---|---|
+  | `push_fn_secret` | `a17f3b64e57e8032e5b2d19cd9f9d44bf96104c619ad2ee0` |
+- [ ] **G3. Deploy the function** (`--no-verify-jwt` because auth is the shared-secret header, not a JWT):
+  ```bash
+  SUPABASE_ACCESS_TOKEN=$(grep '^SUPABASE_ACCESS_TOKEN=' .env.local | cut -d'=' -f2) \
+    supabase functions deploy push-card --no-verify-jwt --linked --workdir $(pwd)
+  ```
+- [ ] **G4. Push the `send_push_card` migration + refresh snapshot** (same commands as F1; the pending migration is `20260612023130_send_push_card.sql`).
+- [ ] **G5. Tell Claude it's done** — it will fire a test card and update the routines.
+
 ---
 
 ## Ongoing (post-migration) rules that involve you
