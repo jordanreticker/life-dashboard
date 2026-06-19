@@ -33,7 +33,8 @@ CREATE TABLE chore_log (
   date date NOT NULL,
   xp_earned numeric NOT NULL DEFAULT 0,
   proactive_points numeric NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  completed_by text NOT NULL DEFAULT 'me'::text
 );
 
 CREATE TABLE chores (
@@ -42,7 +43,8 @@ CREATE TABLE chores (
   name text NOT NULL,
   interval_days integer NOT NULL DEFAULT 7,
   xp_value numeric NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  kind text NOT NULL DEFAULT 'chore'::text
 );
 
 CREATE TABLE contact_log (
@@ -666,6 +668,38 @@ begin
     url     := 'https://api.pushover.net/1/messages.json',
     body    := v_body,
     headers := jsonb_build_object('Content-Type', 'application/json')
+  ) into v_request_id;
+
+  return v_request_id;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.send_push_card(p_payload jsonb)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_secret text;
+  v_request_id bigint;
+begin
+  select decrypted_secret into v_secret
+    from vault.decrypted_secrets where name = 'push_fn_secret';
+
+  if v_secret is null then
+    raise exception 'push_fn_secret missing from Vault';
+  end if;
+
+  select net.http_post(
+    url     := 'https://rhotxathnmkzbtlgxgjv.supabase.co/functions/v1/push-card',
+    body    := p_payload,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-push-secret', v_secret
+    ),
+    timeout_milliseconds := 15000
   ) into v_request_id;
 
   return v_request_id;

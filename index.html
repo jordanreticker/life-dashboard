@@ -433,9 +433,9 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 </div>
 
 <!-- Modals -->
-<div class="mback hide" id="chore-modal"><div class="modal"><h3 id="cm-title"></h3><div class="modal-sub" id="cm-sub"></div><button class="mbtn" id="cm-confirm">✓ Just did this</button><button class="mbtn mcancel" onclick="closeModal('chore-modal')">Cancel</button></div></div>
+<div class="mback hide" id="chore-modal"><div class="modal"><h3 id="cm-title"></h3><div class="modal-sub" id="cm-sub"></div><div style="display:flex;margin:12px 0 10px"><button class="tier-tab" id="cm-who-me" type="button">I did it</button><button class="tier-tab" id="cm-who-paige" type="button">Paige did it</button></div><div class="edit-form" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="cm-date" style="flex:1"/></div></div><button class="mbtn" id="cm-confirm">✓ Log completion</button><button class="mbtn mcancel" onclick="closeModal('chore-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-modal"><div class="modal"><h3 id="rm-title"></h3><div class="modal-sub" id="rm-sub"></div><button class="mbtn" id="rm-confirm" style="background:var(--cpaige);color:#fff;border:none">💕 Just did this</button><button class="mbtn mcancel" onclick="closeModal('rel-modal')">Cancel</button></div></div>
-<div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
+<div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div><div style="display:flex;margin-top:4px"><button class="tier-tab" id="ce-kind-chore" type="button">🧹 Chore</button><button class="tier-tab" id="ce-kind-ordering" type="button">📦 Ordering</button></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chorelog-modal"><div class="modal"><h3>Edit chore completion</h3><div class="modal-sub" id="clm-sub"></div><div class="edit-form" style="margin-top:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="clm-date" style="flex:1"/></div></div><button class="mbtn" id="clm-confirm">Save</button><button class="mbtn" id="clm-delete" style="color:#DC2626">Delete entry (removes its XP)</button><button class="mbtn mcancel" onclick="closeModal('chorelog-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-edit-modal"><div class="modal"><h3>Edit relationship act</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="re-name" placeholder="Act name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="re-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label></div></div><button class="mbtn" id="re-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('rel-edit-modal')">Cancel</button></div></div>
 
@@ -810,7 +810,7 @@ let D={
   pendingChoreId:null,pendingActType:null,pendingContactId:null,pendingContactTier:null,
   questionIdx:0,paigeQIdx:0,selectedMood:'',
   editingTaskId:null,editingChoreId:null,editingFinId:null,
-  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,selectedPersonId:null,sectionTargets:{},expandedContacts:{},expandedJournalId:null,lwOffset:0,
+  encycOpen:false,communityTier:'family',relExpanded:false,choresExpanded:false,orderingExpanded:false,encycFilter:'',shopDoneOpen:false,groDoneOpen:false,journalEntriesOpen:false,journalUnlocked:false,journalLockHash:'',pastFocusesOpen:false,completedTab:'tasks',paigeListTab:'tasks',choresListTab:'grocery',weekView:'open',dateIdeasOpen:false,lifeTab:'goals',selectedChoreId:null,selectedRelId:null,selectedPdId:null,selectedPersonId:null,sectionTargets:{},expandedContacts:{},expandedJournalId:null,lwOffset:0,
 };
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -877,7 +877,7 @@ function applyData(data){
   }
   if(data.profileStatsId)D.profileStatsId=data.profileStatsId;
   if(data.gamification){const g=data.gamification;D.gamification={...D.gamification,...g,xp:Number(g.xp)||0,level:Number(g.level)||1,streakDays:Number(g.streakDays)||0,bestStreak:Number(g.bestStreak)||0,proactivePoints:Number(g.proactivePoints)||0,allTimeTasksDone:Number(g.allTimeTasksDone)||0,allTimeChoresDone:Number(g.allTimeChoresDone)||0,badges:Array.isArray(g.badges)?g.badges:(g.badges?String(g.badges).split(',').filter(Boolean):[]),weeklyBadgeHistory:typeof g.weeklyBadgeHistory==='object'&&g.weeklyBadgeHistory!==null?g.weeklyBadgeHistory:(typeof g.weeklyBadgeHistory==='string'&&g.weeklyBadgeHistory?(()=>{try{return JSON.parse(g.weeklyBadgeHistory)}catch(e){return{}}})():{}),weeklyBadgeLastEarned:typeof g.weeklyBadgeLastEarned==='object'&&g.weeklyBadgeLastEarned!==null?g.weeklyBadgeLastEarned:(typeof g.weeklyBadgeLastEarned==='string'&&g.weeklyBadgeLastEarned?(()=>{try{return JSON.parse(g.weeklyBadgeLastEarned)}catch(e){return{}}})():{})};}
-  if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).length);
+  if(data.choreLog) D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(data.choreLog||[]).filter(l=>l.completedBy!=='paige').length);
   if(data.finances) D.finances=data.finances.map(f=>({...f,amount:Number(f.amount)||0}));
   if(data.journal) D.journal=data.journal;
   if(data.weeklyStats) D.weeklyStats=data.weeklyStats;
@@ -888,7 +888,7 @@ function applyData(data){
   const _lastDoneMap={};
   (D.choreLog||[]).forEach(l=>{const d=toDateStr(l.date)||String(l.date||'');if(l.choreId&&d&&(!_lastDoneMap[l.choreId]||d>_lastDoneMap[l.choreId]))_lastDoneMap[l.choreId]=d;});
   (D.chores||[]).forEach(c=>{if(_lastDoneMap[c.id]&&(!c.lastDone||_lastDoneMap[c.id]>c.lastDone))c.lastDone=_lastDoneMap[c.id];});
-  const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6]);});
+  const thisWeekLogs=(D.choreLog||[]).filter(l=>{const d=toDateStr(l.date)||String(l.date||'');return d>=WEEK_START&&d<=localIso(weekDays[6])&&l.completedBy!=='paige';});
   const wkChoresDone=thisWeekLogs.length;
   const wkChoreXP=thisWeekLogs.reduce((s,l)=>s+Number(l.xpEarned||0),0);
   const wkChorePP=thisWeekLogs.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
@@ -897,7 +897,7 @@ function applyData(data){
   } else {
     D.weekSummary={...D.weekSummary,choresDone:wkChoresDone,choreXP:wkChoreXP,chorePP:wkChorePP};
   }
-  D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).length);
+  D.gamification.allTimeChoresDone=Math.max(D.gamification.allTimeChoresDone,(D.choreLog||[]).filter(l=>l.completedBy!=='paige').length);
   if(data.contactLog) D.contactLog=data.contactLog;
   if(data.inboxLog) D.inboxLog=data.inboxLog;
   if(data.dayResults) D.dayResults=data.dayResults;
@@ -979,8 +979,8 @@ function fetchAllData(){
     const xpObj={};(xpValues||[]).forEach(x=>{xpObj[x.key]=Number(x.value);});
     return{
       tasks:(tasks||[]).map(taskFromRow),
-      chores:(chores||[]).map(c=>({id:c.id,name:c.name,intervalDays:Number(c.interval_days)||7,xpValue:Number(c.xp_value)||0,lastDone:null})),
-      choreLog:(choreLog||[]).map(l=>({id:l.id,choreId:l.chore_id||'',choreName:l.chore_name||'',date:l.date,xpEarned:Number(l.xp_earned)||0,proactivePoints:Number(l.proactive_points)||0})),
+      chores:(chores||[]).map(c=>({id:c.id,name:c.name,intervalDays:Number(c.interval_days)||7,xpValue:Number(c.xp_value)||0,kind:c.kind==='ordering'?'ordering':'chore',lastDone:null})),
+      choreLog:(choreLog||[]).map(l=>({id:l.id,choreId:l.chore_id||'',choreName:l.chore_name||'',date:l.date,xpEarned:Number(l.xp_earned)||0,proactivePoints:Number(l.proactive_points)||0,completedBy:l.completed_by==='paige'?'paige':'me'})),
       people:ppl,
       contactLog:(contactLog||[]).map(l=>({id:l.id,personId:l.person_id||'',personName:l.person_name||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0})),
       activities:(activities||[]).map(activityFromRow),
@@ -1111,10 +1111,10 @@ function saveStats(){
 }
 // ── Row converters: camelCase D objects → snake_case db rows ─────────────────
 const taskRow=t=>({id:t.id,section:t.section,text:t.text,done:!!t.done,priority:t.priority||null,due_date:t.dueDate||null,person_id:t.personId||null,tags:t.tags||[],scheduled_for:t.scheduledFor||null,created_date:t.createdAt||null,completed_date:t.completedAt||null,proactive_points:Number(t.proactivePoints)||0,xp_value:Number(t.xpValue)||5,recurrence:t.recurrence||null,notes:t.notes||''});
-const choreRow=c=>({id:c.id,name:c.name,interval_days:Number(c.intervalDays)||7,xp_value:Number(c.xpValue)||0});
+const choreRow=c=>({id:c.id,name:c.name,interval_days:Number(c.intervalDays)||7,xp_value:Number(c.xpValue)||0,kind:c.kind==='ordering'?'ordering':'chore'});
 const personRow=(p,tierKey)=>({id:p.id,name:p.name,tier:tierKey==='social_family'?'family':tierKey==='social_friends'?'friends':'work',last_contact:p.lastContact||null,cadence_days:Number(p.cadenceDays)>0?Number(p.cadenceDays):null,sort_order:Number(p.sortOrder)||0});
 const contactLogRow=l=>({id:l.id,person_id:l.personId||null,person_name:l.personName||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0});
-const choreLogRow=l=>({id:l.id,chore_id:l.choreId||null,chore_name:l.choreName||'',date:l.date,xp_earned:Number(l.xpEarned)||0,proactive_points:Number(l.proactivePoints)||0});
+const choreLogRow=l=>({id:l.id,chore_id:l.choreId||null,chore_name:l.choreName||'',date:l.date,xp_earned:Number(l.xpEarned)||0,proactive_points:Number(l.proactivePoints)||0,completed_by:l.completedBy==='paige'?'paige':'me'});
 const activityRow=a=>{const games=[];for(let i=1;i<=8;i++){const g=a['game'+i];if(g!==undefined&&g!==null&&g!=='')games.push(Number(g)||0);}return{id:a.id,type:a.type,date:a.date||null,notes:a.notes||'',duration:String(a.duration||''),xp:(a.xp!=null&&a.xp!=='')?Number(a.xp):null,games};};
 const relActRow=r=>({id:r.id,name:r.name,interval_days:Number(r.intervalDays)||7,last_done:r.lastDone||null});
 const journalRow=j=>({id:j.id,date:j.date,text:j.text||'',mood:j.mood||'',title:j.title||''});
@@ -1220,7 +1220,7 @@ function openWeeklyReview(){
   const seasonRec=getSeasonRecord();
   const w=D.weekSummary;
   const doneTasks=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
-  const choreCount=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).length;
+  const choreCount=(D.choreLog||[]).filter(l=>l.date>=WEEK_START&&l.completedBy!=='paige').length;
   const actCount=(D.activities||[]).filter(a=>a.date>=WEEK_START).length;
   const journalCount=(D.journal||[]).filter(j=>j.date>=WEEK_START).length;
   const contactsThisWeek=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).length;
@@ -1542,6 +1542,30 @@ function recalcChoreLastDone(choreId){
   const c=D.chores.find(x=>x.id==choreId);if(!c)return;
   c.lastDone=(D.choreLog||[]).filter(l=>l.choreId==choreId).reduce((m,l)=>{const d=toDateStr(l.date)||String(l.date||'');return d>m?d:m;},'')||null;
 }
+// Household chore split from chore_log: who completed what since fromDate (null = all-time).
+// Returns {me, paige, per:{choreName:{me,paige}}}.
+function choreSplit(fromDate){
+  let me=0,paige=0;const per={};
+  (D.choreLog||[]).forEach(l=>{
+    const d=toDateStr(l.date)||String(l.date||'');
+    if(fromDate&&d<fromDate)return;
+    const name=l.choreName||'(deleted chore)';
+    if(!per[name])per[name]={me:0,paige:0};
+    if(l.completedBy==='paige'){paige++;per[name].paige++;}else{me++;per[name].me++;}
+  });
+  return {me,paige,per};
+}
+// Who completed this chore most recently — 'me' | 'paige' | null (never done).
+// Ties on date fall to the latest-created entry.
+function lastChoreCompleter(choreId){
+  let best=null,bestKey='';
+  (D.choreLog||[]).forEach(l=>{
+    if(l.choreId!=choreId)return;
+    const key=(toDateStr(l.date)||String(l.date||''))+'|'+(l.createdAt||l.created_at||'');
+    if(key>=bestKey){bestKey=key;best=l;}
+  });
+  return best?(best.completedBy==='paige'?'paige':'me'):null;
+}
 function openChoreLogEdit(id){
   const l=(D.choreLog||[]).find(x=>x.id==id);if(!l)return;
   document.getElementById('clm-sub').textContent='🧹 '+(l.choreName||'chore')+' · +'+(Number(l.xpEarned)||0)+' XP'+(Number(l.proactivePoints)>0?' (incl. '+l.proactivePoints+' PP)':'');
@@ -1560,7 +1584,7 @@ function openChoreLogEdit(id){
     D.choreLog=D.choreLog.filter(x=>x.id!=id);
     addXP(-(Number(l.xpEarned)||0));
     if(Number(l.proactivePoints)>0)D.gamification.proactivePoints=Math.max(0,D.gamification.proactivePoints-Number(l.proactivePoints));
-    D.gamification.allTimeChoresDone=D.choreLog.length;
+    D.gamification.allTimeChoresDone=D.choreLog.filter(x=>x.completedBy!=='paige').length;
     recalcChoreLastDone(l.choreId);
     closeModal('chorelog-modal');renderAll();
     dbWrite(db.choreLog.remove(id),'chore log delete');
@@ -1575,29 +1599,39 @@ function openChoreModal(id){
   document.getElementById('cm-title').textContent=c.name;
   const f=freshObj(c);
   document.getElementById('cm-sub').textContent='last: '+f.label+' · every '+c.intervalDays+'d · '+c.xpValue+' XP';
+  // Who did it (defaults Me) + editable completion date (defaults today)
+  document.getElementById('cm-date').value=TODAY_ISO;
+  const setWho=w=>{D.cmWho=w==='paige'?'paige':'me';document.getElementById('cm-who-me').classList.toggle('active',D.cmWho==='me');document.getElementById('cm-who-paige').classList.toggle('active',D.cmWho==='paige');};
+  setWho('me');
+  document.getElementById('cm-who-me').onclick=()=>setWho('me');
+  document.getElementById('cm-who-paige').onclick=()=>setWho('paige');
   document.getElementById('cm-confirm').onclick=()=>{
     const c2=D.chores.find(c=>c.id==D.pendingChoreId);if(!c2)return;
-    const pp=calcChoreProactivePoints(c2);
-    c2.lastDone=TODAY_ISO;
-    const totalXP=(Number(c2.xpValue)||0)+pp;
-    addXP(totalXP);markActive();
-    // Log to ChoreLog for accurate tracking
-    const choreEntry={id:newId(),choreId:c2.id,choreName:c2.name,date:TODAY_ISO,xpEarned:totalXP,proactivePoints:pp};
+    const isMe=D.cmWho!=='paige';
+    const date=document.getElementById('cm-date').value||TODAY_ISO;
+    // Paige completions reset freshness only — no XP, no proactive points, excluded from your stats
+    const pp=isMe?calcChoreProactivePoints(c2):0;
+    const totalXP=isMe?((Number(c2.xpValue)||0)+pp):0;
+    const choreEntry={id:newId(),choreId:c2.id,choreName:c2.name,date,xpEarned:totalXP,proactivePoints:pp,completedBy:isMe?'me':'paige'};
     D.choreLog.push(choreEntry);
-    D.gamification.allTimeChoresDone=D.choreLog.length;
-    // Recount this week from log
-    const _wk=D.choreLog.filter(l=>l.date>=WEEK_START);
-    D.weekSummary.choresDone=_wk.length;
-    D.weekSummary.choreXP=_wk.reduce((s,l)=>s+Number(l.xpEarned||0),0);
-    D.weekSummary.chorePP=_wk.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
-    D.weekSummary.xpEarned+=totalXP;
-    if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
-    checkWeekBadges();
-    // chore_log is the source of truth for lastDone — the chores row isn't touched
+    // chore_log is the source of truth for lastDone; recalc handles back-dated entries
+    recalcChoreLastDone(c2.id);
+    if(isMe){
+      addXP(totalXP);markActive();
+      const meLog=D.choreLog.filter(l=>l.completedBy!=='paige');
+      D.gamification.allTimeChoresDone=meLog.length;
+      const _wk=meLog.filter(l=>l.date>=WEEK_START);
+      D.weekSummary.choresDone=_wk.length;
+      D.weekSummary.choreXP=_wk.reduce((s,l)=>s+Number(l.xpEarned||0),0);
+      D.weekSummary.chorePP=_wk.reduce((s,l)=>s+Number(l.proactivePoints||0),0);
+      D.weekSummary.xpEarned+=totalXP;
+      if(pp>0){D.weekSummary.proactivePoints+=pp;D.gamification.proactivePoints+=pp;}
+      checkWeekBadges();
+    }
     renderAll();
     dbWrite(db.choreLog.insert(choreLogRow(choreEntry)),'chore log');
-    saveStats();
-    toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();
+    if(isMe){saveStats();toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();}
+    else{toast('🤝 '+c2.name+' — Paige did it');haptic&&haptic('success');}
     closeModal('chore-modal');
   };
   document.getElementById('chore-modal').classList.remove('hide');
@@ -1608,16 +1642,21 @@ function openChoreEdit(id){
   document.getElementById('ce-name').value=c.name||'';
   document.getElementById('ce-interval').value=c.intervalDays||7;
   document.getElementById('ce-xp').value=c.xpValue||0;
+  const setKind=k=>{D.ceKind=k==='ordering'?'ordering':'chore';document.getElementById('ce-kind-chore').classList.toggle('active',D.ceKind==='chore');document.getElementById('ce-kind-ordering').classList.toggle('active',D.ceKind==='ordering');};
+  setKind(c.kind==='ordering'?'ordering':'chore');
+  document.getElementById('ce-kind-chore').onclick=()=>setKind('chore');
+  document.getElementById('ce-kind-ordering').onclick=()=>setKind('ordering');
   document.getElementById('ce-confirm').onclick=()=>{
     const name=document.getElementById('ce-name').value.trim();
     const interval=parseInt(document.getElementById('ce-interval').value)||7;
     const xp=parseInt(document.getElementById('ce-xp').value)||8;
+    const kind=D.ceKind==='ordering'?'ordering':'chore';
     if(!name)return;
     if(D.editingChoreId){
       const c2=D.chores.find(c=>c.id==D.editingChoreId);
-      if(c2){c2.name=name;c2.intervalDays=interval;c2.xpValue=xp;dbWrite(db.chores.update(c2.id,choreRow(c2)),'chore edit');}
+      if(c2){c2.name=name;c2.intervalDays=interval;c2.xpValue=xp;c2.kind=kind;dbWrite(db.chores.update(c2.id,choreRow(c2)),'chore edit');}
     } else {
-      const c2={id:newId(),name,intervalDays:interval,lastDone:null,xpValue:xp};
+      const c2={id:newId(),name,intervalDays:interval,lastDone:null,xpValue:xp,kind};
       D.chores.push(c2);
       dbWrite(db.chores.insert(choreRow(c2)),'chore add');
     }
@@ -2022,7 +2061,7 @@ function openDayDetail(iso){
   document.getElementById('dd-title').textContent=dayLabel;
   // Gather what happened that day
   const tasks=D.tasks.filter(t=>t.done&&t.completedAt===iso);
-  const chores=(D.choreLog||[]).filter(l=>l.date===iso);
+  const chores=(D.choreLog||[]).filter(l=>l.date===iso&&l.completedBy!=='paige');
   const contacts=(D.contactLog||[]).filter(l=>l.date===iso);
   const acts=(D.activities||[]).filter(a=>a.date===iso);
   const journals=(D.journal||[]).filter(j=>j.date===iso);
@@ -2652,7 +2691,7 @@ function rHome(){
   const _wkDoneTasks=D.tasks.filter(t=>t.done&&t.completedAt>=WEEK_START);
   const _wkTaskXP=_wkDoneTasks.reduce((s,t)=>s+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0),0);
   const _wkTaskPP=_wkDoneTasks.reduce((s,t)=>s+(Number(t.proactivePoints)||0),0);
-  const _wkChoreLog=(D.choreLog||[]).filter(l=>l.date>=WEEK_START);
+  const _wkChoreLog=(D.choreLog||[]).filter(l=>l.date>=WEEK_START&&l.completedBy!=='paige');
   const _wkChoreXP=_wkChoreLog.reduce((s,l)=>s+(Number(l.xpEarned)||0),0);
   const _wkChorePP=_wkChoreLog.reduce((s,l)=>s+(Number(l.proactivePoints)||0),0);
   const _wkActXP=(D.activities||[]).filter(a=>(a.date||'')>=WEEK_START).reduce((s,a)=>{
@@ -3060,7 +3099,7 @@ function rHome(){
   
   // This week — combined open (by-day) / completed view with toggle
   const wkView=D.weekView||'open';
-  const wkChores=(D.choreLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const wkChores=(D.choreLog||[]).filter(l=>l.date>=WEEK_START&&l.completedBy!=='paige').sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const wkContacts=(D.contactLog||[]).filter(l=>l.date>=WEEK_START).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const wkRelActsCount=D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).length;
   const completedAny=doneTasks.length||wkChores.length||wkContacts.length||wkRelActsCount;
@@ -3197,7 +3236,7 @@ function rHome(){
     const rangeLabel=targetStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+targetEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     // Stats for this target week
     const wkTasksDone=D.tasks.filter(t=>t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===targetKey).length;
-    const wkChoresDone=(D.choreLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).length;
+    const wkChoresDone=(D.choreLog||[]).filter(l=>l.date&&l.completedBy!=='paige'&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).length;
     const wkContacts=(D.contactLog||[]).filter(l=>l.date&&getWeekStart(new Date(l.date+'T12:00:00'))===targetKey).length;
     const wkActivities=(D.activities||[]).filter(a=>a.date&&getWeekStart(new Date(a.date+'T12:00:00'))===targetKey).length;
     const wkXP=Math.round(_wkTotals[targetKey]||0);
@@ -3256,7 +3295,7 @@ function rHome(){
       const d=new Date(targetStart);d.setDate(targetStart.getDate()+i);
       const iso=localIso(d);
       const tasks=D.tasks.filter(t=>t.done&&t.completedAt===iso);
-      const chores=(D.choreLog||[]).filter(l=>l.date===iso);
+      const chores=(D.choreLog||[]).filter(l=>l.date===iso&&l.completedBy!=='paige');
       const contacts=(D.contactLog||[]).filter(l=>l.date===iso);
       const acts=(D.activities||[]).filter(a=>a.date===iso);
       const xpDay=tasks.reduce((s,t)=>s+(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0),0)
@@ -3527,6 +3566,25 @@ function rPaige(){
       <button class="abtn" data-paigeact="fight" style="flex:1;opacity:1;background:rgba(220,38,38,0.1);color:#B91C1C;border-radius:8px;padding:7px 4px;font-size:11px;font-weight:500;border:0.5px solid rgba(220,38,38,0.3)">💢 Fight</button>
     </div>
   </div>`;
+
+  // ── Household chore split — who's carrying which chores (from chore_log) ──
+  {
+    const split7=choreSplit(localIso(new Date(Date.now()-7*86400000)));
+    const splitAll=choreSplit(null);
+    const tot7=split7.me+split7.paige;
+    const perRows=Object.keys(splitAll.per)
+      .map(n=>({name:n,...splitAll.per[n]}))
+      .filter(r=>r.paige>0||r.me>0)
+      .sort((a,b)=>(b.me+b.paige)-(a.me+a.paige));
+    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🤝</span><div class="sec-name">Household chore split</div><span class="sbadge sn">7d</span></div>
+      <div style="padding:8px 10px 10px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);margin-bottom:6px"><span style="color:var(--cchores)">You ${split7.me}</span><span style="color:var(--cpaige)">Paige ${split7.paige}</span></div>
+        ${tot7?`<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border)"><div style="width:${split7.me/tot7*100}%;background:var(--cchores)"></div><div style="width:${split7.paige/tot7*100}%;background:var(--cpaige)"></div></div>`:'<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">no chores logged in the last 7 days</div>'}
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:4px">all-time: you ${splitAll.me} · Paige ${splitAll.paige}</div>
+        ${perRows.length?`<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin:10px 0 4px">by chore (all-time)</div>`+perRows.map(r=>{const t=r.me+r.paige;return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><span style="flex:1;font-size:12px">${escH(r.name)}</span><span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);white-space:nowrap">${r.me}/${r.paige}</span><div style="width:60px;display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--border)"><div style="width:${t?r.me/t*100:0}%;background:var(--cchores)"></div><div style="width:${t?r.paige/t*100:0}%;background:var(--cpaige)"></div></div></div>`;}).join(''):''}
+      </div>
+    </div>`;
+  }
   
   // Recent paige actions log (last 5, collapsible) — gives undo affordance
   const allActs=(D.paigeActions||[]).slice().sort((a,b)=>(b.id||'').localeCompare(a.id||''));
@@ -4120,11 +4178,9 @@ function rCommunity(){
 
 // ── CHORES ────────────────────────────────────────────────────────────────────
 function rChores(){
-  const sorted=[...D.chores].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
-  // Group by urgency: overdue (incl. never done) → due soon (<40% freshness) → fresh
-  const grpOverdue=sorted.filter(c=>freshObj(c).overdue);
-  const grpSoon=sorted.filter(c=>{const f=freshObj(c);return !f.overdue&&f.pct<40;});
-  const grpFresh=sorted.filter(c=>{const f=freshObj(c);return !f.overdue&&f.pct>=40;});
+  // Split into normal chores and ordering/restock tasks; each gets its own urgency grouping
+  const choreItems=D.chores.filter(c=>c.kind!=='ordering');
+  const orderItems=D.chores.filter(c=>c.kind==='ordering');
   // Shopping & grocery lists at top of chores tab — always rendered, just toggled visible
   const shopList=D.shoppingList||[];
   const groList=D.groceryList||[];
@@ -4135,7 +4191,7 @@ function rChores(){
     const staples=active.filter(i=>i.staple);
     const nonStaples=active.filter(i=>!i.staple);
     const doneOpen=D.groDoneOpen===true;
-    const renderItem=(i,isDone)=>'<div class="list-item '+(isDone?'done':'')+'"><div class="chk '+(isDone?'ck':'')+'" data-listchk="'+name+':'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn" style="opacity:1;font-size:18px;padding:2px 6px;color:'+(i.staple?'#F59E0B':'var(--t3)')+';line-height:1" data-liststar="'+name+':'+i.id+'">'+(i.staple?'★':'☆')+'</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="'+name+':'+i.id+'">✕</button></div>';
+    const renderItem=(i,isDone)=>'<div class="list-item '+(isDone?'done':'')+'"><div class="chk '+(isDone?'ck':'')+'" data-listchk="'+name+':'+i.id+'" style="width:24px;height:24px;border-width:1.5px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn" style="opacity:1;font-size:18px;padding:2px 6px;color:'+(i.staple?'#F59E0B':'var(--t3)')+';line-height:1" data-liststar="'+name+':'+i.id+'">'+(i.staple?'★':'☆')+'</button><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="'+name+':'+i.id+'">✕</button></div>';
     let inner='';
     if(staples.length){
       inner+='<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:#F59E0B;padding:2px 6px 4px;font-weight:500">★ staples</div>';
@@ -4165,7 +4221,7 @@ function rChores(){
       const numCol=idx===0?'#DC2626':idx<3?'#D97706':'var(--t3)';
       return '<div class="list-item">'
         +'<span style="font-size:10px;font-family:\'DM Mono\',monospace;color:'+numCol+';width:18px;text-align:center;flex-shrink:0;font-weight:500">'+(idx+1)+'</span>'
-        +(reorder?'':'<div class="chk" data-listchk="shopping:'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div>')
+        +(reorder?'':'<div class="chk" data-listchk="shopping:'+i.id+'" style="width:24px;height:24px;border-width:1.5px;flex-shrink:0"></div>')
         +'<span class="list-text">'+escH(i.text)+'</span>'
         +(reorder
           ?'<button class="abtn" style="opacity:'+(idx===0?'0.25':'1')+';font-size:16px;padding:4px 12px;color:var(--t2)" data-shopmove="up:'+i.id+'" '+(idx===0?'disabled':'')+'>↑</button><button class="abtn" style="opacity:'+(idx===active.length-1?'0.25':'1')+';font-size:16px;padding:4px 12px;color:var(--t2)" data-shopmove="down:'+i.id+'" '+(idx===active.length-1?'disabled':'')+'>↓</button>'
@@ -4175,7 +4231,7 @@ function rChores(){
     if(done.length){
       inner+=prevBoughtHd('shopping',done,doneOpen);
       if(doneOpen){
-        inner+=done.map(i=>'<div class="list-item done"><div class="chk ck" data-listchk="shopping:'+i.id+'" style="width:14px;height:14px;border-width:1px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:'+i.id+'">✕</button></div>').join('');
+        inner+=done.map(i=>'<div class="list-item done"><div class="chk ck" data-listchk="shopping:'+i.id+'" style="width:24px;height:24px;border-width:1.5px;flex-shrink:0"></div><span class="list-text">'+escH(i.text)+'</span><button class="abtn del" style="opacity:0.7;font-size:10px" data-listdel="shopping:'+i.id+'">✕</button></div>').join('');
       }
     }
     if(!shopList.length) inner='<div class="emsg" style="text-align:center;padding:10px;font-size:11px">empty list</div>';
@@ -4215,26 +4271,45 @@ function rChores(){
     </div>`;
   }
   
+  const completerChip=who=>!who?'':`<span title="last done by ${who==='paige'?'Paige':'you'}" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:600;font-family:'DM Mono',monospace;color:#fff;background:${who==='paige'?'var(--cpaige)':'var(--cchores)'};flex-shrink:0;margin-left:6px">${who==='paige'?'P':'J'}</span>`;
   const crowHtml=c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);const sel=D.selectedChoreId==c.id;return`<div class="crow${sel?' crow-selected':''}" data-chore="${c.id}" style="border-left:3px solid ${f.color}">
-      <div class="cinfo"><div class="cname">${escH(c.name)}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue>0?c.xpValue+'XP':'set XP →'}${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
+      <div class="cinfo"><div class="cname" style="display:flex;align-items:center">${escH(c.name)}${completerChip(lastChoreCompleter(c.id))}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue>0?c.xpValue+'XP':'set XP →'}${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
       ${sel?`<button class="abtn" style="opacity:1;font-size:12px" data-cedit="${c.id}">✏️</button>
       <button class="cdelbtn" data-cd="${c.id}">✕</button>`:''}
     </div>`;};
   const choreGroup=(label,emoji,color,arr)=>!arr.length?'':`<div style="display:flex;align-items:center;gap:6px;padding:10px 4px 4px"><span style="font-size:12px">${emoji}</span><span style="font-size:10px;font-family:'DM Mono',monospace;color:${color};text-transform:uppercase;letter-spacing:0.06em;font-weight:500">${label}</span><span style="flex:1;height:0.5px;background:var(--border)"></span><span style="font-size:10px;font-family:'DM Mono',monospace;color:${color};font-weight:500">${arr.length}</span></div>`+arr.map(crowHtml).join('');
-  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🧹</span><div class="sec-name">Recurring chores</div><span class="sbadge ${grpOverdue.length?'sw':'sok'}">${grpOverdue.length?grpOverdue.length+' overdue':'all fresh'}</span></div>
-    ${sorted.length?`<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border);margin:2px 4px 2px">${[['#DC2626',grpOverdue],['#D97706',grpSoon],['#16A34A',grpFresh]].map(([col,arr])=>arr.length?`<div style="width:${arr.length/sorted.length*100}%;background:${col}"></div>`:'').join('')}</div>
-    <div style="display:flex;gap:10px;padding:2px 4px;font-size:9px;font-family:'DM Mono',monospace;color:var(--t3)"><span style="color:#DC2626">${grpOverdue.length} overdue</span><span style="color:#D97706">${grpSoon.length} due soon</span><span style="color:#16A34A">${grpFresh.length} fresh</span></div>`:''}
-    <div class="tlist">${!sorted.length?'<div class="emsg">no chores</div>':''}
-    ${choreGroup('needs doing','⚠️','#DC2626',grpOverdue)}
-    ${choreGroup('due soon','⏳','#D97706',grpSoon)}
-    ${grpFresh.length?(D.choresExpanded?choreGroup('fresh','✅','#16A34A',grpFresh):''):''}</div>
-    ${grpFresh.length&&!D.choresExpanded?`<button class="expand-btn" data-choresexpand="1" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">✅ show ${grpFresh.length} fresh</button>`:''}
-    ${grpFresh.length&&D.choresExpanded?`<button class="expand-btn" data-choresexpand="0" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">hide fresh</button>`:''}
-    <div class="hint">tap chore to mark done · ✏️ to edit</div>
-    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="chore-inp" placeholder="New chore name..."/><button class="badd" id="chore-add">Add</button></div>
-    <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="chore-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div><input class="inp" id="chore-xp" type="number" min="1" value="8" placeholder="XP" style="width:55px"/></div></div>
+  // Renders one chore card (freshness grouping inside), parameterized by kind so
+  // normal chores and ordering/restock tasks each get their own section.
+  const choreSection=(secEmoji,secName,arr,expanded,expandKey,emptyMsg,addInput)=>{
+    const ss=[...arr].sort((a,b)=>freshObj(a).pct-freshObj(b).pct);
+    const over=ss.filter(c=>freshObj(c).overdue);
+    const soon=ss.filter(c=>{const f=freshObj(c);return !f.overdue&&f.pct<40;});
+    const fresh=ss.filter(c=>{const f=freshObj(c);return !f.overdue&&f.pct>=40;});
+    return `<div class="sec"><div class="sec-hd"><span class="sec-ic">${secEmoji}</span><div class="sec-name">${secName}</div><span class="sbadge ${over.length?'sw':'sok'}">${over.length?over.length+' overdue':'all fresh'}</span></div>
+    ${ss.length?`<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border);margin:2px 4px 2px">${[['#DC2626',over],['#D97706',soon],['#16A34A',fresh]].map(([col,a])=>a.length?`<div style="width:${a.length/ss.length*100}%;background:${col}"></div>`:'').join('')}</div>
+    <div style="display:flex;gap:10px;padding:2px 4px;font-size:9px;font-family:'DM Mono',monospace;color:var(--t3)"><span style="color:#DC2626">${over.length} overdue</span><span style="color:#D97706">${soon.length} due soon</span><span style="color:#16A34A">${fresh.length} fresh</span></div>`:''}
+    <div class="tlist">${!ss.length?`<div class="emsg">${emptyMsg}</div>`:''}
+    ${choreGroup('needs doing','⚠️','#DC2626',over)}
+    ${choreGroup('due soon','⏳','#D97706',soon)}
+    ${fresh.length?(expanded?choreGroup('fresh','✅','#16A34A',fresh):''):''}</div>
+    ${fresh.length&&!expanded?`<button class="expand-btn" data-choresexpand="1:${expandKey}" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">✅ show ${fresh.length} fresh</button>`:''}
+    ${fresh.length&&expanded?`<button class="expand-btn" data-choresexpand="0:${expandKey}" style="width:100%;background:transparent;border:none;color:var(--t2);font-size:11px;font-family:'DM Mono',monospace;padding:8px;cursor:pointer">hide fresh</button>`:''}
+    <div class="hint">tap to mark done · ✏️ to edit</div>
+    ${addInput||''}
   </div>`;
+  };
+  const choreAddInput=`<div class="add-wrap"><div class="add-main"><input class="inp f1" id="chore-inp" placeholder="New chore name..."/><button class="badd" id="chore-add">Add</button></div>
+    <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="chore-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div><input class="inp" id="chore-xp" type="number" min="1" value="8" placeholder="XP" style="width:55px"/></div>
+    <div class="hint" style="opacity:0.7">tip: tap ✏️ on a chore to make it an 📦 Ordering task</div></div>`;
+  // Household split this week (you vs. Paige) — fuller breakdown lives on the Paige tab
+  const wkSplit=choreSplit(WEEK_START);const splitTot=wkSplit.me+wkSplit.paige;
+  html+=`<div class="sec" style="padding:10px 12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:${splitTot?'8px':'0'}"><span style="font-size:13px">🤝</span><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);font-weight:500">This week's split</span><span style="flex:1"></span><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--t3)">You ${wkSplit.me} · Paige ${wkSplit.paige}</span></div>
+    ${splitTot?`<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--border)"><div style="width:${wkSplit.me/splitTot*100}%;background:var(--cchores)"></div><div style="width:${wkSplit.paige/splitTot*100}%;background:var(--cpaige)"></div></div>`:'<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">no chores logged yet this week</div>'}
+  </div>`;
+  html+=choreSection('🧹','Recurring chores',choreItems,D.choresExpanded,'chore','no chores',choreAddInput);
+  if(orderItems.length) html+=choreSection('📦','Ordering / restock',orderItems,D.orderingExpanded,'ordering','no ordering tasks','');
   document.getElementById('chores-content').innerHTML=html;
   document.querySelectorAll('.crow').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-cd],[data-cedit]'))return;openChoreModal(el.dataset.chore);}));
   document.querySelectorAll('[data-cedit]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();openChoreEdit(el.dataset.cedit);}));
@@ -4244,7 +4319,7 @@ function rChores(){
     if(!ai?.value.trim())return;
     const interval=parseInt(document.getElementById('chore-interval')?.value)||7;
     const xp=parseInt(document.getElementById('chore-xp')?.value)||8;
-    const c={id:newId(),name:ai.value.trim(),intervalDays:interval,lastDone:null,xpValue:xp};
+    const c={id:newId(),name:ai.value.trim(),intervalDays:interval,lastDone:null,xpValue:xp,kind:'chore'};
     D.chores.push(c);
     ai.value='';renderAll();dbWrite(db.chores.insert(choreRow(c)),'chore add');
     toast('🧹 Chore added');
@@ -4730,7 +4805,7 @@ document.getElementById('main').addEventListener('click', function(e){
   const relExp = e.target.closest('[data-relexpand]');
   if(relExp){ D.relExpanded=relExp.dataset.relexpand==='1'; rPaige(); return; }
   const choresExp = e.target.closest('[data-choresexpand]');
-  if(choresExp){ D.choresExpanded=choresExp.dataset.choresexpand==='1'; rChores(); return; }
+  if(choresExp){ const [val,key]=String(choresExp.dataset.choresexpand).split(':'); if(key==='ordering')D.orderingExpanded=val==='1'; else D.choresExpanded=val==='1'; rChores(); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
   if(rel && !e.target.closest('[data-reledit],[data-reldel]')){
