@@ -433,7 +433,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 </div>
 
 <!-- Modals -->
-<div class="mback hide" id="chore-modal"><div class="modal"><h3 id="cm-title"></h3><div class="modal-sub" id="cm-sub"></div><div style="display:flex;margin:12px 0 10px"><button class="tier-tab" id="cm-who-me" type="button">I did it</button><button class="tier-tab" id="cm-who-paige" type="button">Paige did it</button></div><div class="edit-form" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="cm-date" style="flex:1"/></div></div><button class="mbtn" id="cm-confirm">✓ Log completion</button><button class="mbtn mcancel" onclick="closeModal('chore-modal')">Cancel</button></div></div>
+<div class="mback hide" id="chore-modal"><div class="modal"><h3 id="cm-title"></h3><div class="modal-sub" id="cm-sub"></div><div style="display:flex;margin:12px 0 10px"><button class="tier-tab" id="cm-who-me" type="button">I did it</button><button class="tier-tab" id="cm-who-joint" type="button">Both</button><button class="tier-tab" id="cm-who-paige" type="button">Paige did it</button></div><div class="edit-form" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="cm-date" style="flex:1"/></div></div><button class="mbtn" id="cm-confirm">✓ Log completion</button><button class="mbtn mcancel" onclick="closeModal('chore-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-modal"><div class="modal"><h3 id="rm-title"></h3><div class="modal-sub" id="rm-sub"></div><button class="mbtn" id="rm-confirm" style="background:var(--cpaige);color:#fff;border:none">💕 Just did this</button><button class="mbtn mcancel" onclick="closeModal('rel-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div><div style="display:flex;margin-top:4px"><button class="tier-tab" id="ce-kind-chore" type="button">🧹 Chore</button><button class="tier-tab" id="ce-kind-ordering" type="button">📦 Ordering</button></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chorelog-modal"><div class="modal"><h3>Edit chore completion</h3><div class="modal-sub" id="clm-sub"></div><div class="edit-form" style="margin-top:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="clm-date" style="flex:1"/></div></div><button class="mbtn" id="clm-confirm">Save</button><button class="mbtn" id="clm-delete" style="color:#DC2626">Delete entry (removes its XP)</button><button class="mbtn mcancel" onclick="closeModal('chorelog-modal')">Cancel</button></div></div>
@@ -997,7 +997,7 @@ function fetchAllData(){
     return{
       tasks:(tasks||[]).map(taskFromRow),
       chores:(chores||[]).map(c=>({id:c.id,name:c.name,intervalDays:Number(c.interval_days)||7,xpValue:Number(c.xp_value)||0,kind:c.kind==='ordering'?'ordering':'chore',lastDone:null})),
-      choreLog:(choreLog||[]).map(l=>({id:l.id,choreId:l.chore_id||'',choreName:l.chore_name||'',date:l.date,xpEarned:Number(l.xp_earned)||0,proactivePoints:Number(l.proactive_points)||0,completedBy:l.completed_by==='paige'?'paige':'me'})),
+      choreLog:(choreLog||[]).map(l=>({id:l.id,choreId:l.chore_id||'',choreName:l.chore_name||'',date:l.date,xpEarned:Number(l.xp_earned)||0,proactivePoints:Number(l.proactive_points)||0,completedBy:l.completed_by==='paige'?'paige':l.completed_by==='joint'?'joint':'me'})),
       people:ppl,
       contactLog:(contactLog||[]).map(l=>({id:l.id,personId:l.person_id||'',personName:l.person_name||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0})),
       activities:(activities||[]).map(activityFromRow),
@@ -1136,7 +1136,7 @@ const taskRow=t=>({id:t.id,section:t.section,text:t.text,done:!!t.done,priority:
 const choreRow=c=>({id:c.id,name:c.name,interval_days:Number(c.intervalDays)||7,xp_value:Number(c.xpValue)||0,kind:c.kind==='ordering'?'ordering':'chore'});
 const personRow=(p,tierKey)=>({id:p.id,name:p.name,tier:tierKey==='social_family'?'family':tierKey==='social_friends'?'friends':'work',last_contact:p.lastContact||null,cadence_days:Number(p.cadenceDays)>0?Number(p.cadenceDays):null,sort_order:Number(p.sortOrder)||0});
 const contactLogRow=l=>({id:l.id,person_id:l.personId||null,person_name:l.personName||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0});
-const choreLogRow=l=>({id:l.id,chore_id:l.choreId||null,chore_name:l.choreName||'',date:l.date,xp_earned:Number(l.xpEarned)||0,proactive_points:Number(l.proactivePoints)||0,completed_by:l.completedBy==='paige'?'paige':'me'});
+const choreLogRow=l=>({id:l.id,chore_id:l.choreId||null,chore_name:l.choreName||'',date:l.date,xp_earned:Number(l.xpEarned)||0,proactive_points:Number(l.proactivePoints)||0,completed_by:l.completedBy==='paige'?'paige':l.completedBy==='joint'?'joint':'me'});
 const activityRow=a=>{const games=[];for(let i=1;i<=8;i++){const g=a['game'+i];if(g!==undefined&&g!==null&&g!=='')games.push(Number(g)||0);}return{id:a.id,type:a.type,date:a.date||null,notes:a.notes||'',duration:String(a.duration||''),xp:(a.xp!=null&&a.xp!=='')?Number(a.xp):null,games};};
 const relActRow=r=>({id:r.id,name:r.name,interval_days:Number(r.intervalDays)||7,last_done:r.lastDone||null});
 const journalRow=j=>({id:j.id,date:j.date,text:j.text||'',mood:j.mood||'',title:j.title||''});
@@ -1575,7 +1575,10 @@ function choreSplit(fromDate){
     if(fromDate&&d<fromDate)return;
     const name=l.choreName||'(deleted chore)';
     if(!per[name])per[name]={me:0,paige:0};
-    if(l.completedBy==='paige'){paige++;per[name].paige++;}else{me++;per[name].me++;}
+    // joint completions credit both you and Paige
+    if(l.completedBy==='paige'){paige++;per[name].paige++;}
+    else if(l.completedBy==='joint'){me++;paige++;per[name].me++;per[name].paige++;}
+    else{me++;per[name].me++;}
   });
   return {me,paige,per};
 }
@@ -1588,7 +1591,7 @@ function lastChoreCompleter(choreId){
     const key=(toDateStr(l.date)||String(l.date||''))+'|'+(l.createdAt||l.created_at||'');
     if(key>=bestKey){bestKey=key;best=l;}
   });
-  return best?(best.completedBy==='paige'?'paige':'me'):null;
+  return best?(best.completedBy==='paige'?'paige':best.completedBy==='joint'?'joint':'me'):null;
 }
 function openChoreLogEdit(id){
   const l=(D.choreLog||[]).find(x=>x.id==id);if(!l)return;
@@ -1625,25 +1628,28 @@ function openChoreModal(id){
   document.getElementById('cm-sub').textContent='last: '+f.label+' · every '+c.intervalDays+'d · '+c.xpValue+' XP';
   // Who did it (defaults Me) + editable completion date (defaults today)
   document.getElementById('cm-date').value=TODAY_ISO;
-  const setWho=w=>{D.cmWho=w==='paige'?'paige':'me';document.getElementById('cm-who-me').classList.toggle('active',D.cmWho==='me');document.getElementById('cm-who-paige').classList.toggle('active',D.cmWho==='paige');};
-  // In Paige mode every completion is logged as Paige — hide the toggle entirely
+  const setWho=w=>{D.cmWho=(w==='paige'||w==='joint')?w:'me';['me','joint','paige'].forEach(k=>{const el=document.getElementById('cm-who-'+k);if(el)el.classList.toggle('active',D.cmWho===k);});};
+  // Show the who-toggle in both modes; Paige mode just defaults to Paige
   const pm=isPaigeMode();
-  document.getElementById('cm-who-me').parentElement.style.display=pm?'none':'flex';
+  document.getElementById('cm-who-me').parentElement.style.display='flex';
   setWho(pm?'paige':'me');
   document.getElementById('cm-who-me').onclick=()=>setWho('me');
+  document.getElementById('cm-who-joint').onclick=()=>setWho('joint');
   document.getElementById('cm-who-paige').onclick=()=>setWho('paige');
   document.getElementById('cm-confirm').onclick=()=>{
     const c2=D.chores.find(c=>c.id==D.pendingChoreId);if(!c2)return;
-    const isMe=D.cmWho!=='paige';
+    const who=D.cmWho==='paige'?'paige':D.cmWho==='joint'?'joint':'me';
+    const credited=who!=='paige'; // 'me' and 'joint' both credit you (joint = half XP)
     const date=document.getElementById('cm-date').value||TODAY_ISO;
-    // Paige completions reset freshness only — no XP, no proactive points, excluded from your stats
-    const pp=isMe?calcChoreProactivePoints(c2):0;
-    const totalXP=isMe?((Number(c2.xpValue)||0)+pp):0;
-    const choreEntry={id:newId(),choreId:c2.id,choreName:c2.name,date,xpEarned:totalXP,proactivePoints:pp,completedBy:isMe?'me':'paige'};
+    // Proactive bonus only on solo completions; joint earns half the base XP and no PP; Paige earns nothing.
+    const pp=who==='me'?calcChoreProactivePoints(c2):0;
+    const base=Number(c2.xpValue)||0;
+    const totalXP=who==='me'?(base+pp):who==='joint'?Math.round(base/2):0;
+    const choreEntry={id:newId(),choreId:c2.id,choreName:c2.name,date,xpEarned:totalXP,proactivePoints:pp,completedBy:who};
     D.choreLog.push(choreEntry);
     // chore_log is the source of truth for lastDone; recalc handles back-dated entries
     recalcChoreLastDone(c2.id);
-    if(isMe){
+    if(credited){
       addXP(totalXP);markActive();
       const meLog=D.choreLog.filter(l=>l.completedBy!=='paige');
       D.gamification.allTimeChoresDone=meLog.length;
@@ -1657,7 +1663,7 @@ function openChoreModal(id){
     }
     renderAll();
     dbWrite(db.choreLog.insert(choreLogRow(choreEntry)),'chore log');
-    if(isMe){saveStats();toast('✨ +'+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));fireConfetti();}
+    if(credited){saveStats();toast((who==='joint'?'🤝 +':'✨ +')+totalXP+'XP'+(pp>0?' +'+pp+'PP ⚡':'')+(who==='joint'?' (joint)':''));fireConfetti();}
     else{toast('🤝 '+c2.name+' — Paige did it');haptic&&haptic('success');}
     closeModal('chore-modal');
   };
@@ -4520,7 +4526,11 @@ function rChores(){
     </div>`;
   }
   
-  const completerChip=who=>!who?'':`<span title="last done by ${who==='paige'?'Paige':'you'}" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:600;font-family:'DM Mono',monospace;color:#fff;background:${who==='paige'?'var(--cpaige)':'var(--cchores)'};flex-shrink:0;margin-left:6px">${who==='paige'?'P':'J'}</span>`;
+  const completerChip=who=>{
+    if(!who)return '';
+    if(who==='joint')return `<span title="last done by both" style="display:inline-flex;align-items:center;justify-content:center;height:16px;padding:0 5px;border-radius:8px;font-size:9px;font-weight:600;font-family:'DM Mono',monospace;color:#fff;background:linear-gradient(90deg,var(--cchores),var(--cpaige));flex-shrink:0;margin-left:6px">J·P</span>`;
+    return `<span title="last done by ${who==='paige'?'Paige':'you'}" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:600;font-family:'DM Mono',monospace;color:#fff;background:${who==='paige'?'var(--cpaige)':'var(--cchores)'};flex-shrink:0;margin-left:6px">${who==='paige'?'P':'J'}</span>`;
+  };
   const crowHtml=c=>{const f=freshObj(c);const barPct=freshBarPct(f.pct);const sel=D.selectedChoreId==c.id;return`<div class="crow${sel?' crow-selected':''}" data-chore="${c.id}" style="border-left:3px solid ${f.color}">
       <div class="cinfo"><div class="cname" style="display:flex;align-items:center">${escH(c.name)}${completerChip(lastChoreCompleter(c.id))}</div><div class="cmeta" style="color:${f.color}">${f.label} · every ${c.intervalDays}d · ${c.xpValue>0?c.xpValue+'XP':'set XP →'}${f.overdue&&f.label!=='never done'?' ⚠️':''}</div></div>
       <div class="fwrap"><div class="ftrack"><div class="ffill" style="width:${barPct}%;background:${f.color}"></div></div><div class="flbl" style="color:${f.color}">${f.pct}%</div></div>
