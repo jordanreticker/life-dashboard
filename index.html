@@ -437,6 +437,9 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 <div class="mback hide" id="rel-modal"><div class="modal"><h3 id="rm-title"></h3><div class="modal-sub" id="rm-sub"></div><button class="mbtn" id="rm-confirm" style="background:var(--cpaige);color:#fff;border:none">💕 Just did this</button><button class="mbtn mcancel" onclick="closeModal('rel-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chore-edit-modal"><div class="modal"><h3>Edit chore</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="ce-name" placeholder="Chore name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="ce-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label><input class="inp" id="ce-xp" type="number" min="1" style="width:60px" placeholder="XP"/></div><div style="display:flex;margin-top:4px"><button class="tier-tab" id="ce-kind-chore" type="button">🧹 Chore</button><button class="tier-tab" id="ce-kind-ordering" type="button">📦 Ordering</button></div></div><button class="mbtn" id="ce-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('chore-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="chorelog-modal"><div class="modal"><h3>Edit chore completion</h3><div class="modal-sub" id="clm-sub"></div><div class="edit-form" style="margin-top:12px"><div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="clm-date" style="flex:1"/></div></div><button class="mbtn" id="clm-confirm">Save</button><button class="mbtn" id="clm-delete" style="color:#DC2626">Delete entry (removes its XP)</button><button class="mbtn mcancel" onclick="closeModal('chorelog-modal')">Cancel</button></div></div>
+<div class="mback hide" id="recipe-picker-modal"><div class="modal"><h3>🍳 Add from recipe</h3><select class="sel" id="rp-select" style="width:100%;margin:10px 0"></select><div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button class="bsm" id="rp-toggle-all">Deselect all</button></div><div id="rp-ingredients" style="max-height:50vh;overflow-y:auto;margin-bottom:8px"></div><button class="mbtn" id="rp-add">Add selected to grocery</button><button class="mbtn mcancel" onclick="closeModal('recipe-picker-modal')">Cancel</button></div></div>
+<div class="mback hide" id="recipe-manage-modal"><div class="modal"><h3>🍳 Recipes</h3><div id="rcm-list" style="max-height:55vh;overflow-y:auto;margin:10px 0"></div><button class="mbtn" id="rcm-new">+ New recipe</button><button class="mbtn mcancel" onclick="closeModal('recipe-manage-modal')">Close</button></div></div>
+<div class="mback hide" id="recipe-edit-modal"><div class="modal" style="max-height:88vh;overflow-y:auto"><h3 id="rce-title">New recipe</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="rce-name" placeholder="Recipe name"/><input class="inp f1" id="rce-category" placeholder="Category (e.g. Dinner)" list="rce-cat-list"/><datalist id="rce-cat-list"></datalist><input class="inp f1" id="rce-link" placeholder="Link (optional)"/><label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:2px">Ingredients — one per line</label><textarea class="jta" id="rce-ingredients" placeholder="1 tbsp butter&#10;2 cloves garlic" style="min-height:110px"></textarea><label style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:2px">Steps — one per line (optional)</label><textarea class="jta" id="rce-steps" placeholder="Preheat oven to 400°F&#10;Chop the onion" style="min-height:110px"></textarea></div><button class="mbtn" id="rce-save">Save recipe</button><button class="mbtn mcancel" onclick="closeModal('recipe-edit-modal')">Cancel</button></div></div>
 <div class="mback hide" id="rel-edit-modal"><div class="modal"><h3>Edit relationship act</h3><div class="edit-form" style="margin-top:12px"><input class="inp f1" id="re-name" placeholder="Act name"/><div style="display:flex;gap:6px;align-items:center"><label style="font-size:12px;color:var(--t2);white-space:nowrap">Every</label><input class="inp" id="re-interval" type="number" min="1" style="width:70px"/><label style="font-size:12px;color:var(--t2)">days</label></div></div><button class="mbtn" id="re-confirm">Save</button><button class="mbtn mcancel" onclick="closeModal('rel-edit-modal')">Cancel</button></div></div>
 
 <div class="mback hide" id="day-result-modal"><div class="modal" style="max-width:520px;width:94%">
@@ -623,6 +626,18 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 
 <div class="toast" id="toast"></div>
 
+<div id="recipe-detail-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:150;overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:calc(var(--safe-t) + 12px) 16px calc(var(--safe-b) + 28px)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button class="bsm" id="rd-back">← Back</button>
+      <span style="flex:1"></span>
+      <button class="abtn" id="rd-edit" style="opacity:1;font-size:13px">✏️ Edit</button>
+      <button class="abtn del" id="rd-del" style="opacity:1;font-size:13px">🗑</button>
+    </div>
+    <div id="rd-body"></div>
+  </div>
+</div>
+
 <div id="auth-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:none;align-items:center;justify-content:center">
   <div style="width:280px;display:flex;flex-direction:column;gap:10px">
     <h2 style="font-weight:300;letter-spacing:-0.5px;text-align:center;margin-bottom:8px">JrDr's Office</h2>
@@ -803,7 +818,7 @@ let D={
   gamification:{xp:0,level:1,streakDays:0,bestStreak:0,lastActiveDate:'',badges:[],
     totalTasksDone:0,totalChoresDone:0,totalActivities:0,proactivePoints:0,
     allTimeTasksDone:0,allTimeChoresDone:0,allTimeActivities:0},
-  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],dateIdeas:[],paigeActions:[],
+  finances:[],journal:[],weeklyStats:[],relActs:[],encycNotes:[],choreLog:[],healthGoals:[],contactLog:[],inboxLog:[],dayResults:[],paigeDates:[],paigeFocuses:[],shoppingList:[],groceryList:[],xpValues:{},paigeAnswers:[],dateIdeas:[],paigeActions:[],recipes:[],
   weeklyBadges:[],  // earned this week
   weekSummary:{weekStart:WEEK_START,tasksDone:0,choresDone:0,activitiesLogged:0,contactsLogged:0,xpEarned:0,proactivePoints:0,paigeActs:0,communityTasks:0,workTasks:0,choreXP:0,chorePP:0},
   profileStatsId:null,currentTab:'home',lastSavedAt:null,
@@ -903,6 +918,7 @@ function applyData(data){
   if(data.dayResults) D.dayResults=data.dayResults;
   if(data.paigeDates) D.paigeDates=data.paigeDates;
   if(data.paigeActions) D.paigeActions=data.paigeActions;
+  if(data.recipes) D.recipes=data.recipes;
   if(data.paigeFocuses){
     D.paigeFocuses=data.paigeFocuses.map((f,i)=>{
       if(typeof f==='string'){
@@ -959,12 +975,13 @@ function fetchAllData(){
     db.encycNotes.list(),db.inboxLog.list(),db.dayResults.list(),db.importantDates.list(),
     db.focuses.list(),db.paigeActions.list(),db.listItems.list(),db.xpValues.list(),
     db.dateIdeas.list(),db.healthGoals.list(),db.healthGoalLogs.list(),db.appSettings.get('journal_lock_hash'),
+    db.recipes.list(),db.recipeIngredients.list(),
   ]).then(results=>{
     const err=results.find(r=>r.error);
     if(err&&err.error)throw err.error;
     const [tasks,chores,choreLog,people,contactLog,activities,questions,answers,stats,finances,
       journal,weeklyStats,relActs,encycNotes,inboxLog,dayResults,paigeDates,focuses,paigeActions,
-      listItems,xpValues,dateIdeas,healthGoals,healthGoalLogs,lockSetting]=results.map(r=>r.data);
+      listItems,xpValues,dateIdeas,healthGoals,healthGoalLogs,lockSetting,recipes,recipeIngredients]=results.map(r=>r.data);
     const g=stats||{};
     D.profileStatsId=g.id||null;
     const ppl={social_family:[],social_friends:[],work:[]};
@@ -1002,6 +1019,7 @@ function fetchAllData(){
       xpValues:xpObj,
       dateIdeas:(dateIdeas||[]).map(i=>({id:i.id,text:i.text,preRating:Number(i.pre_rating)||0,date:i.date||'',notes:i.notes||'',finalRating:Number(i.final_rating)||0,starred:!!i.starred,status:i.status||'idea'})),
       healthGoals:(healthGoals||[]).map(gl=>({id:gl.id,name:gl.name,target:Number(gl.target)||7,logs:(healthGoalLogs||[]).filter(l=>l.goal_id===gl.id).map(l=>l.date)})),
+      recipes:(recipes||[]).map(r=>({id:r.id,name:r.name,steps:r.steps||'',link:r.link||'',rating:Number(r.rating)||0,category:r.category||'',ingredients:(recipeIngredients||[]).filter(ing=>ing.recipe_id===r.id).map(ing=>({id:ing.id,text:ing.text,sortOrder:Number(ing.sort_order)||0})).sort((a,b)=>a.sortOrder-b.sortOrder)})),
       journalLockHash:lockSetting?String(lockSetting.value||''):'',
       profileStatsId:g.id||null,
     };
@@ -1066,7 +1084,7 @@ async function loadData(){
 // already updated and re-rendered; the pip flips to error if the write fails.
 function cacheNow(){
   try{
-    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,profileStatsId:D.profileStatsId};
+    const fullData={tasks:D.tasks,chores:D.chores,people:D.people,activities:D.activities,gamification:D.gamification,questions:D.questions,finances:D.finances,journal:D.journal,weeklyStats:D.weeklyStats,relActs:D.relActs,encycNotes:D.encycNotes,choreLog:D.choreLog,healthGoals:D.healthGoals,contactLog:D.contactLog,inboxLog:D.inboxLog,dayResults:D.dayResults,paigeDates:D.paigeDates,paigeActions:D.paigeActions,paigeFocuses:D.paigeFocuses,shoppingList:D.shoppingList,groceryList:D.groceryList,journalLockHash:D.journalLockHash,xpValues:D.xpValues,paigeAnswers:D.paigeAnswers,dateIdeas:D.dateIdeas,recipes:D.recipes,profileStatsId:D.profileStatsId};
     localStorage.setItem('jrdr-cache-v3',JSON.stringify({data:fullData,ts:Date.now()}));
   }catch(e){}
 }
@@ -1128,6 +1146,8 @@ const importantDateRow=d=>({id:d.id,name:d.name,date:d.date,recur:d.recur||'',no
 const focusRow=f=>({id:f.id,text:f.text,notes:f.notes||'',status:f.status||'active',created_date:f.createdAt||null,completed_date:f.completedAt||null,reactivated_date:f.reactivatedAt||null,sort_order:Number(f.sortOrder)||0});
 const paigeActionRow=a=>({id:a.id,kind:a.kind,date:a.date,xp:Number(a.xp)||0});
 const listItemRow=(i,listName)=>({id:i.id,list:listName,text:i.text,done:!!i.done,added_date:i.addedAt||null,staple:!!i.staple,sort_order:Number(i.sortOrder)||0});
+const recipeRow=r=>({id:r.id,name:r.name,steps:r.steps||'',link:r.link||'',rating:Number(r.rating)||0,category:r.category||''});
+const recipeIngredientRow=(ing,recipeId)=>({id:ing.id,recipe_id:recipeId,text:ing.text,sort_order:Number(ing.sortOrder)||0});
 const dateIdeaRow=i=>({id:i.id,text:i.text,pre_rating:Number(i.preRating)||0,date:i.date||null,notes:i.notes||'',final_rating:Number(i.finalRating)||0,starred:!!i.starred,status:i.status||'idea'});
 const answerRow=a=>({id:a.id,question_id:a.questionId||null,question:a.question||'',answer:a.answer||'',date:a.date||null});
 const encycRow=n=>({id:n.id,text:n.text,cat:n.cat||'',done:!!n.done,completed_note:n.completedNote||'',sort_order:Number(n.sortOrder)||0});
@@ -2607,6 +2627,179 @@ function deleteListItem(name,id){
   renderAll();dbWrite(db.listItems.remove(id),'list delete');
 }
 
+// ── Recipes ───────────────────────────────────────────────────────────────────
+// Ingredient lines keep their amounts ("1 tbsp butter") on the recipe, but the
+// grocery list gets the parsed core noun ("butter") and dedupes on it.
+const RECIPE_UNITS=['tbsp','tbsps','tablespoon','tablespoons','tsp','tsps','teaspoon','teaspoons','cup','cups','oz','ounce','ounces','lb','lbs','pound','pounds','g','gram','grams','kg','ml','l','liter','liters','litre','litres','clove','cloves','can','cans','pinch','pinches','dash','dashes','slice','slices','stick','sticks','package','packages','pkg','bunch','bunches','head','heads','sprig','sprigs','quart','quarts','pint','pints','gallon','gallons','jar','jars','box','boxes','bag','bags','handful','handfuls'];
+function coreName(text){
+  const orig=String(text||'').trim();
+  let s=orig.toLowerCase();
+  // strip leading quantity tokens: integers, decimals, fractions (1/2, ½), ranges
+  s=s.replace(/^[\d¼½¾⅓⅔⅛⅜⅝⅞\/\.\-–\s]+/,'').trim();
+  // strip a leading unit word (+ optional trailing period)
+  s=s.replace(new RegExp('^(?:'+RECIPE_UNITS.join('|')+')\\.?\\b\\s*','i'),'').trim();
+  // "1 cup of flour" -> after unit strip leaves "of flour"
+  s=s.replace(/^of\s+/i,'').trim();
+  // drop any parenthetical notes anywhere, e.g. "onion (diced)" -> "onion"
+  s=s.replace(/\([^)]*\)/g,' ');
+  // drop everything after the first comma, e.g. "yellow onion, diced" -> "yellow onion"
+  s=s.replace(/,.*$/,'');
+  s=s.replace(/\s+/g,' ').trim();
+  return s||orig.toLowerCase();
+}
+function sameIngredient(a,b){
+  a=String(a||'').toLowerCase().trim();b=String(b||'').toLowerCase().trim();
+  if(!a||!b)return false;
+  if(a===b)return true;
+  const esc=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const wb=x=>new RegExp('\\b'+esc(x)+'\\b','i');
+  return wb(a).test(b)||wb(b).test(a);
+}
+const capFirst=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+function addRecipeIngredientsToGrocery(recipeId,selectedIds){
+  const r=(D.recipes||[]).find(x=>x.id==recipeId);if(!r)return;
+  let added=0,skipped=0;
+  (r.ingredients||[]).forEach(ing=>{
+    if(!selectedIds.includes(ing.id))return;
+    const core=coreName(ing.text);
+    if(!core){skipped++;return;}
+    // skip if an active grocery item already matches (incl. items added earlier in this batch)
+    const dup=(D.groceryList||[]).some(g=>!g.done&&sameIngredient(core,coreName(g.text)));
+    if(dup){skipped++;return;}
+    addListItem('grocery',capFirst(core));
+    added++;
+  });
+  toast('🛒 Added '+added+(skipped?' · '+skipped+' already on list':''));
+  haptic('success');
+}
+function openRecipePicker(preId){
+  const recs=[...(D.recipes||[])].sort((a,b)=>a.name.localeCompare(b.name));
+  const sel=document.getElementById('rp-select');
+  if(!recs.length){
+    sel.innerHTML='<option>— no recipes —</option>';
+    document.getElementById('rp-ingredients').innerHTML='<div class="emsg" style="text-align:center;padding:14px">No recipes yet. Tap “Manage recipes” to add one.</div>';
+  } else {
+    sel.innerHTML=recs.map(r=>`<option value="${r.id}">${escH(r.name)}</option>`).join('');
+    D.rpRecipeId=(preId&&recs.some(r=>r.id==preId))?preId:recs[0].id;
+    sel.value=D.rpRecipeId;
+    renderRecipePickerIngredients();
+  }
+  sel.onchange=()=>{D.rpRecipeId=sel.value;renderRecipePickerIngredients();};
+  document.getElementById('recipe-picker-modal').classList.remove('hide');
+}
+function renderRecipePickerIngredients(){
+  const r=(D.recipes||[]).find(x=>x.id==D.rpRecipeId);
+  const box=document.getElementById('rp-ingredients');
+  if(!r||!r.ingredients.length){box.innerHTML='<div class="emsg" style="text-align:center;padding:14px">No ingredients</div>';return;}
+  box.innerHTML=r.ingredients.map(ing=>{
+    const onList=(D.groceryList||[]).some(g=>!g.done&&sameIngredient(coreName(ing.text),coreName(g.text)));
+    return `<label class="list-item" style="cursor:pointer;gap:8px"><input type="checkbox" class="rp-ing" data-ingid="${ing.id}" checked style="width:20px;height:20px;flex-shrink:0"/><span class="list-text">${escH(ing.text)}${onList?' <span style="font-size:9px;color:var(--t3);font-family:\'DM Mono\',monospace">· on list</span>':''}</span></label>`;
+  }).join('');
+  box.querySelectorAll('.rp-ing').forEach(b=>b.addEventListener('change',updateRpToggleLabel));
+  updateRpToggleLabel();
+}
+function updateRpToggleLabel(){
+  const btn=document.getElementById('rp-toggle-all');if(!btn)return;
+  const boxes=[...document.querySelectorAll('#rp-ingredients .rp-ing')];
+  btn.style.display=boxes.length?'':'none';
+  btn.textContent=(boxes.length&&boxes.every(b=>b.checked))?'Deselect all':'Select all';
+}
+function openRecipeManage(){renderRecipeManageList();document.getElementById('recipe-manage-modal').classList.remove('hide');}
+function renderRecipeManageList(){
+  const recs=[...(D.recipes||[])].sort((a,b)=>a.name.localeCompare(b.name));
+  const box=document.getElementById('rcm-list');
+  box.innerHTML=recs.length?recs.map(r=>`<div class="list-item" style="gap:8px"><span class="list-text" data-recopen="${r.id}" style="cursor:pointer">${escH(r.name)} <span style="font-size:10px;color:var(--t3);font-family:'DM Mono',monospace">(${(r.ingredients||[]).length})${r.category?' · '+escH(r.category):''}</span>${Number(r.rating)>0?'<span style="margin-left:6px;white-space:nowrap">'+ratingStars(r.rating,false)+'</span>':''}</span><button class="abtn" style="opacity:1;font-size:14px" data-recedit="${r.id}">✏️</button><button class="abtn del" style="opacity:0.7;font-size:12px" data-recdel="${r.id}">✕</button></div>`).join(''):'<div class="emsg" style="text-align:center;padding:14px">No recipes yet</div>';
+  box.querySelectorAll('[data-recopen]').forEach(el=>el.onclick=()=>openRecipeDetail(el.dataset.recopen));
+  box.querySelectorAll('[data-recedit]').forEach(el=>el.onclick=()=>openRecipeEdit(el.dataset.recedit));
+  box.querySelectorAll('[data-recdel]').forEach(el=>el.onclick=()=>deleteRecipe(el.dataset.recdel));
+}
+function openRecipeEdit(id){
+  const r=(D.recipes||[]).find(x=>x.id==id);
+  D.editingRecipeId=id||null;
+  document.getElementById('rce-title').textContent=r?'Edit recipe':'New recipe';
+  document.getElementById('rce-name').value=r?r.name:'';
+  document.getElementById('rce-category').value=r?(r.category||''):'';
+  document.getElementById('rce-link').value=r?(r.link||''):'';
+  document.getElementById('rce-ingredients').value=r?(r.ingredients||[]).map(i=>i.text).join('\n'):'';
+  document.getElementById('rce-steps').value=r?(r.steps||''):'';
+  // Autocomplete categories from existing recipes
+  const cats=[...new Set((D.recipes||[]).map(x=>(x.category||'').trim()).filter(Boolean))].sort();
+  document.getElementById('rce-cat-list').innerHTML=cats.map(c=>`<option value="${escH(c)}"></option>`).join('');
+  document.getElementById('recipe-edit-modal').classList.remove('hide');
+}
+const ratingStars=(n,interactive)=>{n=Number(n)||0;let s='';for(let i=1;i<=5;i++){const col=i<=n?'#F59E0B':'var(--border2)';s+=`<span ${interactive?`data-rdstar="${i}"`:''} style="font-size:${interactive?'26px':'13px'};color:${col};line-height:1;${interactive?'cursor:pointer;padding:0 2px':''}">${i<=n?'★':'☆'}</span>`;}return s;};
+function saveRecipe(){
+  if(D._savingRecipe)return; // guard against double-tap
+  const name=document.getElementById('rce-name').value.trim();
+  if(!name){toast('Recipe name required');return;}
+  D._savingRecipe=true;
+  const category=document.getElementById('rce-category').value.trim();
+  const link=document.getElementById('rce-link').value.trim();
+  const steps=document.getElementById('rce-steps').value.replace(/\r/g,'').trim();
+  const lines=document.getElementById('rce-ingredients').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const editing=!!D.editingRecipeId;
+  const id=D.editingRecipeId||newId();
+  const ingredients=lines.map((t,i)=>({id:newId(),text:t,sortOrder:i}));
+  // Optimistic: update local state + close immediately so it feels saved and a
+  // second tap can't create a duplicate. Writes fire in the background, FK-ordered.
+  let rating=0;
+  if(editing){const r=D.recipes.find(x=>x.id==id);if(r){rating=Number(r.rating)||0;r.name=name;r.category=category;r.link=link;r.steps=steps;r.ingredients=ingredients;}}
+  else{D.recipes.push({id,name,category,link,steps,rating:0,ingredients});}
+  D.editingRecipeId=null;
+  closeModal('recipe-edit-modal');renderRecipeManageList();
+  if(D.detailRecipeId)renderRecipeDetail();
+  toast('🍳 Recipe saved');
+  (async()=>{
+    try{
+      const row={id,name,category,link,steps,rating};
+      if(editing){
+        await dbWrite(db.recipes.update(id,recipeRow(row)),'recipe edit');
+        await dbWrite(db.recipeIngredients.removeByRecipe(id),'recipe ingredients clear');
+      } else {
+        await dbWrite(db.recipes.insert(recipeRow(row)),'recipe add'); // FK: recipe before ingredients
+      }
+      for(const ing of ingredients){await dbWrite(db.recipeIngredients.insert(recipeIngredientRow(ing,id)),'recipe ingredient');}
+    } finally { D._savingRecipe=false; }
+  })();
+}
+function deleteRecipe(id){
+  if(!confirm('Delete this recipe?'))return;
+  D.recipes=D.recipes.filter(r=>r.id!=id);
+  dbWrite(db.recipes.remove(id),'recipe delete'); // recipe_ingredients cascade server-side
+  renderRecipeManageList();
+  if(D.detailRecipeId==id)closeRecipeDetail();
+}
+// ── Recipe detail (full-screen overlay) ───────────────────────────────────────
+function openRecipeDetail(id){D.detailRecipeId=id;closeModal('recipe-manage-modal');renderRecipeDetail();document.getElementById('recipe-detail-overlay').style.display='block';document.getElementById('recipe-detail-overlay').scrollTo(0,0);}
+function closeRecipeDetail(){document.getElementById('recipe-detail-overlay').style.display='none';D.detailRecipeId=null;}
+function renderRecipeDetail(){
+  const r=(D.recipes||[]).find(x=>x.id==D.detailRecipeId);
+  const box=document.getElementById('rd-body');
+  if(!r){box.innerHTML='<div class="emsg">Recipe not found</div>';return;}
+  const stepLines=(r.steps||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  let h=`<h1 style="font-size:24px;font-weight:600;letter-spacing:-0.5px;margin-bottom:6px">${escH(r.name)}</h1>`;
+  h+=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">${ratingStars(r.rating,true)}${r.category?`<span class="pchip">${escH(r.category)}</span>`:''}</div>`;
+  if(r.link)h+=`<a href="${escH(r.link)}" target="_blank" rel="noopener" class="mbtn" style="display:block;text-align:center;text-decoration:none;background:var(--text);color:#fff;border:none;margin-bottom:14px">🔗 Open recipe link</a>`;
+  // Ingredients
+  h+=`<div class="sec" style="margin-bottom:12px"><div class="sec-hd"><span class="sec-ic">🧺</span><div class="sec-name">Ingredients</div><span class="sbadge sn">${(r.ingredients||[]).length}</span></div>`;
+  h+=(r.ingredients||[]).length?`<div style="padding:4px 10px 8px">${r.ingredients.map(i=>`<div style="padding:5px 0;border-bottom:0.5px solid var(--border);font-size:13px">${escH(i.text)}</div>`).join('')}</div><div style="padding:0 10px 10px"><button class="bsm" id="rd-add-grocery" style="width:100%">🛒 Add ingredients to grocery</button></div>`:'<div class="emsg" style="padding:10px">No ingredients</div>';
+  h+=`</div>`;
+  // Steps
+  h+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📋</span><div class="sec-name">Steps</div>${stepLines.length?`<span class="sbadge sn">${stepLines.length}</span>`:''}</div>`;
+  h+=stepLines.length?`<div style="padding:6px 10px 10px">${stepLines.map((s,i)=>`<div style="display:flex;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px;line-height:1.45"><span style="color:var(--t3);font-family:'DM Mono',monospace;flex-shrink:0">${i+1}.</span><span>${escH(s)}</span></div>`).join('')}</div>`:'<div class="emsg" style="padding:10px">No steps yet — tap ✏️ Edit to add some</div>';
+  h+=`</div>`;
+  box.innerHTML=h;
+  box.querySelectorAll('[data-rdstar]').forEach(el=>el.onclick=()=>setRecipeRating(r.id,Number(el.dataset.rdstar)));
+  const ag=document.getElementById('rd-add-grocery');if(ag)ag.onclick=()=>openRecipePicker(r.id);
+}
+function setRecipeRating(id,val){
+  const r=(D.recipes||[]).find(x=>x.id==id);if(!r)return;
+  r.rating=(Number(r.rating)===val)?0:val; // tap the current rating to clear
+  dbWrite(db.recipes.update(id,recipeRow(r)),'recipe rating');
+  renderRecipeDetail();renderRecipeManageList();
+  haptic('light');
+}
+
 // ── Search ────────────────────────────────────────────────────────────────────
 function toggleSearch(){
   const overlay=document.getElementById('search-overlay');
@@ -2699,10 +2892,29 @@ function applyPaigeChrome(){
 applyPaigeChrome();
 document.querySelectorAll('.search-btn').forEach(b=>b.addEventListener('click',toggleSearch));
 document.getElementById('search-inp').addEventListener('input',e=>runSearch(e.target.value));
-['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal','day-result-modal','paige-date-modal','weekly-review-modal','focus-modal'].forEach(id=>{
+['chore-modal','chore-edit-modal','act-modal','edit-modal','fin-modal','contact-modal','reset-modal','quick-add-modal','rel-edit-modal','rel-modal','day-result-modal','paige-date-modal','weekly-review-modal','focus-modal','recipe-picker-modal','recipe-manage-modal','recipe-edit-modal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{if(e.target===el)closeModal(id);});
 });
+// Recipe modal static buttons
+document.getElementById('rp-add').onclick=()=>{
+  const ids=[...document.querySelectorAll('#rp-ingredients .rp-ing:checked')].map(c=>c.dataset.ingid);
+  if(!ids.length){toast('Nothing selected');return;}
+  addRecipeIngredientsToGrocery(D.rpRecipeId,ids);
+  closeModal('recipe-picker-modal');
+};
+document.getElementById('rp-toggle-all').onclick=()=>{
+  const boxes=[...document.querySelectorAll('#rp-ingredients .rp-ing')];
+  if(!boxes.length)return;
+  const anyUnchecked=boxes.some(b=>!b.checked);
+  boxes.forEach(b=>{b.checked=anyUnchecked;}); // any unchecked -> select all, else deselect all
+  updateRpToggleLabel();
+};
+document.getElementById('rcm-new').onclick=()=>openRecipeEdit(null);
+document.getElementById('rce-save').onclick=saveRecipe;
+document.getElementById('rd-back').onclick=()=>{closeRecipeDetail();openRecipeManage();};
+document.getElementById('rd-edit').onclick=()=>{if(D.detailRecipeId)openRecipeEdit(D.detailRecipeId);};
+document.getElementById('rd-del').onclick=()=>{if(D.detailRecipeId)deleteRecipe(D.detailRecipeId);};
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAll(){
@@ -3611,12 +3823,13 @@ function rPaige(){
       .map(n=>({name:n,...splitAll.per[n]}))
       .filter(r=>r.paige>0||r.me>0)
       .sort((a,b)=>(b.me+b.paige)-(a.me+a.paige));
-    html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">🤝</span><div class="sec-name">Household chore split</div><span class="sbadge sn">7d</span></div>
+    const csOpen=D.choreSplitOpen===true;
+    html+=`<div class="sec"><div class="sec-hd" data-choresplit="1" style="cursor:pointer"><span class="sec-ic">🤝</span><div class="sec-name">Household chore split</div><span class="sbadge sn">7d</span><span style="margin-left:auto;color:var(--t3);font-size:11px">${csOpen?'▲':'▼'}</span></div>
       <div style="padding:8px 10px 10px">
         <div style="display:flex;justify-content:space-between;font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);margin-bottom:6px"><span style="color:var(--cchores)">You ${split7.me}</span><span style="color:var(--cpaige)">Paige ${split7.paige}</span></div>
         ${tot7?`<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--border)"><div style="width:${split7.me/tot7*100}%;background:var(--cchores)"></div><div style="width:${split7.paige/tot7*100}%;background:var(--cpaige)"></div></div>`:'<div style="font-size:10px;font-family:\'DM Mono\',monospace;color:var(--t3)">no chores logged in the last 7 days</div>'}
-        <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:4px">all-time: you ${splitAll.me} · Paige ${splitAll.paige}</div>
-        ${perRows.length?`<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin:10px 0 4px">by chore (all-time)</div>`+perRows.map(r=>{const t=r.me+r.paige;return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><span style="flex:1;font-size:12px">${escH(r.name)}</span><span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);white-space:nowrap">${r.me}/${r.paige}</span><div style="width:60px;display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--border)"><div style="width:${t?r.me/t*100:0}%;background:var(--cchores)"></div><div style="width:${t?r.paige/t*100:0}%;background:var(--cpaige)"></div></div></div>`;}).join(''):''}
+        ${csOpen?`<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);margin-top:4px">all-time: you ${splitAll.me} · Paige ${splitAll.paige}</div>
+        ${perRows.length?`<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin:10px 0 4px">by chore (all-time)</div>`+perRows.map(r=>{const t=r.me+r.paige;return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><span style="flex:1;font-size:12px">${escH(r.name)}</span><span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);white-space:nowrap">${r.me}/${r.paige}</span><div style="width:60px;display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--border)"><div style="width:${t?r.me/t*100:0}%;background:var(--cchores)"></div><div style="width:${t?r.paige/t*100:0}%;background:var(--cpaige)"></div></div></div>`;}).join(''):''}`:''}
       </div>
     </div>`;
   }
@@ -4288,7 +4501,8 @@ function rChores(){
         ${listsTabBtn('shopping','Shopping',shopCount,'🛍️')}
       </div>
       <div class="list-items" style="padding:6px 8px 4px">${renderListItems(groList,'grocery')}</div>
-      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="gro-inp" placeholder="Add grocery item..."/><button class="badd" id="gro-add">Add</button></div></div>
+      <div class="add-wrap"><div class="add-main"><input class="inp f1" id="gro-inp" placeholder="Add grocery item..."/><button class="badd" id="gro-add">Add</button></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><button class="bsm" id="gro-from-recipe" style="flex:1">🍳 From recipe</button><button class="bsm" id="gro-manage-recipes" style="flex:1">Manage recipes</button></div></div>
     </div>`;
   } else {
     html+=`<div class="sec">
@@ -4690,6 +4904,8 @@ document.getElementById('main').addEventListener('click', function(e){
     if(inp?.value.trim()){addListItem('grocery',inp.value);inp.value='';}
     return;
   }
+  if(e.target.closest('#gro-from-recipe')){openRecipePicker();return;}
+  if(e.target.closest('#gro-manage-recipes')){openRecipeManage();return;}
   // Staple toggle
   const listStar = e.target.closest('[data-liststar]');
   if(listStar){ e.stopPropagation(); const [n,id]=listStar.dataset.liststar.split(':'); toggleStaple(n,id); return; }
@@ -4841,6 +5057,8 @@ document.getElementById('main').addEventListener('click', function(e){
   if(relExp){ D.relExpanded=relExp.dataset.relexpand==='1'; rPaige(); return; }
   const choresExp = e.target.closest('[data-choresexpand]');
   if(choresExp){ const [val,key]=String(choresExp.dataset.choresexpand).split(':'); if(key==='ordering')D.orderingExpanded=val==='1'; else D.choresExpanded=val==='1'; rChores(); return; }
+  const choreSplitTog = e.target.closest('[data-choresplit]');
+  if(choreSplitTog){ D.choreSplitOpen=!D.choreSplitOpen; rPaige(); return; }
   // Relationship act
   const rel = e.target.closest('[data-rel]');
   if(rel && !e.target.closest('[data-reledit],[data-reldel]')){
@@ -5147,7 +5365,7 @@ async function boot(){
 }
 </script>
 <script type="module">
-  import * as db from './src/db.js';
+  import * as db from './src/db.js?v=20260620b';
   window.db=db;
   boot();
 </script>

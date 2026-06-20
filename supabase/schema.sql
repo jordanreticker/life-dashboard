@@ -232,6 +232,26 @@ CREATE TABLE questions (
   created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
+CREATE TABLE recipe_ingredients (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL DEFAULT auth.uid(),
+  recipe_id uuid NOT NULL,
+  text text NOT NULL,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TABLE recipes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL DEFAULT auth.uid(),
+  name text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  steps text NOT NULL DEFAULT ''::text,
+  link text NOT NULL DEFAULT ''::text,
+  rating numeric NOT NULL DEFAULT 0,
+  category text NOT NULL DEFAULT ''::text
+);
+
 CREATE TABLE rel_acts (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL DEFAULT auth.uid(),
@@ -402,6 +422,16 @@ ALTER TABLE questions ADD CONSTRAINT questions_pkey PRIMARY KEY (id);
 
 ALTER TABLE questions ADD CONSTRAINT questions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 
+ALTER TABLE recipe_ingredients ADD CONSTRAINT recipe_ingredients_pkey PRIMARY KEY (id);
+
+ALTER TABLE recipe_ingredients ADD CONSTRAINT recipe_ingredients_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE;
+
+ALTER TABLE recipe_ingredients ADD CONSTRAINT recipe_ingredients_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+
+ALTER TABLE recipes ADD CONSTRAINT recipes_pkey PRIMARY KEY (id);
+
+ALTER TABLE recipes ADD CONSTRAINT recipes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+
 ALTER TABLE rel_acts ADD CONSTRAINT rel_acts_pkey PRIMARY KEY (id);
 
 ALTER TABLE rel_acts ADD CONSTRAINT rel_acts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
@@ -563,6 +593,18 @@ CREATE POLICY owner_all ON question_answers AS PERMISSIVE FOR ALL TO authenticat
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY owner_all ON questions AS PERMISSIVE FOR ALL TO authenticated
+  USING ((user_id = auth.uid()))
+  WITH CHECK ((user_id = auth.uid()));
+
+ALTER TABLE recipe_ingredients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY owner_all ON recipe_ingredients AS PERMISSIVE FOR ALL TO authenticated
+  USING ((user_id = auth.uid()))
+  WITH CHECK ((user_id = auth.uid()));
+
+ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY owner_all ON recipes AS PERMISSIVE FOR ALL TO authenticated
   USING ((user_id = auth.uid()))
   WITH CHECK ((user_id = auth.uid()));
 

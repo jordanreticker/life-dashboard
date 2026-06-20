@@ -41,6 +41,12 @@ export const listItems = {
   list: () => supabase.from('list_items').select('*').order('sort_order').order('added_date'),
 }
 export const dateIdeas = table('date_ideas')
+export const recipes = table('recipes', { orderBy: 'name', ascending: true })
+export const recipeIngredients = {
+  ...table('recipe_ingredients', { orderBy: 'sort_order', ascending: true }),
+  removeByRecipe: (recipeId) =>
+    supabase.from('recipe_ingredients').delete().eq('recipe_id', recipeId),
+}
 
 export const healthGoalLogs = {
   list: () => supabase.from('health_goal_logs').select('*').order('date'),
