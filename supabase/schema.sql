@@ -278,7 +278,8 @@ CREATE TABLE tasks (
   xp_value numeric NOT NULL DEFAULT 5,
   recurrence text,
   notes text NOT NULL DEFAULT ''::text,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  completed_by text NOT NULL DEFAULT 'me'::text
 );
 
 CREATE TABLE weekly_stats (
@@ -442,7 +443,7 @@ ALTER TABLE tasks ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
 
 ALTER TABLE tasks ADD CONSTRAINT tasks_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'urgent'::text])));
 
-ALTER TABLE tasks ADD CONSTRAINT tasks_section_check CHECK ((section = ANY (ARRAY['paige'::text, 'work'::text, 'community_family'::text, 'community_friends'::text, 'health'::text, 'personal'::text])));
+ALTER TABLE tasks ADD CONSTRAINT tasks_section_check CHECK ((section = ANY (ARRAY['paige'::text, 'work'::text, 'community_family'::text, 'community_friends'::text, 'health'::text, 'personal'::text, 'home'::text])));
 
 ALTER TABLE tasks ADD CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 

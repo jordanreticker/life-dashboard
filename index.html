@@ -545,6 +545,7 @@ button,input,select,textarea{font-family:'DM Sans',sans-serif;}
 <div class="mback hide" id="task-done-modal"><div class="modal">
   <h3 id="tdm-title">Complete task</h3>
   <div class="modal-sub" id="tdm-sub"></div>
+  <div id="tdm-who-row" style="display:none;margin:12px 0 0"><div style="display:flex"><button class="tier-tab" id="tdm-who-me" type="button">I did it</button><button class="tier-tab" id="tdm-who-joint" type="button">Both</button><button class="tier-tab" id="tdm-who-paige" type="button">Paige did it</button></div></div>
   <div class="edit-form" style="margin-top:12px">
     <div style="display:flex;align-items:center;gap:8px"><label style="font-size:11px;color:var(--t2);font-family:'DM Mono',monospace;white-space:nowrap">completed on</label><input class="dtp" type="date" id="tdm-date" style="flex:1"/></div>
   </div>
@@ -872,7 +873,7 @@ function fireConfetti(){
 // ── Load ──────────────────────────────────────────────────────────────────────
 function applyData(data){
   const weekDays=[];const _td=new Date();const _td_day=_td.getDay();const _wd_off=_td_day===0?-6:1-_td_day;for(let i=0;i<7;i++){const d=new Date(_td);d.setDate(_td.getDate()+_wd_off+i);weekDays.push(d);}
-  if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||''}));
+  if(data.tasks) D.tasks=data.tasks.map(t=>({...t,done:t.done===true||t.done==='TRUE',tags:Array.isArray(t.tags)?t.tags:(t.tags?String(t.tags).split(',').filter(Boolean):[]),dueDate:toDateStr(t.dueDate)||'',priority:t.priority||'',scheduledFor:t.scheduledFor||'',proactivePoints:Number(t.proactivePoints)||0,xpValue:Number(t.xpValue)||5,createdAt:toDateStr(t.createdAt)||TODAY_ISO,completedAt:toDateStr(t.completedAt)||'',recurrence:t.recurrence||'',notes:t.notes||'',completedBy:t.completedBy==='paige'?'paige':t.completedBy==='joint'?'joint':'me'}));
   if(data.chores&&data.chores.length){
     D.chores=data.chores.map(c=>{
       const xpVal=Number(c.xpValue);
@@ -964,7 +965,7 @@ function applyData(data){
 }
 
 // ── Row converters: snake_case db rows → legacy camelCase D shapes ───────────
-function taskFromRow(r){return{id:r.id,section:r.section,text:r.text,done:!!r.done,priority:r.priority||'',dueDate:r.due_date||'',personId:r.person_id||'',tags:r.tags||[],scheduledFor:r.scheduled_for||'',createdAt:r.created_date||'',completedAt:r.completed_date||'',proactivePoints:Number(r.proactive_points)||0,xpValue:Number(r.xp_value)||5,recurrence:r.recurrence||'',notes:r.notes||''};}
+function taskFromRow(r){return{id:r.id,section:r.section,text:r.text,done:!!r.done,priority:r.priority||'',dueDate:r.due_date||'',personId:r.person_id||'',tags:r.tags||[],scheduledFor:r.scheduled_for||'',createdAt:r.created_date||'',completedAt:r.completed_date||'',proactivePoints:Number(r.proactive_points)||0,xpValue:Number(r.xp_value)||5,recurrence:r.recurrence||'',notes:r.notes||'',completedBy:r.completed_by==='paige'?'paige':r.completed_by==='joint'?'joint':'me'};}
 function activityFromRow(r){const a={id:r.id,type:r.type,date:r.date||'',notes:r.notes||'',duration:r.duration||'',xp:r.xp!=null?Number(r.xp):''};(r.games||[]).forEach((g,i)=>{if(i<8)a['game'+(i+1)]=g;});return a;}
 function fetchAllData(){
   // Parallel reads through src/db.js; returns the legacy-shaped data blob applyData expects.
@@ -1132,7 +1133,7 @@ function saveStats(){
   },400);
 }
 // ── Row converters: camelCase D objects → snake_case db rows ─────────────────
-const taskRow=t=>({id:t.id,section:t.section,text:t.text,done:!!t.done,priority:t.priority||null,due_date:t.dueDate||null,person_id:t.personId||null,tags:t.tags||[],scheduled_for:t.scheduledFor||null,created_date:t.createdAt||null,completed_date:t.completedAt||null,proactive_points:Number(t.proactivePoints)||0,xp_value:Number(t.xpValue)||5,recurrence:t.recurrence||null,notes:t.notes||''});
+const taskRow=t=>({id:t.id,section:t.section,text:t.text,done:!!t.done,priority:t.priority||null,due_date:t.dueDate||null,person_id:t.personId||null,tags:t.tags||[],scheduled_for:t.scheduledFor||null,created_date:t.createdAt||null,completed_date:t.completedAt||null,proactive_points:Number(t.proactivePoints)||0,xp_value:Number(t.xpValue)||5,recurrence:t.recurrence||null,notes:t.notes||'',completed_by:t.completedBy==='paige'?'paige':t.completedBy==='joint'?'joint':'me'});
 const choreRow=c=>({id:c.id,name:c.name,interval_days:Number(c.intervalDays)||7,xp_value:Number(c.xpValue)||0,kind:c.kind==='ordering'?'ordering':'chore'});
 const personRow=(p,tierKey)=>({id:p.id,name:p.name,tier:tierKey==='social_family'?'family':tierKey==='social_friends'?'friends':'work',last_contact:p.lastContact||null,cadence_days:Number(p.cadenceDays)>0?Number(p.cadenceDays):null,sort_order:Number(p.sortOrder)||0});
 const contactLogRow=l=>({id:l.id,person_id:l.personId||null,person_name:l.personName||'',type:l.type,note:l.note||'',date:l.date,xp:Number(l.xp)||0});
@@ -1333,7 +1334,7 @@ function toggleTask(id){
   // un-completing stays instant.
   if(!t.done){openTaskDoneModal(id);return;}
   haptic('light');
-  t.done=false;t.completedAt='';t.proactivePoints=0;
+  t.done=false;t.completedAt='';t.proactivePoints=0;t.completedBy='me';
   renderAll();
   dbWrite(db.tasks.update(t.id,taskRow(t)),'task toggle');
   saveStats();
@@ -1343,44 +1344,65 @@ function openTaskDoneModal(id){
   document.getElementById('tdm-title').textContent='✓ '+t.text;
   document.getElementById('tdm-sub').textContent=t.dueDate?('due '+fmtDate(t.dueDate)+' · finishing early earns PP ⚡'):'no due date';
   document.getElementById('tdm-date').value=TODAY_ISO;
+  // Home tasks track who did it (like chores): Paige solo earns you no XP, Both earns half.
+  const isHome=t.section==='home';
+  const whoRow=document.getElementById('tdm-who-row');
+  whoRow.style.display=isHome?'block':'none';
+  if(isHome){
+    const setWho=w=>{D.tdmWho=(w==='paige'||w==='joint')?w:'me';['me','joint','paige'].forEach(k=>{const el=document.getElementById('tdm-who-'+k);if(el)el.classList.toggle('active',D.tdmWho===k);});};
+    setWho(isPaigeMode()?'paige':'me');
+    document.getElementById('tdm-who-me').onclick=()=>setWho('me');
+    document.getElementById('tdm-who-joint').onclick=()=>setWho('joint');
+    document.getElementById('tdm-who-paige').onclick=()=>setWho('paige');
+  }
   document.getElementById('tdm-confirm').onclick=()=>{
     const d=document.getElementById('tdm-date').value||TODAY_ISO;
+    const who=isHome?(D.tdmWho==='paige'?'paige':D.tdmWho==='joint'?'joint':'me'):'me';
     closeModal('task-done-modal');
-    completeTask(id,d);
+    completeTask(id,d,who);
   };
   document.getElementById('task-done-modal').classList.remove('hide');
 }
-function completeTask(id,doneDate){
+function completeTask(id,doneDate,who){
   const t=D.tasks.find(x=>x.id==id);if(!t||t.done)return;
+  who=who==='paige'?'paige':who==='joint'?'joint':'me';
+  const credited=who!=='paige'; // 'me' and 'joint' credit you; Paige-only earns nothing
   haptic('success');
-  t.done=true;
+  t.done=true;t.completedBy=who;
   const baseXP=t.priority==='urgent'?xp('task_urgent'):t.priority==='high'?xp('task_high'):t.priority==='medium'?xp('task_medium'):t.priority==='low'?xp('task_low'):t.xpValue||xp('task_default');
-  const pp=calcProactivePointsAt(t.dueDate,doneDate);
+  // Joint earns half the base XP and no proactive bonus; Paige-only earns nothing.
+  const pp=who==='me'?calcProactivePointsAt(t.dueDate,doneDate):0;
+  const earnedXP=who==='me'?(baseXP+pp):who==='joint'?Math.round(baseXP/2):0;
   t.proactivePoints=pp;t.completedAt=doneDate;
-  addXP(baseXP+pp);
-  if(doneDate===TODAY_ISO)markActive(); // backdated completions don't extend today's streak
-  D.gamification.allTimeTasksDone++;
-  if(doneDate>=WEEK_START){
-    D.weekSummary.tasksDone++;D.weekSummary.xpEarned+=baseXP+pp;
-    if(pp>0)D.weekSummary.proactivePoints+=pp;
-    if(t.section==='work')D.weekSummary.workTasks++;
-    if(t.section==='community_family'||t.section==='community_friends'||t.section==='community')D.weekSummary.communityTasks++;
+  if(credited){
+    addXP(earnedXP);
+    if(doneDate===TODAY_ISO)markActive(); // backdated completions don't extend today's streak
+    D.gamification.allTimeTasksDone++;
+    if(doneDate>=WEEK_START){
+      D.weekSummary.tasksDone++;D.weekSummary.xpEarned+=earnedXP;
+      if(pp>0)D.weekSummary.proactivePoints+=pp;
+      if(t.section==='work')D.weekSummary.workTasks++;
+      if(t.section==='community_family'||t.section==='community_friends'||t.section==='community')D.weekSummary.communityTasks++;
+    }
+    if(pp>0)D.gamification.proactivePoints+=pp;
+    const dispXP=who==='joint'?earnedXP:baseXP; // 'me' shows base + PP separately, like other tasks
+    fireConfetti();toast((who==='joint'?'🤝 +':'✓ +')+dispXP+'XP'+(pp>0?' +'+pp+'PP ⚡':'')+(who==='joint'?' (joint)':''));
+    checkWeekBadges();
+  } else {
+    toast('🤝 '+t.text+' — Paige did it');haptic&&haptic('success');
   }
-  if(pp>0)D.gamification.proactivePoints+=pp;
-  fireConfetti();toast('✓ +'+baseXP+'XP'+(pp>0?' +'+pp+'PP ⚡':''));
-  checkWeekBadges();
   // Auto-regenerate recurring tasks
   if(t.recurrence){
     const baseDate=t.dueDate||doneDate;
     const nextDate=advanceDate(baseDate,t.recurrence);
-    const clone={...t,id:newId(),done:false,completedAt:'',proactivePoints:0,dueDate:nextDate,createdAt:TODAY_ISO};
+    const clone={...t,id:newId(),done:false,completedAt:'',proactivePoints:0,dueDate:nextDate,createdAt:TODAY_ISO,completedBy:'me'};
     D.tasks.push(clone);
     dbWrite(db.tasks.insert(taskRow(clone)),'task recur');
     setTimeout(()=>toast('🔁 Repeats '+t.recurrence+' — next: '+fmtDate(nextDate),3000),1500);
   }
   renderAll();
   dbWrite(db.tasks.update(t.id,taskRow(t)),'task toggle');
-  saveStats();
+  if(credited)saveStats();
 }
 function advanceDate(iso,rec){
   const d=new Date(iso+'T12:00:00');
@@ -1554,7 +1576,7 @@ function updateQAPersonDropdown(){updateQAFields();}
 function addTask(section,text,priority,dueDate,personId,tags,recurrence,notes){
   if(!text.trim())return;
   const xpValue=priority==='urgent'?xp('task_urgent'):priority==='high'?xp('task_high'):priority==='medium'?xp('task_medium'):priority==='low'?xp('task_low'):xp('task_default');
-  const t={id:newId(),section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue,recurrence:recurrence||'',notes:notes||''};
+  const t={id:newId(),section,text:text.trim(),done:false,priority:priority||'',dueDate:dueDate||'',personId:personId||'',tags:tags||[],scheduledFor:'',createdAt:TODAY_ISO,completedAt:'',proactivePoints:0,xpValue,recurrence:recurrence||'',notes:notes||'',completedBy:'me'};
   D.tasks.push(t);
   markActive();renderAll();dbWrite(db.tasks.insert(taskRow(t)),'task add');
 }
@@ -1580,7 +1602,26 @@ function choreSplit(fromDate){
     else if(l.completedBy==='joint'){me++;paige++;per[name].me++;per[name].paige++;}
     else{me++;per[name].me++;}
   });
+  // Completed home tasks are household contributions too — fold them into the split.
+  (D.tasks||[]).forEach(t=>{
+    if(t.section!=='home'||!t.done)return;
+    const d=toDateStr(t.completedAt)||String(t.completedAt||'');
+    if(!d||(fromDate&&d<fromDate))return;
+    const name=t.text||'(home task)';
+    if(!per[name])per[name]={me:0,paige:0};
+    if(t.completedBy==='paige'){paige++;per[name].paige++;}
+    else if(t.completedBy==='joint'){me++;paige++;per[name].me++;per[name].paige++;}
+    else{me++;per[name].me++;}
+  });
   return {me,paige,per};
+}
+// XP actually earned by you for a completed task, honoring completedBy (home tasks
+// follow the chore rules: Paige-only earns 0, joint earns half, you earn base+PP).
+function earnedTaskXP(t){
+  const base=Number(t.xpValue)||0;
+  if(t.completedBy==='paige')return 0;
+  if(t.completedBy==='joint')return Math.round(base/2);
+  return base+(Number(t.proactivePoints)||0);
 }
 // Who completed this chore most recently — 'me' | 'paige' | null (never done).
 // Ties on date fall to the latest-created entry.
@@ -3168,8 +3209,8 @@ function rHome(){
   // XP earned this week per section (from task xpValue+PP, choreLog xp, contactLog xp filtered by section)
   const wkXPBySec={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
   D.tasks.filter(t=>t.done&&t.completedAt>=WEEK_START).forEach(t=>{
-    const sec=t.section||'personal';
-    if(sec in wkXPBySec) wkXPBySec[sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+    const sec=t.section==='home'?'chores':(t.section||'personal'); // home tasks roll into the Home/chores bucket
+    if(sec in wkXPBySec) wkXPBySec[sec]+=earnedTaskXP(t);
   });
   // Rel-acts done this week count toward Paige
   D.relActs.filter(r=>r.lastDone&&r.lastDone>=WEEK_START).forEach(r=>{
@@ -3198,8 +3239,8 @@ function rHome(){
     const ws=getWeekStart(new Date(t.completedAt+'T12:00:00'));
     if(ws===WEEK_START)return; // exclude this week
     if(!histWeeks[ws])histWeeks[ws]={paige:0,work:0,community_family:0,community_friends:0,health:0,chores:0,personal:0};
-    const sec=t.section||'personal';
-    if(sec in histWeeks[ws]) histWeeks[ws][sec]+=(Number(t.xpValue)||0)+(Number(t.proactivePoints)||0);
+    const sec=t.section==='home'?'chores':(t.section||'personal');
+    if(sec in histWeeks[ws]) histWeeks[ws][sec]+=earnedTaskXP(t);
   });
   (D.choreLog||[]).forEach(l=>{
     if(!l.date)return;
@@ -4561,6 +4602,17 @@ function rChores(){
   const choreAddInput=`<div class="add-wrap"><div class="add-main"><input class="inp f1" id="chore-inp" placeholder="New chore name..."/><button class="badd" id="chore-add">Add</button></div>
     <div class="add-extras"><div style="display:flex;align-items:center;gap:4px"><label style="font-size:11px;color:var(--t2)">Every</label><input class="inp" id="chore-interval" type="number" min="1" value="7" style="width:55px"/><label style="font-size:11px;color:var(--t2)">days</label></div><input class="inp" id="chore-xp" type="number" min="1" value="8" placeholder="XP" style="width:55px"/></div>
     ${isPaigeMode()?'':'<div class="hint" style="opacity:0.7">tip: tap ✏️ on a chore to make it an 📦 Ordering task</div>'}</div>`;
+  // Home tasks: adhoc, non-recurring household to-dos, completable by you or Paige
+  const homeActive=D.tasks.filter(t=>t.section==='home'&&!t.done&&(!t.scheduledFor||t.scheduledFor===TODAY_STR)).sort((a,b)=>{
+    if(!a.dueDate&&!b.dueDate)return 0;if(!a.dueDate)return 1;if(!b.dueDate)return -1;return a.dueDate.localeCompare(b.dueDate);
+  });
+  const homeDone=D.tasks.filter(t=>t.section==='home'&&t.done&&t.completedAt&&getWeekStart(new Date(t.completedAt+'T12:00:00'))===WEEK_START);
+  html+=`<div class="sec"><div class="sec-hd"><span class="sec-ic">📋</span><div class="sec-name">Home tasks</div><span class="sbadge ${homeActive.length?'sw':'sok'}">${homeActive.length} to do</span></div>
+    <div class="tlist">${!homeActive.length?'<div class="emsg" style="text-align:center;padding:12px 8px">no home tasks — add one below</div>':''}${homeActive.map(t=>trow(t)).join('')}
+    ${homeDone.length?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--t3);padding:6px 2px 4px;border-top:0.5px solid var(--border);margin-top:4px">done this week</div>${homeDone.map(t=>trow(t)).join('')}`:''}</div>
+    <div class="add-wrap"><div class="add-main"><input class="inp f1" id="inp-home" placeholder="Add a home task..."/><button class="badd" data-ab="home">Add</button></div>
+    ${isPaigeMode()?'':`<div class="add-extras"><select class="sel" id="pr-home"><option value="">priority</option><option value="urgent">urgent</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option></select><input class="dtp" type="date" id="dt-home"/></div>`}</div>
+  </div>`;
   // Household split this week (you vs. Paige) — fuller breakdown lives on the Paige tab
   const wkSplit=choreSplit(WEEK_START);const splitTot=wkSplit.me+wkSplit.paige;
   html+=`<div class="sec" style="padding:10px 12px">
@@ -4774,7 +4826,7 @@ function trow(t){
   const priCls={urgent:'pu',high:'ph',medium:'pm',low:'pl'}[t.priority]||'';
   const hasMeta=t.priority||t.dueDate||(tags.length>0)||t.scheduledFor||t.proactivePoints>0||t.recurrence;
   const noteId='note-'+t.id;
-  return`<div class="trow ${t.done?'done-r':''} ${over?'overdue-row':''}"${t.done?` data-completed-edit="${t.id}" style="cursor:pointer"`:''}>
+  return`<div class="trow ${t.done?'done-r':''} ${over?'overdue-row':''}"${(t.done&&!isPaigeMode())?` data-completed-edit="${t.id}" style="cursor:pointer"`:''}>
     <div class="chk ${t.done?'ck':''}" data-chk="${t.id}"></div>
     <div class="tbody">
       <div class="ttxt">${escH(t.text)}</div>
@@ -4789,11 +4841,11 @@ function trow(t){
       </div>`:''}
       ${t.notes?`<div id="${noteId}" class="task-notes" style="display:none">${escH(t.notes)}</div>`:''}
     </div>
-    <div class="tacts">
+    ${isPaigeMode()?'':`<div class="tacts">
       <button class="abtn" data-edit="${t.id}">✏️</button>
       <button class="abtn" data-dupe="${t.id}">+7</button>
       <button class="abtn del" data-del="${t.id}">✕</button>
-    </div>
+    </div>`}
   </div>`;
 }
 
