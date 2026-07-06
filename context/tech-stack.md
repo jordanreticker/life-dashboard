@@ -1,5 +1,7 @@
 # Tech Stack
 
+> **⚠️ Scope note (2026-07):** this file describes the **legacy web client** (repo-root `index.html`). The primary client is now the **native Expo app in `app/`** — see [expo-app.md](expo-app.md). The web client stays live on GitHub Pages as a fallback until USER_TODO Phase I retires it. Everything below still applies when touching `index.html`.
+
 ## What this app is
 
 A single-page, mobile-first personal dashboard ("JrDr's Office") used by one person, installed to the iPhone home screen as a web app. Six tabs: Summary, Paige, Work, Community, Home (chores/lists), Life (health/journal). Heavy gamification layer (XP, levels, weekly + permanent badges, streaks, proactive points, a 7-game weekly "series").

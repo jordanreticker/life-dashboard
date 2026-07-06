@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# generated native folders (recreate with `expo prebuild`)
+/ios
+/android
+
+# metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# env — real keys live here, template in .env.example
+.env.local
+.env*.local
+
+# macOS
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo

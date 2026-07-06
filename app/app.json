@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "JrDr's Office",
+    "slug": "jrdrs-office",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "jrdrsoffice",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.jordanreticker.jrdrsoffice",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F2ED",
+        "foregroundImage": "./assets/images/icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4F2ED",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "db0e8f82-ca1c-4581-9b49-d58d35f40141"
+      }
+    },
+    "owner": "jordanret"
+  }
+}

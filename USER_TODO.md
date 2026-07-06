@@ -97,6 +97,24 @@ Why: agents cannot reliably transcribe image bytes (the "black image" bug), so c
 
 ---
 
+## Phase H — Native app → TestFlight (Expo/EAS)
+
+The app now lives in `app/` (Expo + React Native, same architecture as music-club-app). These steps need your Apple/Expo accounts — agents cannot do them:
+
+- [ ] **H1. Create the EAS project.** From `app/`: `npx eas login` (your expo.dev account), then `npx eas init` — accept creating a new project; it writes the `projectId` into `app.json`. Commit that change.
+- [ ] **H2. First build (interactive).** From `app/`: `npx eas build --platform ios --profile production`. First run registers the bundle id `com.jordanreticker.jrdrsoffice` on your Apple Developer account and sets up signing credentials on EAS (sign in with `jreticker@me.com` when prompted, same as music-club-app).
+- [ ] **H3. Create the app record + first submit (interactive).** In App Store Connect → My Apps → **+ New App**: platform iOS, bundle id `com.jordanreticker.jrdrsoffice`, name e.g. "JrDr's Office" (any unique name works — it's never public). Copy the numeric **Apple ID** of the app (App Information page) into `app/eas.json` → `submit.production.ios.ascAppId`. Then from `app/`: `npx eas submit --platform ios --latest` — this stores ASC credentials on EAS so CI can auto-submit later.
+- [ ] **H4. Add the `EXPO_TOKEN` repo secret.** expo.dev → Account settings → Access tokens → create one; GitHub repo → Settings → Secrets and variables → Actions → new secret `EXPO_TOKEN`. (Same as music-club-app — you can reuse that token.)
+- [ ] **H5. TestFlight Internal Testing.** App Store Connect → your app → TestFlight → Internal Testing → add yourself as a tester. Install via the TestFlight app. No App Review needed for internal testing, ever.
+- [ ] **H6. From now on:** queue builds from the GitHub Actions UI — see [Queue a TestFlight Build.md](Queue%20a%20TestFlight%20Build.md).
+
+## Phase I — Retire the web client (only after the native app proves out)
+
+- [ ] **I1. Soak:** use the TestFlight app as your daily driver for a week+; the web app stays live as fallback (both clients share the same Supabase backend — no conflict).
+- [ ] **I2. Decide the web app's fate:** keep as read-only fallback, or remove from the home screen. (Phases D3/D4/E above still apply to the legacy web deploy while it lives.)
+
+---
+
 ## Ongoing (post-migration) rules that involve you
 
 - Schema changes are agent-authored migrations — you never run SQL by hand in the Dashboard after C3/D1 (the SQL Editor is for *reading* only from then on).
